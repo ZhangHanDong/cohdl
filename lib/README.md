@@ -25,9 +25,9 @@ footprints live in focused packages:
 | `soic` | `soic::SOIC8P127X790X216N` | audited SOIC and TSSOP package land patterns |
 | `connectors` | `connectors::headers::micro_fit_3::MOLEX_43045_0612` | general-purpose board connectors, keyed power/actuator harnesses, and headers |
 | `usb` | `usb::connectors::type_c::USB_C_HRO_TYPE_C_31_M_12` | USB connectors, including Type-C and Micro-B, and controllers |
-| `esd` | `esd::ESD_USBLC6` | ESD protection devices |
+| `esd` | `esd::ESD_USBLC6`, `esd::ESD_H5VL10B` | ESD protection devices |
 | `diode` | `diode::D_1N4148W` | discrete diodes |
-| `flash` | `flash::FLASH_W25Q32`, `flash::FLASH_W25Q128JVSIQ` | nonvolatile NOR flash memories |
+| `flash` | `flash::FLASH_W25Q32`, `flash::FLASH_W25Q128JVSIQ`, `flash::FLASH_W25Q128JVPIQ` | nonvolatile NOR flash memories |
 | `ldo` | `ldo::LDO_AP2112K_3V3`, `ldo::LDO_RT9193_15PB` | low-dropout regulators |
 | `led` | `led::LED_RED_0603` | discrete/addressable LEDs and their traits |
 | `mosfet` | `mosfet::FET_DMG1012T` | discrete MOSFETs |
@@ -38,18 +38,19 @@ footprints live in focused packages:
 | `logic` | `logic::BUFFER_SN74AHCT1G125` | logic gates and buffers with verified land patterns |
 | `antenna` | `antenna::ANT_2450AT18B100E` | RF antennas with verified terminal lands and layout guidance |
 | `misc` | `misc::TEST_POINT_ROUND_1MM`, `misc::MOUNTING_HOLE_M2_NPTH`, `misc::MOUNTING_HOLE_M2_PTH` | reusable PCB fabrication primitives with explicit electrical semantics |
-| `cellular` | `cellular::CELL_AIR780E` | 4G/LTE cellular module devices with verified land patterns (Air780E, 109-pin LGA, official PADS decal land) |
+| `cellular` | `cellular::CELL_AIR780E`, `cellular::CELL_AIR780EG` | 4G/LTE cellular module devices with verified 109-pin LGA land patterns |
 | `esim` | `esim::ESIM_MFF2_TRUPHONE` | eUICC (eSIM) devices with verified land patterns |
-| `load-switch` | `load_switch::LOADSW_SGM2554` | power-distribution load switches with verified land patterns |
+| `load-switch` | `load_switch::LOADSW_SGM2554`, `load_switch::LOADSW_TPS22918DBVR`, `load_switch::LOADSW_MT9700N` | power-distribution load switches with verified land patterns |
 | `@ti/dcdc` | `ti_dcdc::controllers::multiphase::CTRL_TPS59650` | TI DC/DC controllers |
 | `@ti/logic` | `ti_logic::LS_SN74LVC8T245PWR` | TI logic and dual-supply level translators |
 | `@ti/power-switch` | `ti_power_switch::EFUSE_TPS259823ONRGET` | TI protected power paths and eFuses |
 | `@st/stm32` | `st_stm32::STM32F103C8Tx`, `st_stm32::MCU_STM32F103C8T6`, `st_stm32::MCU_STM32F072CBT6` | Generated ST-source-backed STM32 device catalog plus source-joined exact parts with attributed dependency-owned fabrication geometry |
 | `@espressif/esp32` | `espressif_esp32::ESP32_C3`, `espressif_esp32::ESP32_C6_WROOM_1_N8`, `espressif_esp32::chips::s3::ESP32_S3R8` | Pinned-source generated ESP32-lineage SoCs and modules, exact MPN parts, and vendor module land patterns |
-| `@contrib/imu` | `contrib_imu::IMU_BHI260AP` | community-contributed IMU devices and public, manufacturer-land-pattern part bindings |
+| `@contrib/imu` | `contrib_imu::IMU_BHI260AP`, `contrib_imu::IMU_LSM6DS3TR_C` | community-contributed IMU devices and audited public part bindings |
 | `@contrib/charger` | `contrib_charger::CHARGER_SGM41562B` | community-contributed battery charger / power-path devices and parts |
 | `@contrib/env` | `contrib_env::ENV_BME280` | community-contributed environmental sensor devices and parts |
-| `@sifli/sf32` | `sifli_sf32::MCU_SF32LB52EUB6` | SiFli SF32LB52X device and qualified EUB6 package binding |
+| `@contrib/fuel-gauge` | `contrib_fuel_gauge::FGAUGE_CW2015CHBD` | community-contributed battery fuel-gauge devices and audited public part bindings |
+| `@sifli/sf32` | `sifli_sf32::MCU_SF32LB52EUB6`, `sifli_sf32::MCU_SF32LB52GUC6` | SiFli SF32LB52X device and qualified EUB6/GUC6 package bindings |
 | `@contrib/io-expander` | `contrib_io_expander::IOEXP_XL9555` | community-contributed I2C/SMBus I/O expander variants and a public TSSOP24 binding with an independently derived land pattern |
 | `@raspberrypi/mcu` | `raspberrypi_mcu::RP2350A_QFN60` | Raspberry Pi microcontrollers |
 | `@richtek/dcdc` | `richtek_dcdc::buck_boost::rt6150b::BUCKBOOST_RT6150B` | Richtek DC/DC converters |
@@ -87,7 +88,7 @@ Additional community-contributed packages:
 | `@contrib/keyscan` | `contrib_keyscan::KEYSCAN_TCA8418` | community-contributed keypad / keyboard scanner devices and parts |
 | `@contrib/rtc` | `contrib_rtc::RTC_PCF85063AT` | community-contributed real-time clock devices and parts |
 | `@contrib/gnss` | `contrib_gnss::GNSS_L76K`, `contrib_gnss::GNSS_MIA_M10Q` | community-contributed GNSS modules with public manufacturer-land-pattern bindings |
-| `@contrib/ldo` | `contrib_ldo::LDO_RT9080_33_ZQFN`, `contrib_ldo::LDO_XC6206P182MR` | community-contributed low-dropout regulators with exact-manufacturer and independently derived lands, respectively |
+| `@contrib/ldo` | `contrib_ldo::LDO_ETA5060V330S8F`, `contrib_ldo::LDO_RT9080_33_ZQFN`, `contrib_ldo::LDO_XC6206P182MR` | community-contributed low-dropout regulators with exact-manufacturer and independently derived lands, respectively |
 | `@contrib/usb-uart` | `contrib_usb_uart::CH343P` | community-contributed USB-to-UART device model; CH343P part binding quarantined |
 | `@contrib/audio-amp` | `contrib_audio_amp::AMP_MAX98357A`, `contrib_audio_amp::AMP_NS4150B` | community-contributed audio amplifiers with public exact-manufacturer and independently derived lands, respectively |
 | `@contrib/pmu` | `contrib_pmu::AXP2101` | community-contributed PMU device model; AXP2101 part binding quarantined |
@@ -123,6 +124,9 @@ part in `lib/`.
 | `contrib_audio_amp::AMP_MAX98357A` | Analog Devices `MAX98357AETE+` | Analog Devices land pattern 90-0031 rev C |
 | `passive::IND_4U7_WPN201610U` | Sunlord `WPN201610U4R7MT` | Sunlord WPN-series recommended 2016 land |
 | `osc::XTAL_48MHZ` | Hosonic `E1SB48E001G00E` | Hosonic E1SB recommended land; SiFli-certified 22 ohm maximum ESR selection |
+| `passive::IND_2N0_COILCRAFT_0402DC` | Coilcraft `0402DC-2N0XJRW` | 0402DC manufacturer land; 2.0 nH high-Q supply/RF selection |
+| `passive::IND_3N0_COILCRAFT_0402DC` | Coilcraft `0402DC-3N0XJRW` | 0402DC manufacturer land; 3.0 nH high-Q RF selection |
+| `transistor::BJT_JSCJ_S8050_J3Y` | JSCJ `S8050 J3Y(RANGE:200-350)` | Exact B/E/C pinout and manufacturer SOT-23 land |
 | `osc::XTAL_32K768` | Abracon `ABS07-32.768KHZ-9-T` | Abracon ABS07 recommended land |
 
 The following are also public part bindings with exact manufacturer identity
@@ -140,6 +144,7 @@ for the intended copper, mask, stencil, placement, and reflow process.
 | `contrib_level_shifter::LS_RS0104_QFN14` | QFN3.5x3.5-14L land independently derived from Run-IC package tolerances |
 | `contrib_level_shifter::LS_RS0104_QFN12_2X2` | QFN2x2-12L land independently derived from Run-IC package tolerances |
 | `contrib_level_shifter::LS_RS0104_QFN12_2X1P7` | QFN2x1.7-12L land independently derived from Run-IC package tolerances |
+| `load_switch::LOADSW_MT9700N` | SOT-23-5 land is the nominal generic KiCad MO-178 land, not an Aerosemi recommendation; requires assembler qualification |
 
 These devices remain quarantined:
 
