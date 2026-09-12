@@ -25,6 +25,7 @@
   - [物料与封装：part、pad、footprint](cohdl/syntax/parts-footprints.md)
   - [设计与网络：design、inst、net、nc、属性](cohdl/syntax/design-nets.md)
   - [复用：模块、fn、subdesign](cohdl/syntax/composition.md)
+  - [包与注册表：依赖怎么锁、库怎么发](cohdl/syntax/packages.md)
   - [布局事实：layout、place、约束、物理属性](cohdl/syntax/layout-facts.md)
   - [走一遍：syntax-tour 的源码与产物](cohdl/syntax/tour.md)
 - [模块、fn、subdesign 与数组](cohdl/reuse.md)
