@@ -1,0 +1,9 @@
+/* Small reading adjustments; keep mdBook navigation and theme controls. */
+.content main { max-width: 860px; }
+.content { line-height: 1.8; }
+.content table { display: block; overflow-x: auto; margin: 1.3em 0; }
+.content th, .content td { min-width: 7em; padding: 0.6em 0.8em; }
+.content pre { line-height: 1.5; }
+.content blockquote { border-inline-start: 3px solid var(--links); padding: 0.5em 1em; }
+.content img { max-width: 100%; height: auto; }
+@media print { .content table { display: table; font-size: 0.85em; } }

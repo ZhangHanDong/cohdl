@@ -1,0 +1,15 @@
+// A check-only teaching model: no physical part or footprint is selected.
+device ContactPair {
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+
+design Connections {
+    inst input: ContactPair
+    inst output: ContactPair
+
+    net SIGNAL: input.A, output.A
+    net RETURN: input.B, output.B
+}

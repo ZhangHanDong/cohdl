@@ -1,0 +1,42 @@
+// Check-only language fixture. These are synthetic interface types,
+// not procurement-backed devices or a validated hardware design.
+device AddressableLED {
+    pins {
+        required DIN: 1 [input]
+        required DOUT: 2 [output]
+        required VDD: 3 [power_in]
+        required GND: 4 [power_in]
+    }
+}
+device Host {
+    pins {
+        required DATA: 1 [output]
+        required V5: 2 [power_out]
+        required GND: 3 [passive]
+    }
+}
+
+// PROPOSED M2 syntax below. NOT supported by main ab44257.
+design LedChain {
+    const N: Int = 10
+    const COLUMNS: Int = 5
+    const PITCH: Length = 4mm
+    inst host: Host
+    inst leds: [AddressableLED; N]
+
+    net VCC [5V]: host.V5, leds[0..=(leds.len - 1)].VDD
+    net GND [gnd]: host.GND, leds[0..=(leds.len - 1)].GND
+    net DATA: host.DATA, leds[0].DIN
+    for links: n in 0..(leds.len - 1) {
+        net _: leds[n].DOUT, leds[n + 1].DIN
+    }
+    nc: leds[leds.len - 1].DOUT
+
+    layout {
+        place host at (0mm, 0mm)
+        for grid: n in 0..leds.len {
+            place leds[n] at (10mm + (n % COLUMNS) * PITCH,
+                             10mm + (n / COLUMNS) * PITCH)
+        }
+    }
+}

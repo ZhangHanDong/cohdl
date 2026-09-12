@@ -1,0 +1,867 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running unittests src/lib.rs (target/debug/deps/cohdl-4708faa4fc32f420)
+
+running 62 tests
+test dxf::tests::arc_center_of_quarter_circle ... ok
+test check::ipc7351::tests::qfn_without_ep ... ok
+test check::ipc7351::tests::unknown_family_is_free_form ... ok
+test check::ipc7351::tests::rejects_malformed ... ok
+test check::ipc7351::tests::sot_and_soic ... ok
+test check::ipc7351::tests::parses_the_rfc_examples ... ok
+test emit::kicad_pcb::arc_mid_tests::dxf_clockwise_quarter_uses_the_minor_arc ... ok
+test emit::kicad_pcb::arc_mid_tests::dxf_counterclockwise_quarter_uses_the_minor_arc ... ok
+test emit::kicad_pcb::arc_mid_tests::winding_selects_the_major_arc_when_requested ... ok
+test emit::geom::tests::ratio_rendering_is_exact_and_bounded ... ok
+test emit::geom::tests::canonical_rendering ... ok
+test dxf::tests::garbage_is_unparseable ... ok
+test lex::tests::bare_numbers_stay_bare ... ok
+test lex::tests::keywords_and_idents ... ok
+test lex::tests::bad_prefix_targeted_error ... ok
+test dxf::tests::wrong_layer_is_no_entity ... ok
+test lex::tests::comments_skipped ... ok
+test lex::tests::negative_voltage_rejected ... ok
+test dxf::tests::open_polyline_is_not_closed ... ok
+test dxf::tests::extracts_closed_rect ... ok
+test lex::tests::turbofish_and_generics ... ok
+test lex::tests::unicode_degree_targeted_error ... ok
+test hash::tests::known_vectors ... ok
+test lex::tests::unicode_omega_targeted_error ... ok
+test lex::tests::unit_literals_one_token ... ok
+test lock::tests::lock_roundtrip ... ok
+test lock::tests::split ... ok
+test parse::tests::parses_impl_trait_param_and_anon_net ... ok
+test parse::tests::parses_designator_attr ... ok
+test parse::tests::parses_note10_trait_examples ... ok
+test parse::tests::parses_impls ... ok
+test parse::tests::parses_nets_nc_annotations ... ok
+test parse::tests::parses_note10_device_example ... ok
+test parse::tests::design_with_multiline_net ... ok
+test parse::tests::parses_part ... ok
+test parse::tests::parses_pin_bus_and_roles ... ok
+test parse::tests::parses_note10_fn_and_design ... ok
+test parse::tests::rejects_bare_number_spec ... ok
+test parse::tests::rejects_part_without_primary ... ok
+test parse::tests::rejects_v1_embedded_impl_clause ... ok
+test selfupdate::tests::asset_name_carries_tag_and_target ... ok
+test parse::tests::malformed_input_never_spins_in_recovery ... ok
+test selfupdate::tests::expected_hash_reads_sha256sum_format ... ok
+test selfupdate::tests::json_str_values_handles_spacing_and_escapes ... ok
+test selfupdate::tests::latest_release_is_version_max_not_list_order ... ok
+test selfupdate::tests::latest_release_skips_non_compiler_tags ... ok
+test trig::tests::cardinals_are_exact ... ok
+test trig::tests::four_quarter_turns_return_to_start_exactly ... ok
+test trig::tests::bound_half_extents_matches_the_closed_set ... ok
+test trig::tests::known_angles ... ok
+test trig::tests::no_overflow_at_the_geometry_bound ... ok
+test trig::tests::a_rotation_and_its_inverse_cancel ... ok
+test trig::tests::quadrant_symmetry ... ok
+test trig::tests::table_path_reproduces_the_exact_swaps ... ok
+test units::tests::comparison_is_exact ... ok
+test units::tests::exact_values ... ok
+test units::tests::parses_all_unit_types ... ok
+test units::tests::rejects_bad_prefixes ... ok
+test units::tests::rejects_negative_except_signed_types ... ok
+test units::tests::unknown_suffix ... ok
+test trig::tests::rotation_preserves_length_closely ... ok
+test hash::tests::incremental_matches_oneshot ... ok
+
+test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/main.rs (target/debug/deps/cohdl-a864935ed0434411)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/apidocs.rs (target/debug/deps/apidocs-417fdf36bd497b60)
+
+running 13 tests
+test registry_upload_compaction_preserves_string_bytes_and_removes_only_json_whitespace ... ok
+test circular_paste_uses_the_canonical_docs_shape ... ok
+test foreign_items_inline_dependency_geometry ... ok
+test varianted_devices_render_one_view_per_variant ... ok
+test srcless_dependency_foreign_files_have_no_src_prefix ... ok
+test backslash_displays_normalize_to_tar_paths ... ok
+test golden_fixture_bytes_are_exact ... ok
+test placeholder_footprint_and_empty_package ... ok
+test docs_generation_is_zero_impact_on_build_artifacts ... ok
+test output_is_deterministic_across_fresh_pipelines ... ok
+test lib_esp32_exports_every_admitted_part_and_fits_registry_cap ... ok
+test lib_passive_scales_and_stays_deterministic ... ok
+test lib_stm32_transport_uses_streaming_path_and_fits_registry_cap ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.69s
+
+     Running tests/checker_smoke.rs (target/debug/deps/checker_smoke-97daff289f14f8a3)
+
+running 11 tests
+test missing_subtrait_impl_chain_diag ... ok
+test duplicate_impl_rejected ... ok
+test contradictory_net_and_nc ... ok
+test unresolved_required_pin ... ok
+test wrong_unit_generic_arg ... ok
+test trait_bound_violation_at_instantiation ... ok
+test clean_design_type_checks ... ok
+test same_fn_two_call_sites_no_collision ... ok
+test impl_mapping_and_trait_role_access ... ok
+test cyclic_fn_call_detected ... ok
+test nested_fn_expansion_two_levels ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli.rs (target/debug/deps/cli-e6c4ceb1b97e71cf)
+
+running 21 tests
+test duplicate_emit_flag_is_rejected ... ok
+test invocation_failures_are_exit_2_with_no_json ... ok
+  Built design `B`: 2 instances, 2 nets
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r56-34162/out/t.net
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r56-34162/out/t-bom.csv
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r56-34162/out/footprints/t-FP.kicad_mod
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r56-34162/design.lock
+  Built design `B`: 2 instances, 2 nets
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/out/t.net
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/out/t-bom.csv
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/out/footprints/t-FP.kicad_mod
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/design.lock
+test build_refuses_symlinked_out_dir ... ok
+test build_refuses_foreign_net_and_bom ... ok
+  Built design `B`: 2 instances, 2 nets
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t.net
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t-bom.csv
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t-layout.json
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/design.lock
+test build_preserves_foreign_kicad_mod ... ok
+test nothing_to_build_is_exit_2_with_no_json ... ok
+  Built design `B`: 2 instances, 2 nets
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/out/t.net
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/out/t-bom.csv
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/out/footprints/t-FP.kicad_mod
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r71c-34162/design.lock
+test build_refuses_exact_name_foreign_and_symlink ... ok
+test build_manifest_enables_reownership ... ok
+test docs_command_refuses_errors_and_bad_flags ... ok
+test docs_command_emits_json_to_stdout_and_file ... ok
+test selection_failure_preserves_collected_diagnostics ... ok
+  Built design `B`: 2 instances, 2 nets
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t.net
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t-bom.csv
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t-layout.json
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t.xml
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/design.lock
+test unicode_omega_full_pipeline_recovery ... ok
+test post_check_failures_preserve_collected_diagnostics ... ok
+test traversal_package_name_is_rejected ... ok
+test stale_layout_artifact_is_removed ... ok
+  removed stale /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t.xml
+  Built design `B`: 2 instances, 2 nets
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t.net
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t-bom.csv
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/out/t-layout.json
+  wrote /var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-cli-r4own-34162/design.lock
+test build_leaves_a_foreign_xml_untouched ... ok
+test successful_plain_build_shows_warnings ... ok
+test search_query_invocation_contract_is_validated_before_network ... ok
+test command_specific_flags_are_validated ... ok
+test fmt_check_gate_std_and_examples ... ok
+test shipped_libraries_check_standalone ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.05s
+
+     Running tests/connectors_lailan.rs (target/debug/deps/connectors_lailan-d84970a6589d6c02)
+
+running 4 tests
+test lailan_pz127_holes_pitch_and_numbering_match_exact_sources ... ok
+test lailan_lands_and_chirality_match_the_manufacturer_layout ... ok
+test exact_lailan_part_binds_four_passive_pads ... ok
+test exact_lailan_pz127_part_binds_four_passive_pins ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/connectors_micro_fit.rs (target/debug/deps/connectors_micro_fit-8d160946d654ee68)
+
+running 2 tests
+test exact_micro_fit_parts_bind_the_right_passive_contacts ... ok
+test micro_fit_holes_pitch_numbering_and_courtyards_match_the_sales_drawing ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/deps.rs (target/debug/deps/deps-8ef6fe71fff8adca)
+
+running 27 tests
+test every_library_resolves_through_the_same_family_rule ... ok
+test lock_render_parse_round_trip_is_stable ... ok
+test a_library_root_is_recognized_by_the_packages_it_offers ... ok
+test manifest_metadata_is_read_verbatim ... ok
+test json_mode_carries_package_diags_in_the_array ... ok
+test corrupted_lock_is_flagged ... ok
+test misplaced_package_name_is_rejected ... ok
+test arbitrary_version_dir_names_resolve_by_manifest ... ok
+test missing_transitive_dependency_names_its_requirer ... ok
+test duplicate_package_identity_is_rejected ... ok
+test no_std_skips_a_dependencys_std_pin ... ok
+test the_repos_std_is_an_ordinary_library_under_lib ... ok
+test std_override_always_warns ... ok
+test fmt_leaves_package_metadata_untouched ... ok
+test version_parsing_is_exact_only ... ok
+test manifest_version_is_the_authority_not_the_dirname ... ok
+test first_resolution_writes_lock_and_rebuild_is_byte_stable ... ok
+test unresolvable_version_lists_searched_locations ... ok
+test fmt_sorts_dependencies_by_name ... ok
+test version_ranges_are_rejected_with_suggestion ... ok
+test divergent_transitive_pins_are_a_conflict_unless_the_project_chooses ... ok
+test the_project_pin_wins_over_a_dependencys_pin ... ok
+test removing_the_direct_dependency_prunes_its_transitive_lock_rows ... ok
+test tampered_transitive_content_is_a_hard_error ... ok
+test transitive_dependency_resolves_and_locks_the_closure ... ok
+test pre_rfc029_manifest_is_flagged_and_update_migrates_it ... ok
+test tampered_locked_content_is_a_hard_error ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+
+     Running tests/easyeda.rs (target/debug/deps/easyeda-6dab26b0f3937b93)
+
+running 9 tests
+test shape_is_the_v1_document ... ok
+test agrees_with_the_kicad_netlist ... ok
+test multi_pad_pins_flatten_and_nc_is_absent ... ok
+test emission_is_deterministic ... ok
+test cli_json_names_the_enet_artifact ... ok
+test cli_enet_only_with_flag_and_zero_impact_on_everything_else ... ok
+test cli_flag_matrix_includes_easyeda ... ok
+test document_parses_as_json ... ok
+test example_boards_are_deterministic_and_complete ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+
+     Running tests/error_registry.rs (target/debug/deps/error_registry-f3b15831c43196db)
+
+running 7 tests
+test codes_in_text_ignores_raw_literals ... ok
+test scanner_ignores_commented_constructors ... ok
+test raw_strings_are_not_call_sites ... ok
+test no_duplicate_registry_rows ... ok
+test every_source_code_has_a_registry_row ... ok
+test every_live_registry_row_has_a_call_site ... ok
+test call_site_scanner_finds_known_sites ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/esp32_footprints.rs (target/debug/deps/esp32_footprints-43d6a17430e06203)
+
+running 2 tests
+test esp32_generated_footprints_round_trip_every_normalized_pad ... ok
+test esp32_representative_geometry_is_consistent_across_all_board_emitters ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running tests/exit_criteria.rs (target/debug/deps/exit_criteria-258ca9ff011ef115)
+
+running 41 tests
+test cyclic_call_full_chain_diagnostic ... ok
+test drc_d001_never_compares_across_unit_types ... ok
+test bare_number_where_unit_expected ... ok
+test contradictory_net_and_nc_diagnostic ... ok
+test drc_d004_multi_driver ... ok
+test designator_assignment_is_order_independent ... ok
+test designator_same_prefix_no_collision ... ok
+test drc_d003_single_driver ... ok
+test drc_d001_voltage_exceed ... ok
+test drc_d002_polarity_mismatch ... ok
+test designator_stability_tombstones_and_overrides ... ok
+test ambiguous_part_binding_is_deterministic_and_noted ... ok
+test dunder_names_are_reserved ... ok
+test generic_trait_bound_violation_diagnostic ... ok
+test missing_subtrait_impl_chain_diagnostic ... ok
+test impl_missing_pin_and_spec_names_trait_and_gap ... ok
+test rfc008_duplicate_variant_is_e906 ... ok
+test net_annotation_must_be_voltage_typed ... ok
+test rfc008_impl_satisfaction_must_hold_for_every_variant ... ok
+test rfc008_bare_pins_on_variant_device_is_e908 ... ok
+test rfc008_missing_pin_role_is_e901_listing_roles ... ok
+test rfc008_omitted_selector_is_e904_no_implicit_default ... ok
+test nested_fn_three_levels_substitution_threading ... ok
+test rfc008_part_must_select_variant ... ok
+test overridden_paths_prior_designator_stays_reserved ... ok
+test rfc008_selector_on_plain_device_is_e905 ... ok
+test rfc008_undeclared_qualifier_is_e907 ... ok
+test rfc008_per_variant_pin_numbers_reach_the_netlist ... ok
+test rfc008_selector_on_part_instantiation_is_rejected ... ok
+test rfc008_undeclared_variant_selected_is_e903_with_valid_set ... ok
+test robot_dog_mainboard_builds_cleanly ... ignored, examples/robot-dog-mainboard is not in the repository yet; remove this attribute when it lands
+test rfc008_variant_without_pins_block_is_e902_naming_it ... ok
+test rfc008_wildcard_variant_arm_is_rejected ... ok
+test rfc008_variant_spec_merge_override_and_addition ... ok
+test unresolved_required_pin_diagnostic ... ok
+test wrong_unit_spec_names_expected_and_actual ... ok
+test unbound_instance_is_a_build_error ... ok
+test grammar_parses_demo_board_and_std ... ok
+test rpi_pico2_uses_reusable_catalog_packages_and_canonical_chip_pins ... ok
+test rpi_pico2_example_builds_cleanly ... ok
+test example_build_matches_committed_golden_output ... ok
+
+test result: ok. 40 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.75s
+
+     Running tests/fmt.rs (target/debug/deps/fmt-97bee74d73b40d59)
+
+running 33 tests
+test fmt_rejects_nonparsing_source ... ok
+test backslash_string_round_trips ... ok
+test eof_backstop_never_drops_a_comment ... ok
+test empty_body_comments_stay_inside_braces ... ok
+test blank_after_open_brace_is_preserved ... ok
+test comment_between_attribute_and_target_stays_between ... ok
+test comments_inside_layout_blocks_survive_in_place ... ok
+test empty_body_opener_comment_stays_attached ... ok
+test attr_sharing_line_with_decl_leaves_comment_to_the_decl ... ok
+test comments_inside_trait_impl_part_survive ... ok
+test attributes_keep_source_order_and_comments ... ok
+test idempotent_on_messy_input ... ok
+test interior_full_line_comment_in_multiline_statement_survives ... ok
+test multi_line_use_trailing_comment_rides_the_import ... ok
+test qualified_paths_survive_formatting ... ok
+test multi_line_use_with_inner_comment_is_idempotent ... ok
+test shared_line_trailing_comment_attaches_to_last_statement ... ok
+test long_lines_wrap_at_100_columns ... ok
+test same_line_mixed_attributes_keep_written_order ... ok
+test tolerance_canonicalizes_unit_literal_unquoted ... ok
+test trailing_comment_on_first_line_of_multiline_statement_survives ... ok
+test trailing_comment_on_one_line_item_survives ... ok
+test trailing_comment_on_attribute_survives ... ok
+test use_statements_canonicalize_and_sort ... ok
+test use_trailing_comments_ride_their_import_when_sorted ... ok
+test use_run_with_interior_comment_keeps_author_order ... ok
+test tolerance_quoted_non_time_stays_quoted ... ok
+test whole_construct_comment_stays_on_the_construct ... ok
+test trailing_comments_on_header_and_brace_lines_survive ... ok
+test repo_is_in_canonical_form ... ok
+test comments_are_preserved ... ok
+test idempotent_on_repo_files ... ok
+test formatting_is_semantically_inert ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.42s
+
+     Running tests/footprint.rs (target/debug/deps/footprint-ae42563079d63295)
+
+running 88 tests
+test a_slot_needs_an_elongated_pad ... ok
+test a_slot_must_fit_inside_its_own_pad ... ok
+test a_marker_must_name_a_pad_the_footprint_declares ... ok
+test bounded_pad_controls_parse_and_validate ... ok
+test bounded_pad_controls_reject_unsafe_forms ... ok
+test annulus_pad_syntax_is_accepted ... ok
+test annulus_invariants_fail_closed ... ok
+test empty_footprint_name_grammar_only ... ok
+test courtyard_typo_and_broken_placement_are_contained ... ok
+test drill_plating_biconditional ... ok
+test fmt_preserves_ipc7351_identifier ... ok
+test corner_radius_is_bounded_and_mutually_exclusive_with_chamfer ... ok
+test fmt_round_trips_a_window ... ok
+test fmt_round_trips_a_slot_drill ... ok
+test courtyard_only_footprint_is_real_content ... ok
+test circle_courtyard_projects_in_both_emitters ... ok
+test bounded_pad_controls_project_to_kicad_without_implicit_paste ... ok
+test circular_paste_projects_to_kicad_and_ipc2581 ... ok
+test fmt_round_trips_silkscreen_with_markers_first ... ok
+test fmt_round_trips_bounded_pad_controls ... ok
+test circular_paste_parses_formats_and_validates ... ok
+test footprint_field_naming_a_pad_is_a_kind_error ... ok
+test invalid_variant_selection_does_not_cascade_to_e807 ... ok
+test fmt_round_trips_pads_and_footprint_bodies ... ok
+test e807_checks_alt_entry_footprints_too ... ok
+test malformed_name_is_e808 ... ok
+test length_literals_lex_including_negatives ... ok
+test kicad_mod_file_names_cannot_collide ... ok
+test marker_geometry_uses_one_canonical_land_per_electrical_number ... ok
+test mount_hole_bad_diameter_is_e810 ... ok
+test kicad_mod_projection ... ok
+test mount_hole_bad_shape_is_e810 ... ok
+test mount_hole_accepts_both_field_orderings ... ok
+test geometry_is_exact_beyond_six_decimals_and_canonical ... ok
+test misc_library_exports_locked_public_fabrication_contract ... ok
+test misc_library_emits_exact_kicad_pad_semantics ... ok
+test mount_hole_invalid_plating_is_e810 ... ok
+test mount_hole_defaulted_circle_rejects_size_and_says_so ... ok
+test markers_expand_to_real_geometry_clear_of_their_pad ... ok
+test mount_hole_duplicate_number_is_e810 ... ok
+test mount_hole_non_positive_size_is_e810 ... ok
+test mount_hole_parses_disjoint_from_pads ... ok
+test mount_hole_round_trips_through_fmt ... ok
+test mount_hole_shape_and_size_parse ... ok
+test mount_hole_rect_oval_project_to_kicad_slots ... ok
+test mount_hole_shape_round_trips_through_fmt ... ok
+test name_outside_closed_families_is_free_form ... ok
+test mount_hole_projects_np_and_plated_thru_hole ... ok
+test mount_hole_size_arity_is_e810 ... ok
+test mount_hole_shape_geometry_mismatch_is_e810 ... ok
+test name_pitch_check_adds_large_squared_axes_exactly ... ok
+test name_pin_count_mismatch_is_e809 ... ok
+test name_pitch_mismatch_is_e809 ... ok
+test negative_literal_messages_name_length ... ok
+test nameless_pad_and_footprint_bodies_do_not_swallow_the_file ... ok
+test non_length_dimensions_are_rejected ... ok
+test name_pitch_check_does_not_overflow_valid_large_geometry ... ok
+test one_pad_field_typo_one_error_plus_true_missing ... ok
+test non_positive_extents_are_rejected ... ok
+test oversized_silkscreen_ref_is_rejected ... ok
+test oversized_length_is_diagnosed_not_panicked ... ok
+test pad_references_resolve_like_everything_else ... ok
+test pad_vocab_and_arity_are_checked ... ok
+test polarity_marker_needs_two_distinct_electrical_pad_numbers ... ok
+test repeated_electrical_pad_numbers_are_allowed ... ok
+test qfn_name_with_ep_passes ... ok
+test pin_1_marker_shapes_both_expand ... ok
+test selector_on_non_variant_device_does_not_cascade_e807 ... ok
+test pad_set_must_match_the_bound_device ... ok
+test silkscreen_closed_sets_and_shapes_are_checked ... ok
+test repeated_pin_ipc_representative_is_stable_when_a_via_is_authored_first ... ok
+test repeated_pin_ipc_keeps_source_order_and_canonical_representative_rotation ... ok
+test slot_dimensions_are_checked_like_any_other_length ... ok
+test silkscreen_primitives_project_onto_kicad_silk_layer ... ok
+test valid_chip_name_passes ... ok
+test slot_drill_projects_kicad_oval_drill ... ok
+test unused_part_footprint_mismatch_is_caught ... ok
+test unclosed_courtyard_is_contained ... ok
+test slot_drill_reports_its_minor_axis_to_ipc2581 ... ok
+test window_dimensions_are_checked_like_a_courtyard ... ok
+test window_projects_onto_kicad_edge_cuts ... ok
+test segmented_annulus_vertex_cap_matches_emitted_geometry ... ok
+test bounded_pad_controls_project_distinct_ipc_mask_and_paste ... ok
+test mount_hole_rect_ipc_is_schema_valid ... ok
+test ipc2581_projects_real_pins_and_stays_schema_valid ... ok
+test annulus_formatter_and_backends_are_lossless ... ok
+test mount_hole_ipc_is_nonplated_and_schema_valid ... ok
+test repeated_ep_and_roundrect_project_losslessly ... ok
+
+test result: ok. 88 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/inst_array.rs (target/debug/deps/inst_array-da6bf34e7a4fbf2d)
+
+running 15 tests
+test array_syntax_round_trips_through_fmt ... ok
+test non_positive_length_is_e211 ... ok
+test indexed_reference_works_in_place ... ok
+test array_name_collision_is_e201 ... ok
+test indexing_a_non_array_is_rejected ... ok
+test indexed_reference_works_in_fn_call_args ... ok
+test bare_unindexed_array_reference_is_rejected ... ok
+test unstrided_range_does_not_gain_a_step_in_fmt ... ok
+test out_of_bounds_index_is_e202_naming_the_valid_range ... ok
+test two_arrays_of_the_same_device_are_independent ... ok
+test fan_out_equals_hand_written_indexed_references ... ok
+test array_typed_instance_declares_n_real_elements ... ok
+test range_and_list_fan_out_in_net_members ... ok
+test range_or_list_outside_net_members_is_e211 ... ok
+test strided_equals_explicit_list ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/intent.rs (target/debug/deps/intent-68026fbbcf964b83)
+
+running 9 tests
+test fmt_preserves_and_normalizes_intent ... ok
+test multiple_intent_on_one_declaration_is_an_error ... ok
+test designator_attr_still_inst_only ... ok
+test malformed_intent_arg_shape_is_an_error ... ok
+test intent_valid_on_every_declared_target ... ok
+test mutating_intent_on_failing_fixture_is_fully_json_identical ... ok
+test intent_is_zero_impact_on_diagnostic_positions_in_failing_fixture ... ok
+test intent_is_zero_impact ... ok
+test mutating_intent_text_is_zero_impact ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ipc2581.rs (target/debug/deps/ipc2581-e883a47d1d9d507f)
+
+running 24 tests
+test designator_special_chars_are_rejected_at_source ... ok
+test components_stay_at_origin_without_outline ... ok
+test components_stage_outside_board_outline ... ok
+test completeness_marker_is_machine_readable ... ok
+test courtyardless_footprint_gets_nondegenerate_outline ... ok
+test emission_is_byte_deterministic ... ok
+test hostile_strings_are_escaped_and_names_sanitized ... ok
+test net_class_attribute_mirrors_annotations ... ok
+test no_board_outline_emits_no_profile ... ok
+test avl_mpns_stay_distinct_and_carry_raw_mpn ... ok
+test hostile_designator_prefixes_stay_schema_valid_and_distinct ... ok
+test component_attributes_and_pinrefs_are_semantically_faithful ... ok
+test placed_copper_is_tied_to_net_and_pin ... ok
+test board_outline_emits_profile_polygon ... ok
+test smd_pins_carry_mount_type ... ok
+test emits_physical_padstacks_layers_and_placed_copper ... ok
+test duplicate_mpn_across_manufacturers_keeps_both ... ok
+test control_characters_stay_well_formed_and_tabs_survive ... ok
+test placed_component_locks_at_position_and_is_not_staged ... ok
+test forbidden_scalars_projected_and_enterprise_ids_unique ... ok
+test cli_emit_writes_documents_and_stays_zero_impact ... ok
+test cli_emit_flag_matrix ... ok
+test fidelity_over_corpus_and_examples ... ok
+test schema_validity_over_corpus ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s
+
+     Running tests/json_output.rs (target/debug/deps/json_output-a8034890887f8e38)
+
+running 5 tests
+test clean_design_reports_pass_and_empty_diagnostics ... ok
+test build_object_decodes_with_and_without_optional_artifacts ... ok
+test schema_shape_and_escaping ... ok
+test document_is_valid_json_and_fields_decode ... ok
+test equivalence_across_error_fixtures ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kicad_custom_chamfer.rs (target/debug/deps/kicad_custom_chamfer-a69cb53e0c0160e2)
+
+running 2 tests
+test oversized_chamfer_uses_exact_custom_polygon_and_keeps_pad_controls ... ok
+test exactly_half_minimum_dimension_stays_native_and_deterministic ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kicad_pcb.rs (target/debug/deps/kicad_pcb-9d1086b699280be8)
+
+running 14 tests
+test back_side_with_zero_rotation_folds_the_flip_into_180 ... ok
+test back_side_is_kicads_own_on_disk_representation ... ok
+test board_is_deterministic_with_a_fixed_format_stamp ... ok
+test outline_draws_edge_cuts_lines ... ok
+test circular_paste_aperture_is_independent_on_both_board_sides ... ok
+test top_side_placement_passes_coordinates_through_verbatim ... ok
+test nets_bind_by_name_on_every_pad_copy_and_nc_is_absent ... ok
+test unplaced_without_outline_stage_on_the_grid ... ok
+test unplaced_with_outline_stage_on_the_shared_shelf_outside_it ... ok
+test cli_emits_both_formats_in_one_build ... ok
+test cli_flag_matrix_names_both_formats ... ok
+test cli_foreign_board_file_is_never_clobbered ... ok
+test cli_board_only_with_flag_and_zero_impact_on_everything_else ... ok
+test example_boards_are_deterministic_and_complete ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running tests/layout.rs (target/debug/deps/layout-5adc2ea91f3f9170)
+
+running 36 tests
+test fmt_round_trips_place_with_rotate ... ok
+test fmt_round_trips_board_outline ... ok
+test fmt_normalizes_layout ... ok
+test fmt_round_trips_placement_hint ... ok
+test duplicate_place_is_e1007 ... ok
+test duplicate_board_outline_is_e1006 ... ok
+test fn_scope_duplicate_class_message_uses_source_name ... ok
+test board_outline_inside_fn_is_e1006 ... ok
+test duplicate_net_class_is_e1002 ... ok
+test diff_pair_same_net_is_rejected ... ok
+test diff_pair_wrong_arity_is_e1003 ... ok
+test layout_bearing_fn_is_reusable ... ok
+test board_outline_bad_path_is_e1006_at_check ... ok
+test layout_is_zero_impact_on_netlist_and_diagnostics ... ok
+test length_match_all_same_net_is_rejected ... ok
+test board_outline_is_zero_impact_on_netlist_and_bom ... ok
+test board_outline_projects_dxf_geometry_to_layout_json ... ok
+test length_match_too_few_is_e1004 ... ok
+test no_board_outline_is_json_null ... ok
+test layout_json_shape ... ok
+test place_unknown_instance_is_e1007 ... ok
+test merged_away_net_is_not_a_false_e1001 ... ok
+test mutating_layout_content_is_zero_impact ... ok
+test missing_dxf_is_e1006_at_build ... ok
+test place_inside_fn_is_e1007 ... ok
+test non_closed_dxf_is_e1006_at_build ... ok
+test partially_merged_group_deduplicates_in_layout_json ... ok
+test placement_projects_to_layout_json_with_rotation ... ok
+test placement_is_zero_impact_on_netlist_and_bom ... ok
+test place_non_length_is_e1007 ... ok
+test unknown_net_is_e1001 ... ok
+test unparseable_dxf_is_e1006_at_build ... ok
+test tolerance_accepts_unit_literal_and_string ... ok
+test place_out_of_range_rotation_is_e1007 ... ok
+test place_accepts_an_arbitrary_rotation ... ok
+test tolerance_non_time_units_are_rejected ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/library.rs (target/debug/deps/library-469588ebd4bbfa0a)
+
+running 39 tests
+test equivalent_unit_spellings_are_the_same_component ... ok
+test default_equivalent_generics_are_the_same_component ... ok
+test doc_on_impl_is_rejected_with_the_reason ... ok
+test consistent_parts_sharing_mfr_mpn_are_allowed ... ok
+test duplicate_avl_field_is_rejected ... ok
+test alt_entry_mpn_conflict_is_checked ... ok
+test doc_attr_shape_is_validated ... ok
+test doc_paths_reject_drive_roots_and_uri_schemes ... ok
+test doc_paths_must_be_package_relative ... ok
+test doc_paths_reject_dot_slash_and_empty_components ... ok
+test footprint_missing_name_is_named ... ok
+test footprint_body_recovery_is_contained ... ok
+test footprint_in_a_body_gets_a_targeted_error ... ok
+test footprint_reference_must_be_a_footprint ... ok
+test footprint_body_is_real_since_rfc018 ... ok
+test compat_entry_supports_footprints ... ok
+test fmt_round_trips_footprint_and_docs ... ok
+test footprint_string_gets_the_migration_error ... ok
+test footprint_resolves_like_every_other_declaration ... ok
+test inst_attrs_are_validated_at_parse_even_in_uncalled_fns ... ok
+test inconsistent_parts_sharing_mfr_mpn_are_rejected ... ok
+test docs_are_zero_impact_and_recorded ... ok
+test non_pub_footprint_is_invisible_cross_package ... ok
+test netlist_emits_the_resolved_footprint_symbol ... ok
+test omitted_alt_footprint_inherits_primary ... ok
+test recovery_stops_at_footprint_declarations ... ok
+test std_exports_only_the_core_trait_allowlist ... ok
+test same_mpn_distinct_fq_devices_are_rejected ... ok
+test t3902_public_part_matches_manufacturer_geometry ... ok
+test ti_sn74lvc8t245pwr_uses_exact_pinout_part_and_pw0024a_land ... ok
+test promoted_w25q128_variants_use_the_datasheet_pinouts_and_exact_lands ... ok
+test esp32_s3_wroom_uses_exact_segmented_ep_and_distinct_memory_parts ... ok
+test generated_zero_ohm_resistors_match_the_locked_oracle ... ok
+test generated_esp32_catalog_matches_the_pinned_official_sources ... ok
+test generated_esp32_footprints_match_the_pinned_manufacturer_snapshot ... ok
+test generated_stm32_footprints_match_the_pinned_kicad_snapshot ... ok
+test stm32f072_parts_use_canonical_pins_and_audited_geometry ... ok
+test every_shipped_component_library_has_consistent_part_footprints ... ok
+test generated_stm32_catalog_matches_the_pinned_st_snapshot ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.68s
+
+     Running tests/lsp.rs (target/debug/deps/lsp-53cb475b26c15bd1)
+
+running 50 tests
+test bad_jsonrpc_envelope_is_invalid_request ... ok
+test empty_std_with_phantom_buffer_shows_message ... ok
+test exit_with_id_does_not_terminate ... ok
+test exit_without_shutdown_is_exit_code_1 ... ok
+test broken_std_surfaces_as_message ... ok
+test completion_covers_post_rfc014_keywords ... ok
+test circular_paste_hover_explains_the_independent_aperture ... ok
+test annulus_hover_explains_bounded_geometry ... ok
+test did_change_overlay_updates_diagnostics ... ok
+test goto_definition_resolves_call_turbofish_arg ... ok
+test footprint_ref_definition_and_part_hover ... ok
+test goto_definition_resolves_inst_type ... ok
+test initialize_advertises_save_sync ... ok
+test initialize_notification_does_not_consume_lifecycle ... ok
+test initialize_advertises_completion_and_returns_keywords ... ok
+test hover_empty_impl_and_pin ... ok
+test hover_and_goto_definition_on_pad_placement ... ok
+test hover_on_fn_generic_default_literal ... ok
+test instance_reference_definition ... ok
+test hover_pin_reference_and_unit_literal ... ok
+test goto_definition_resolves_imported_and_qualified_names ... ok
+test invalid_position_params_get_invalid_params_error ... ok
+test goto_definition_resolves_subdesign_references ... ok
+test lifecycle_gates_requests ... ok
+test malformed_request_with_null_id_gets_response ... ok
+test lowercase_content_length_header_accepted ... ok
+test malformed_notification_is_dropped ... ok
+test malformed_frames_get_parse_errors_and_session_survives ... ok
+test localhost_authority_uri_accepted ... ok
+test notification_with_id_is_invalid_request ... ok
+test nested_phantom_buffer_gets_the_cli_module_path ... ok
+test object_id_is_invalid_request ... ok
+test out_of_range_position_is_invalid_params ... ok
+test manifest_dependency_has_clean_diagnostics_and_definition ... ok
+test pad_decl_and_mount_hole_hover ... ok
+test phantom_buffer_gets_diagnostics_from_overlay ... ok
+test percent_encoded_paths_keep_diagnostics ... ok
+test pin_hover_respects_selected_variant ... ok
+test phys_attr_definitions_and_hover ... ok
+test pin_reference_definition_and_array_pin_hover ... ok
+test project_load_failure_surfaces_not_false_clean ... ok
+test place_and_layout_net_definitions ... ok
+test related_information_requires_client_capability ... ok
+test selection_error_surfaces_as_show_message ... ok
+test references_lists_all_impls ... ok
+test two_loose_files_keep_independent_diagnostics ... ok
+test use_import_definition_and_hover ... ok
+test two_files_one_project_clear_independently ... ok
+test publish_diagnostics_matches_check_json ... ok
+test equivalence_over_diagnostic_corpus ... ok
+
+test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests/modules.rs (target/debug/deps/modules-8b8b7fcd55fd89c1)
+
+running 32 tests
+test keyword_package_root_anchors_to_project_file ... ok
+test keyword_std_segment_is_e210 ... ok
+test keyword_package_root_is_e210 ... ok
+test hyphenated_directory_is_unspellable_e210 ... ok
+test colliding_names_across_packages_resolve_via_qualified_paths ... ok
+test keyword_directory_is_unspellable_e210 ... ok
+test file_tree_becomes_module_tree ... ok
+test design_vs_declaration_collision_in_package_is_e201 ... ok
+test compat_entry_defaults_to_main_package ... ok
+test intra_package_cross_module_collision_is_ambiguous_at_use_site ... ok
+test non_pub_cross_package_reference_is_e209 ... ok
+test colliding_names_resolve_at_reference_level ... ok
+test designator_prefix_ignores_module_paths ... ok
+test same_module_duplicate_is_still_an_error ... ok
+test qualified_and_imported_references_work_intra_package ... ok
+test project_polarized_trait_does_not_shade_d002 ... ok
+test single_package_projects_are_unchanged ... ok
+test unresolved_reference_is_reported_once ... ok
+test unknown_references_suggest_closest_match ... ok
+test project_name_shadows_std_prelude ... ok
+test part_binding_order_ignores_module_paths ... ok
+test unresolved_reference_in_uncalled_fn_is_caught ... ok
+test uncalled_fn_body_is_semantically_checked ... ok
+test unresolved_use_path_suggests_closest_match ... ok
+test uncalled_fn_body_deeper_semantics ... ok
+test use_collision_is_e208_at_the_use_site ... ok
+test use_of_a_design_names_the_real_rule ... ok
+test valid_uncalled_fn_body_passes ... ok
+test use_grammar_errors_anchor_and_recover ... ok
+test use_requires_semicolon_and_qualified_path ... ok
+test std_prelude_stays_implicitly_visible_and_qualified_paths_reach_it ... ok
+test std_package_name_is_reserved ... ok
+
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/quilter.rs (target/debug/deps/quilter-1010ecd5fe5b8188)
+
+running 15 tests
+test indexed_bypass_round_trips_through_fmt ... ok
+test bare_bypass_form_round_trips_through_fmt ... ok
+test attributes_and_diff_pair_bracket_round_trip_through_fmt ... ok
+test converter_on_fn_instance_parameters_resolves_per_call_site ... ok
+test bypass_on_fn_pin_parameter_yields_one_row_per_call_site ... ok
+test ranged_bypass_target_is_e211 ... ok
+test unresolvable_bare_target_is_e1009 ... ok
+test out_of_bounds_bypass_index_is_e202 ... ok
+test duplicate_primary_ground_is_e1009 ... ok
+test no_physics_facts_emits_no_files ... ok
+test csv_rows_scale_and_flatten_like_the_templates ... ok
+test bypass_targets_an_array_element ... ok
+test csv_set_matches_the_supplied_templates ... ok
+test unresolved_references_are_e1009 ... ok
+test wrong_target_and_bad_values_are_diagnosed ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/registry.rs (target/debug/deps/registry-fc1286d9498ff9be)
+
+running 26 tests
+test name_version_split_respects_scopes ... ok
+test publish_namespace_rejection_is_surfaced ... ok
+test publish_surfaces_a_server_side_manifest_rejection ... ok
+test docs_publish_sends_compact_length_delimited_authenticated_sidecar ... ok
+test publish_needs_login_and_reports_server_hash ... ok
+test publish_echoes_the_metadata_and_documents_it_sends ... ok
+test malformed_search_response_is_e1204_in_human_and_json_modes ... ok
+test empty_search_is_a_success_in_human_and_json_modes ... ok
+test missing_package_and_unreachable_registry_are_distinct ... ok
+test install_fetches_only_whats_missing ... ok
+test tar_round_trip_preserves_content_hash ... ok
+test three_tier_name_grammar ... ok
+test search_finds_packages_and_parts_and_url_encodes_the_query ... ok
+test publish_without_a_license_never_reaches_the_network ... ok
+test unpack_rejects_path_traversal ... ok
+test search_normalizes_unicode_whitespace_and_bom_before_the_request ... ok
+test search_json_is_deterministic_and_preserves_nullable_fields ... ok
+test search_url_encoding_preserves_a_unicode_query ... ok
+test search_decoder_enforces_default_result_and_transport_bounds ... ok
+test add_fetches_writes_manifest_and_lock ... ok
+test unreachable_search_registry_is_e1204 ... ok
+test add_fetches_the_transitive_closure_into_the_cache ... ok
+test install_fetches_the_transitive_closure ... ok
+test remove_prunes_manifest_and_lock_and_flags_absent ... ok
+test update_bumps_to_latest_published ... ok
+test search_decoder_rejects_ambiguous_or_wrong_typed_json ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running tests/self_update.rs (target/debug/deps/self_update-69940829f1fb4a5c)
+
+running 4 tests
+test self_update_refuses_a_corrupted_download ... ok
+test self_update_replaces_the_running_binary ... ok
+test self_update_up_to_date_is_a_no_op ... ok
+test self_update_check_reports_without_installing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.27s
+
+     Running tests/side_rotate.rs (target/debug/deps/side_rotate-9d90252d5ef1f8f3)
+
+running 11 tests
+test pad_rotate_round_trips_through_fmt ... ok
+test side_invalid_is_e1008 ... ok
+test side_parses_layout_json_and_byte_compat ... ok
+test ipc_bottom_side_reflects_pad_local_chamfer_and_rotation ... ok
+test ipc_carries_side_and_mirrored_pads ... ok
+test pad_rotate_parses_and_emits_kicad_angle ... ok
+test pad_rotate_accepts_an_arbitrary_angle ... ok
+test pad_rotate_out_of_range_is_e811 ... ok
+test ipc_rotates_pads_at_a_non_cardinal_angle ... ok
+test side_and_rotate_accept_either_order_and_fmt_canonicalizes ... ok
+test ipc_with_side_and_pad_rotate_is_schema_valid ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/source_exact_parts.rs (target/debug/deps/source_exact_parts-113a0940a2cff091)
+
+running 5 tests
+test exact_xunpu_switch_matches_normally_open_two_pad_drawing ... ok
+test max16054_matches_locked_kicad_roundrect_geometry ... ok
+test exact_source_leds_match_manufacturer_polarity_and_lands ... ok
+test hirose_ufl_matches_locked_kicad_roundrect_geometry ... ok
+test exact_xfcn_header_and_lailan_fpc_match_layouts ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/stm32_footprints.rs (target/debug/deps/stm32_footprints-e1f92072400fb62a)
+
+running 1 test
+test stm32_focused_footprints_round_trip_all_normalized_geometry ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+
+     Running tests/subdesign.rs (target/debug/deps/subdesign-02adecbea5847e80)
+
+running 24 tests
+test fmt_canonical_form_is_a_fixed_point_and_keeps_every_construct ... ok
+test recursive_containment_is_e1304_naming_the_cycle ... ok
+test required_port_unconnected_is_e1302 ... ok
+test nested_subdesigns_compose_paths_ports_and_layout ... ok
+test pub_subdesign_imports_across_packages_and_private_is_e209 ... ok
+test nc_on_a_port_is_e1306 ... ok
+test explicit_reach_in_override_beats_the_default_for_one_instantiation ... ok
+test reach_in_path_failure_names_the_exact_segment ... ok
+test deterministic_bytes ... ok
+test ports_merge_internal_and_external_nets_and_the_container_vanishes ... ok
+test array_element_name_collisions_are_e201_in_both_directions ... ok
+test rotated_and_flipped_anchor_uses_the_rfc026_pad_math ... ok
+test unknown_port_is_e1301_naming_the_boundary ... ok
+test unused_subdesign_still_validates_nested_use_sites ... ok
+test unanchored_node_contributes_no_placements ... ok
+test two_uses_are_hygienic_with_distinct_paths_and_designators ... ok
+test unknown_net_name_in_port_block_is_e1303 ... ok
+test physics_attr_through_a_port_is_e1009_never_a_panic ... ok
+test array_typed_use_sites_index_everywhere_and_bound_check ... ok
+test use_site_in_fn_body_is_e1307_even_uncalled ... ok
+test unanchored_outer_override_does_not_shadow_an_anchored_default ... ok
+test unused_subdesign_validates_argument_kinds_and_trait_bounds ... ok
+test used_subdesign_reports_each_static_defect_once ... ok
+test whole_unit_placement_transforms_the_default_layout ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ti_power_switch.rs (target/debug/deps/ti_power_switch-de4167e1b003c442)
+
+running 4 tests
+test tps259823onrget_pinout_and_orderable_part_match_rev_d ... ok
+test rge0024m_lands_vias_and_stencil_match_ti_drawing_4223975_b ... ok
+test rge0024m_builds_and_projects_all_39_pad_features ... ok
+test vendored_tps25982_pdf_is_the_audited_rev_d_file ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+   Doc-tests cohdl
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

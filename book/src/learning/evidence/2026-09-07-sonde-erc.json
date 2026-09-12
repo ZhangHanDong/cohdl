@@ -1,0 +1,34 @@
+[
+  {
+    "description": "在库 'Connector_Dsub' 中找不到封装 'DSUB-25_Male_EdgeMount_P2.77mm': 符号 J1 [DB25]",
+    "items": [
+      {
+        "description": "符号 J1 [DB25]",
+        "uuid": "00000000-0000-0000-0000-00003ebf7d04",
+        "x": 0.4445,
+        "y": 0.7112
+      }
+    ],
+    "rule": "footprint_link_issues",
+    "severity": "warning",
+    "sheet": "/",
+    "x": 0.4445,
+    "y": 0.7112
+  },
+  {
+    "description": "在库 'Connector_Dsub' 中找不到封装 'DSUB-9_Male_EdgeMount_P2.77mm': 符号 J2 [DB9]",
+    "items": [
+      {
+        "description": "符号 J2 [DB9]",
+        "uuid": "00000000-0000-0000-0000-00003ecde5c8",
+        "x": 2.7178,
+        "y": 0.9906
+      }
+    ],
+    "rule": "footprint_link_issues",
+    "severity": "warning",
+    "sheet": "/",
+    "x": 2.7178,
+    "y": 0.9906
+  }
+]

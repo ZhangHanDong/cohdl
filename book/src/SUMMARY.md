@@ -1,0 +1,90 @@
+# Summary
+
+[如何使用这本书](index.md)
+[学习路线](route.md)
+
+# 实操课程
+
+- [第 0 课：准备工作台](course/00-workbench.md)
+- [第 1 课：看懂一条连接](course/01-read-board.md)
+- [整板解读：Sonde 并口下载接口](course/01-sonde-circuit.md)
+- [第 2 课：修改、检查与修复](course/02-edit-check.md)
+- [第 3 课：认出功能区与重复电路（课程提纲）](course/03-functions.md)
+- [第 3 课实操：十路 RC 的连接、布局与扩容](course/03-rc-workflow.md)
+- [第 4 课：第一块 CoHDL 小板（课程提纲）](course/04-first-board.md)
+- [第 5 课：手表开发原型（课程提纲）](course/05-watch-prototype.md)
+- [第 6 课：电源预算与器件条件（课程提纲）](course/06-power-contracts.md)
+- [第 7 课：制造、测试与缩板（课程提纲）](course/07-production-test.md)
+
+# CoHDL 当前能力
+
+- [连接模型：从实例到焊盘](cohdl/connections.md)
+- [语法总览：每个关键字管什么](cohdl/syntax/index.md)
+  - [语言项与 PCB 事实的完整对照](cohdl/syntax/mapping.md)
+  - [单位与器件：trait、device、impl](cohdl/syntax/units-devices.md)
+  - [物料与封装：part、pad、footprint](cohdl/syntax/parts-footprints.md)
+  - [设计与网络：design、inst、net、nc、属性](cohdl/syntax/design-nets.md)
+  - [复用：模块、fn、subdesign](cohdl/syntax/composition.md)
+  - [布局事实：layout、place、约束、物理属性](cohdl/syntax/layout-facts.md)
+  - [走一遍：syntax-tour 的源码与产物](cohdl/syntax/tour.md)
+- [模块、fn、subdesign 与数组](cohdl/reuse.md)
+- [subdesign：端口、复用与整组布局](cohdl/subdesign.md)
+- [读懂诊断：从报错到验证边界](cohdl/diagnostics.md)
+- [从 check 到实际 PCB](cohdl/pipeline.md)
+- [用 CoHDL 描述并检查 Sonde](cohdl/sonde-case.md)
+
+# 语言设计研究（按需阅读）
+
+- [设计理念：为什么让编译器判定电路](cohdl/design-philosophy.md)
+- [语言设计原则：怎样判断一个新功能](cohdl/language-principles.md)
+- [产品与语言的边界：cohdl.ai 与 cohdl.dev](cohdl/product-boundary.md)
+- [语言里程碑与手表需求](cohdl/milestones.md)
+- [M2 中文导读：已选 A 的范围与待决问题（Proposed）](cohdl/programming-proposal.md)
+- [M2 RFC English working draft（Proposed）](cohdl/programming-rfc-en.md)
+- [M2 RFC 中文全文（Proposed，已同步）](cohdl/programming-rfc-zh.md)
+- [开源参考：tscircuit 的可编程模型](cohdl/tscircuit-reference.md)
+
+# 学习记录
+
+- [当前进度](learning/progress.md)
+- [每课记录模板](learning/template.md)
+- [工作台与电路实操记录](learning/workbench-circuits.md)
+  - [2026-09-07：课程起点](learning/2026-09-07-start.md)
+  - [2026-09-07：变量与 export](learning/2026-09-07-shell-variables.md)
+  - [2026-09-07：创建 Konnect 配置](learning/2026-09-07-konnect-config.md)
+  - [2026-09-07：重启后的 MCP 与 IPC 核对](learning/2026-09-07-mcp-ipc-check.md)
+  - [2026-09-07：首次实时读板](learning/2026-09-07-first-live-board.md)
+  - [2026-09-07：铜连接与检查基线](learning/2026-09-07-copper-and-checks.md)
+  - [2026-09-08：从 R1 重新开始](learning/2026-09-08-r1-step-by-step.md)
+  - [2026-09-08：整板解读与 CoHDL 实验](learning/2026-09-08-sonde-language.md)
+  - [2026-09-08：拉取 main，验证 subdesign](learning/2026-09-08-subdesign.md)
+- [语言设计与 RFC 记录](learning/language-rfc.md)
+  - [2026-09-08：翻译与解读设计总览](learning/2026-09-08-design-philosophy.md)
+  - [2026-09-08：产品与基础设施的边界](learning/2026-09-08-product-boundary.md)
+  - [2026-09-08：起草 M2 RFC](learning/2026-09-08-m2-rfc.md)
+  - [2026-09-09：沉淀语言设计原则与哲学](learning/2026-09-09-language-principles.md)
+  - [2026-09-09：按设计原则再审 M2 RFC](learning/2026-09-09-m2-review.md)
+  - [2026-09-09：M2 RFC 中文全文](learning/2026-09-09-m2-chinese.md)
+  - [2026-09-10：校正 RFC 依据，研究 tscircuit](learning/2026-09-10-programmability-references.md)
+  - [2026-09-10：重写 M2，并连接类型系统](learning/2026-09-10-m2-rewrite.md)
+  - [2026-09-10：核对最新 main，恢复 RFC-032 依据](learning/2026-09-10-main-rfc032.md)
+  - [2026-09-10：根据 Live 评审修订英文 RFC](learning/2026-09-10-m2-english-review.md)
+  - [2026-09-10：M2 中英文 RFC 全文同步](learning/2026-09-10-m2-bilingual-sync.md)
+  - [2026-09-11：补读最新 RFC 评审，明确减号规则](learning/2026-09-11-m2-minus-lexing.md)
+  - [2026-09-11：用 tscircuit 源码复核 M2 取舍](learning/2026-09-11-tscircuit-rfc-review.md)
+  - [2026-09-12：M2 选定 A，归档 B 实施计划](learning/2026-09-12-m2-scope-a.md)
+  - [2026-09-12：比较循环标签与区间，建立审计清单](learning/2026-09-12-m2-syntax-options.md)
+  - [2026-09-12：聚焦 RFC，将后续工作收录为附录](learning/2026-09-12-m2-rfc-appendices.md)
+- [教材维护与验证记录](learning/book-maintenance.md)
+  - [2026-09-10：修复 Book 导航并验证 RC 教学课](learning/2026-09-10-book-review-repair.md)
+  - [2026-09-10：简化课程环境准备并复验](learning/2026-09-10-book-portable-setup.md)
+  - [2026-09-11：按主题整理学习记录目录](learning/2026-09-11-book-topic-navigation.md)
+  - [2026-09-12：修复语法章节的几何说明与能力边界](learning/2026-09-12-book-syntax-repair.md)
+
+# 附录
+
+- [课程编译器准备：独立工作树](appendix/course-compiler.md)
+- [PCB 简史：从手工连线到小型主板](appendix/pcb-history.md)
+- [术语表](appendix/glossary.md)
+- [资料与版本](appendix/sources.md)
+- [三个贯穿示例](appendix/traces.md)

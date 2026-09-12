@@ -1,0 +1,88 @@
+// Language-composition experiment: literal passive RC channels, no active load.
+// Values/parts demonstrate reuse; no measured response or production claim.
+use connectors::headers::smd_254::SOCKET_2X3_254_SMD;
+use passive::C_100n_10V_X7R_0603;
+use passive::R_1K_F_0603;
+
+// ANCHOR: definition
+subdesign RcChannel {
+    ports {
+        required IN: Pin
+        required OUT: Pin
+        required GND: Pin
+    }
+
+    inst r: R_1K_F_0603
+    inst c: C_100n_10V_X7R_0603
+    net _: IN, r.A
+    net _: OUT, r.B, c.A
+    net _: GND, c.B
+
+    layout {
+        place r at (0mm, 0mm)
+        place c at (3mm, 0mm)
+    }
+}
+// ANCHOR_END: definition
+
+design RcWorkflow {
+    inst connectors: [SOCKET_2X3_254_SMD; 10]
+    subdesign channels: [RcChannel; 10]
+    net IN0: connectors[0].P1, channels[0].IN
+    net OUT0: connectors[0].P2, channels[0].OUT
+    nc: connectors[0].P3, connectors[0].P4, connectors[0].P6
+    net IN1: connectors[1].P1, channels[1].IN
+    net OUT1: connectors[1].P2, channels[1].OUT
+    nc: connectors[1].P3, connectors[1].P4, connectors[1].P6
+    net IN2: connectors[2].P1, channels[2].IN
+    net OUT2: connectors[2].P2, channels[2].OUT
+    nc: connectors[2].P3, connectors[2].P4, connectors[2].P6
+    net IN3: connectors[3].P1, channels[3].IN
+    net OUT3: connectors[3].P2, channels[3].OUT
+    nc: connectors[3].P3, connectors[3].P4, connectors[3].P6
+    net IN4: connectors[4].P1, channels[4].IN
+    net OUT4: connectors[4].P2, channels[4].OUT
+    nc: connectors[4].P3, connectors[4].P4, connectors[4].P6
+    net IN5: connectors[5].P1, channels[5].IN
+    net OUT5: connectors[5].P2, channels[5].OUT
+    nc: connectors[5].P3, connectors[5].P4, connectors[5].P6
+    net IN6: connectors[6].P1, channels[6].IN
+    net OUT6: connectors[6].P2, channels[6].OUT
+    nc: connectors[6].P3, connectors[6].P4, connectors[6].P6
+    net IN7: connectors[7].P1, channels[7].IN
+    net OUT7: connectors[7].P2, channels[7].OUT
+    nc: connectors[7].P3, connectors[7].P4, connectors[7].P6
+    net IN8: connectors[8].P1, channels[8].IN
+    net OUT8: connectors[8].P2, channels[8].OUT
+    nc: connectors[8].P3, connectors[8].P4, connectors[8].P6
+    net IN9: connectors[9].P1, channels[9].IN
+    net OUT9: connectors[9].P2, channels[9].OUT
+    nc: connectors[9].P3, connectors[9].P4, connectors[9].P6
+    net GND [gnd]: connectors[0].P5, channels[0].GND, connectors[1].P5, channels[1].GND,
+                   connectors[2].P5, channels[2].GND, connectors[3].P5, channels[3].GND,
+                   connectors[4].P5, channels[4].GND, connectors[5].P5, channels[5].GND,
+                   connectors[6].P5, channels[6].GND, connectors[7].P5, channels[7].GND,
+                   connectors[8].P5, channels[8].GND, connectors[9].P5, channels[9].GND
+    layout {
+        place channels[0] at (10mm, 15mm)
+        place connectors[0] at (10mm, 5mm)
+        place channels[1] at (18mm, 15mm)
+        place connectors[1] at (18mm, 5mm)
+        place channels[2] at (26mm, 15mm)
+        place connectors[2] at (26mm, 5mm)
+        place channels[3] at (34mm, 15mm)
+        place connectors[3] at (34mm, 5mm)
+        place channels[4] at (42mm, 15mm)
+        place connectors[4] at (42mm, 5mm)
+        place channels[5] at (50mm, 15mm)
+        place connectors[5] at (50mm, 5mm)
+        place channels[6] at (58mm, 15mm)
+        place connectors[6] at (58mm, 5mm)
+        place channels[7] at (66mm, 15mm)
+        place connectors[7] at (66mm, 5mm)
+        place channels[8] at (74mm, 15mm)
+        place connectors[8] at (74mm, 5mm)
+        place channels[9] at (82mm, 15mm)
+        place connectors[9] at (82mm, 5mm)
+    }
+}

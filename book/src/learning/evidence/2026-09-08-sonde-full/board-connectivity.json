@@ -1,0 +1,253 @@
+{
+  "method": "Compare exported schematic endpoint sets per original net name with all 25 get_component_pads IPC results. Compare component references and values. This is pad-net assignment equivalence, not KiCad schematic-parity or track-geometry validation.",
+  "schematic_netlist_sha256": "b503772d1458c4f0408359539be6f333105089fd28c954fc4d74f94a39ed767c",
+  "konnect_evidence_sha256": "5a3134b6f61ceb0b74f40e5a62823baeab43e29d211331f697953c444244f9b7",
+  "matched": true,
+  "components": 25,
+  "physical_pads": 108,
+  "connected_networks": 26,
+  "connected_endpoints": 92,
+  "nc_endpoints": 16,
+  "nets": [
+    {
+      "name": "/CLK-D1",
+      "endpoints": [
+        "J1.3",
+        "R10.2"
+      ]
+    },
+    {
+      "name": "/CTRL-D3",
+      "endpoints": [
+        "J1.5",
+        "R8.2"
+      ]
+    },
+    {
+      "name": "/DONE-SELECT*",
+      "endpoints": [
+        "J1.13",
+        "R4.2"
+      ]
+    },
+    {
+      "name": "/PWR_3,3-5V",
+      "endpoints": [
+        "D2.1",
+        "J2.1",
+        "P1.1"
+      ]
+    },
+    {
+      "name": "/TCK-CCLK",
+      "endpoints": [
+        "J2.4",
+        "P1.5",
+        "R12.1"
+      ]
+    },
+    {
+      "name": "/TD0-DONE",
+      "endpoints": [
+        "J2.2",
+        "P1.3",
+        "R14.1"
+      ]
+    },
+    {
+      "name": "/TD0-PROG-D4",
+      "endpoints": [
+        "J1.6",
+        "R6.2"
+      ]
+    },
+    {
+      "name": "/TDI-DIN",
+      "endpoints": [
+        "J2.3",
+        "P1.4",
+        "R11.1"
+      ]
+    },
+    {
+      "name": "/TDI-DIN-D0",
+      "endpoints": [
+        "J1.2",
+        "R7.2"
+      ]
+    },
+    {
+      "name": "/TMS-PROG",
+      "endpoints": [
+        "J2.5",
+        "P1.6",
+        "R13.1"
+      ]
+    },
+    {
+      "name": "/TMS-PROG-D2",
+      "endpoints": [
+        "J1.4",
+        "R9.2"
+      ]
+    },
+    {
+      "name": "/VCC_SENSE-ERROR*",
+      "endpoints": [
+        "J1.15",
+        "R1.2"
+      ]
+    },
+    {
+      "name": "GND",
+      "endpoints": [
+        "C1.2",
+        "C2.2",
+        "C3.2",
+        "C4.2",
+        "C5.2",
+        "J1.20",
+        "J1.25",
+        "J2.6",
+        "J2.7",
+        "J2.8",
+        "J2.9",
+        "P1.2",
+        "R5.2",
+        "U1.2",
+        "U1.7",
+        "U2.1",
+        "U2.10",
+        "U2.12",
+        "U2.13",
+        "U2.4",
+        "U2.5",
+        "U2.7",
+        "U2.9"
+      ]
+    },
+    {
+      "name": "Net-(D1-K)",
+      "endpoints": [
+        "D1.2",
+        "R1.1"
+      ]
+    },
+    {
+      "name": "Net-(J1-Pad11)",
+      "endpoints": [
+        "J1.11",
+        "J1.12",
+        "J1.8"
+      ]
+    },
+    {
+      "name": "Net-(U1A-E)",
+      "endpoints": [
+        "R6.1",
+        "U1.1"
+      ]
+    },
+    {
+      "name": "Net-(U1A-O)",
+      "endpoints": [
+        "C3.1",
+        "R14.2",
+        "R2.2",
+        "U1.3",
+        "U2.2"
+      ]
+    },
+    {
+      "name": "Net-(U1B-D)",
+      "endpoints": [
+        "R7.1",
+        "U1.5"
+      ]
+    },
+    {
+      "name": "Net-(U1B-E)",
+      "endpoints": [
+        "R8.1",
+        "U1.10",
+        "U1.13",
+        "U1.4"
+      ]
+    },
+    {
+      "name": "Net-(U1B-O)",
+      "endpoints": [
+        "C2.1",
+        "R11.2",
+        "U1.6"
+      ]
+    },
+    {
+      "name": "Net-(U1C-D)",
+      "endpoints": [
+        "R10.1",
+        "U1.9"
+      ]
+    },
+    {
+      "name": "Net-(U1C-O)",
+      "endpoints": [
+        "C5.1",
+        "R12.2",
+        "U1.8"
+      ]
+    },
+    {
+      "name": "Net-(U1D-D)",
+      "endpoints": [
+        "R9.1",
+        "U1.12"
+      ]
+    },
+    {
+      "name": "Net-(U1D-O)",
+      "endpoints": [
+        "C4.1",
+        "R13.2",
+        "U1.11"
+      ]
+    },
+    {
+      "name": "Net-(U2A-O)",
+      "endpoints": [
+        "R4.1",
+        "U2.3"
+      ]
+    },
+    {
+      "name": "VCC",
+      "endpoints": [
+        "C1.1",
+        "D1.1",
+        "D2.2",
+        "R2.1",
+        "R5.1",
+        "U1.14",
+        "U2.14"
+      ]
+    }
+  ],
+  "nc": [
+    "J1.1",
+    "J1.10",
+    "J1.14",
+    "J1.16",
+    "J1.17",
+    "J1.18",
+    "J1.19",
+    "J1.21",
+    "J1.22",
+    "J1.23",
+    "J1.24",
+    "J1.7",
+    "J1.9",
+    "U2.11",
+    "U2.6",
+    "U2.8"
+  ]
+}

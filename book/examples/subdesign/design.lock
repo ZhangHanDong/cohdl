@@ -1,0 +1,8 @@
+[designators]
+"RcPair::channels_0::c" = "C1"
+"RcPair::channels_0::r" = "R1"
+"RcPair::channels_1::c" = "C2"
+"RcPair::channels_1::r" = "R2"
+"RcPair::connector" = "J1"
+
+[tombstones]

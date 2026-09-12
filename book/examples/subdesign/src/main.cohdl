@@ -1,0 +1,47 @@
+// Language-composition experiment: two passive RC channels, no active load.
+// Values/parts demonstrate reuse; no measured response or production claim.
+use connectors::headers::smd_254::SOCKET_2X3_254_SMD;
+use passive::C_100p_50V_C0G_0603;
+use passive::R_100R_F_0603;
+
+// ANCHOR: definition
+subdesign RcChannel {
+    ports {
+        required IN: Pin
+        required OUT: Pin
+        required GND: Pin
+    }
+
+    inst r: R_100R_F_0603
+    inst c: C_100p_50V_C0G_0603
+    net _: IN, r.A
+    net _: OUT, r.B, c.A
+    net _: GND, c.B
+
+    layout {
+        place r at (0mm, 0mm)
+        place c at (3mm, 0mm)
+    }
+}
+// ANCHOR_END: definition
+
+// ANCHOR: assembly
+design RcPair {
+    inst connector: SOCKET_2X3_254_SMD
+    subdesign channels: [RcChannel; 2]
+
+    net IN0: connector.P1, channels[0].IN
+    net OUT0: connector.P2, channels[0].OUT
+    net IN1: connector.P3, channels[1].IN
+    net OUT1: connector.P4, channels[1].OUT
+    net GND [gnd]: connector.P5, channels[0].GND, channels[1].GND
+    nc: connector.P6
+
+    layout {
+        place connector at (10mm, 6mm)
+        place channels[0] at (10mm, 15mm)
+        place channels[1] at (20mm, 15mm)
+        place channels[1].c at (24mm, 17mm)
+    }
+}
+// ANCHOR_END: assembly

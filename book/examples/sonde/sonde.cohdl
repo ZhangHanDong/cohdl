@@ -1,0 +1,255 @@
+// Faithful check-only topology of the exported Sonde schematic.
+// No procurement identities, voltage ratings, or tolerances were supplied.
+// Roles follow the export except tri_state -> output (conservative abstraction).
+// The compiler does NOT simulate enable, high-Z, diode drops, or RC behavior.
+trait TwoTerminal {
+    pins {
+        required A: pin
+        required B: pin
+    }
+}
+
+trait Polarized {
+    pins {
+        required Anode: pin
+        required Cathode: pin
+    }
+}
+
+// Typed interfaces require only facts available from this schematic.
+trait ResistanceElement: TwoTerminal {
+    spec {
+        resistance: Resistance
+    }
+}
+trait CapacitanceElement: TwoTerminal {
+    spec {
+        capacitance: Capacitance
+    }
+}
+
+// ANCHOR: devices
+device AxialResistor<R: Resistance> {
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+    spec {
+        resistance: R
+    }
+}
+impl TwoTerminal for AxialResistor {}
+impl ResistanceElement for AxialResistor {}
+// ANCHOR_END: devices
+
+device DiscCapacitor<C: Capacitance> {
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+    spec {
+        capacitance: C
+    }
+}
+impl TwoTerminal for DiscCapacitor {}
+impl CapacitanceElement for DiscCapacitor {}
+
+device PolarizedCapacitor<C: Capacitance> {
+    pins {
+        required Anode: 1 [passive]
+        required Cathode: 2 [passive]
+    }
+    spec {
+        capacitance: C
+    }
+}
+impl Polarized for PolarizedCapacitor {}
+
+// This source symbol maps A=1, K=2; never assume a generic diode's numbering.
+device BAT46 {
+    pins {
+        required Anode: 1 [passive]
+        required Cathode: 2 [passive]
+    }
+}
+impl Polarized for BAT46 {}
+
+// One physical 14-pin package contains four gates and shared supply pins.
+// E names denote active-low enables; no language-level active-low semantics.
+device Quad74LS125 {
+    pins {
+        required E1: 1 [input]
+        required D1: 2 [input]
+        required O1: 3 [output]
+        required E2: 4 [input]
+        required D2: 5 [input]
+        required O2: 6 [output]
+        required GND: 7 [power_in]
+        required O3: 8 [output]
+        required D3: 9 [input]
+        required E3: 10 [input]
+        required O4: 11 [output]
+        required D4: 12 [input]
+        required E4: 13 [input]
+        required VCC: 14 [power_in]
+    }
+}
+
+device DB25 {
+    pins {
+        required P1: 1 [passive]
+        required P2: 2 [passive]
+        required P3: 3 [passive]
+        required P4: 4 [passive]
+        required P5: 5 [passive]
+        required P6: 6 [passive]
+        required P7: 7 [passive]
+        required P8: 8 [passive]
+        required P9: 9 [passive]
+        required P10: 10 [passive]
+        required P11: 11 [passive]
+        required P12: 12 [passive]
+        required P13: 13 [passive]
+        required P14: 14 [passive]
+        required P15: 15 [passive]
+        required P16: 16 [passive]
+        required P17: 17 [passive]
+        required P18: 18 [passive]
+        required P19: 19 [passive]
+        required P20: 20 [passive]
+        required P21: 21 [passive]
+        required P22: 22 [passive]
+        required P23: 23 [passive]
+        required P24: 24 [passive]
+        required P25: 25 [passive]
+    }
+}
+
+device DB9 {
+    pins {
+        required P1: 1 [passive]
+        required P2: 2 [passive]
+        required P3: 3 [passive]
+        required P4: 4 [passive]
+        required P5: 5 [passive]
+        required P6: 6 [passive]
+        required P7: 7 [passive]
+        required P8: 8 [passive]
+        required P9: 9 [passive]
+    }
+}
+
+device Header6 {
+    pins {
+        required P1: 1 [passive]
+        required P2: 2 [passive]
+        required P3: 3 [passive]
+        required P4: 4 [passive]
+        required P5: 5 [passive]
+        required P6: 6 [passive]
+    }
+}
+
+// ANCHOR: buffered_path
+// Reuse the wiring of three output paths without creating gate-sized ICs.
+// Full resistor/capacitor instances and existing chip pins are passed in.
+fn buffered_path(host: Pin, gate_in: Pin, gate_out: Pin, rin: impl ResistanceElement, rout: impl ResistanceElement, shunt: impl CapacitanceElement, db9: Pin, header: Pin, ground: Pin) {
+    net _: host, rin.B
+    net _: rin.A, gate_in
+    net _: gate_out, shunt.A, rout.B
+    net _: rout.A, db9, header
+    net _: shunt.B, ground
+}
+// ANCHOR_END: buffered_path
+
+design Sonde {
+    #[designator("J1")]
+    inst J1: DB25
+    #[designator("J2")]
+    inst J2: DB9
+    #[designator("P1")]
+    inst P1: Header6
+    #[designator("U1")]
+    inst U1: Quad74LS125
+    #[designator("U2")]
+    inst U2: Quad74LS125
+    #[designator("D1")]
+    inst D1: BAT46
+    #[designator("D2")]
+    inst D2: BAT46
+    #[designator("C1")]
+    inst C1: PolarizedCapacitor<1uF>
+    #[designator("C2")]
+    inst C2: DiscCapacitor<100pF>
+    #[designator("C3")]
+    inst C3: DiscCapacitor<100pF>
+    #[designator("C4")]
+    inst C4: DiscCapacitor<100pF>
+    #[designator("C5")]
+    inst C5: DiscCapacitor<100pF>
+    // ANCHOR: r1_instance
+    #[designator("R1")]
+    inst R1: AxialResistor<100ohm>
+    // ANCHOR_END: r1_instance
+    #[designator("R2")]
+    inst R2: AxialResistor<5.1kohm>
+    #[designator("R4")]
+    inst R4: AxialResistor<47ohm>
+    #[designator("R5")]
+    inst R5: AxialResistor<1kohm>
+    #[designator("R6")]
+    inst R6: AxialResistor<100ohm>
+    #[designator("R7")]
+    inst R7: AxialResistor<100ohm>
+    #[designator("R8")]
+    inst R8: AxialResistor<100ohm>
+    #[designator("R9")]
+    inst R9: AxialResistor<100ohm>
+    #[designator("R10")]
+    inst R10: AxialResistor<100ohm>
+    #[designator("R11")]
+    inst R11: AxialResistor<100ohm>
+    #[designator("R12")]
+    inst R12: AxialResistor<100ohm>
+    #[designator("R13")]
+    inst R13: AxialResistor<100ohm>
+    #[designator("R14")]
+    inst R14: AxialResistor<100ohm>
+
+    // ANCHOR: power_nets
+    // D2 feeds VCC; D1/R1 export a sense path. Neither is a fixed rail source.
+    net TARGET_POWER: J2.P1, P1.P1, D2.Anode
+    net VCC: D2.Cathode, D1.Anode, C1.Anode, R2.A, R5.A, U1.VCC, U2.VCC
+    net SENSE_DIODE: D1.Cathode, R1.A
+    net VCC_SENSE_ERROR_N: R1.B, J1.P15
+    // ANCHOR_END: power_nets
+    net GND [gnd]: C1.Cathode, C3.B, R5.B, J1.P20, J1.P25, J2.P6, J2.P7, J2.P8, J2.P9, P1.P2, U1.D1,
+                   U1.GND, U2.GND, U2.E1, U2.E2, U2.E3, U2.E4, U2.D2, U2.D3, U2.D4
+
+    // J1 pin 8 loops back to status pins 11 and 12; it is not NC.
+    net HOST_LOOPBACK: J1.P8, J1.P11, J1.P12
+    net HOST_ENABLE: J1.P5, R8.B
+    net OUTPUT_ENABLE_N: R8.A, U1.E2, U1.E3, U1.E4
+
+    // ANCHOR: channel_calls
+    // TDI / DIN: U1 gate B, R7 -> C2/R11.
+    buffered_path(J1.P2, U1.D2, U1.O2, R7, R11, C2, J2.P3, P1.P4, U1.GND)
+    // TCK / CCLK: U1 gate C, R10 -> C5/R12.
+    buffered_path(J1.P3, U1.D3, U1.O3, R10, R12, C5, J2.P4, P1.P5, U1.GND)
+    // TMS / PROG: U1 gate D, R9 -> C4/R13.
+    buffered_path(J1.P4, U1.D4, U1.O4, R9, R13, C4, J2.P5, P1.P6, U1.GND)
+    // ANCHOR_END: channel_calls
+
+    // U1 gate A: D is tied low, E controls pull-down versus high impedance.
+    // R2 pulls up this node; U2 gate A returns its state to the host.
+    net HOST_PULLDOWN: J1.P6, R6.B
+    net PULLDOWN_ENABLE_N: R6.A, U1.E1
+    net READBACK_INTERNAL: U1.O1, U2.D1, R2.B, R14.B, C3.A
+    net TDO_DONE: R14.A, J2.P2, P1.P3
+    net READBACK_BUFFERED: U2.O1, R4.A
+    net DONE_SELECT_N: R4.B, J1.P13
+
+    // 13 unused DB25 contacts + 3 unused U2 outputs, exactly as exported.
+    nc: J1.P1, J1.P7, J1.P9, J1.P10, J1.P14, J1.P16, J1.P17, J1.P18, J1.P19, J1.P21, J1.P22, J1.P23,
+        J1.P24, U2.O2, U2.O3, U2.O4
+}

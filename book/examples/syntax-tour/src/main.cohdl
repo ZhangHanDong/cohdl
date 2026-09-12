@@ -1,0 +1,66 @@
+// 顶层设计：把库声明变成真实元件、网络、放置和布局事实。
+
+use connectors::headers::smd_254::SOCKET_2X3_254_SMD;
+
+// ANCHOR: design
+design SyntaxTour {
+    // ---- 实例：每条 inst 都是一个会出现在 BOM 里的真实元件 ----
+    #[designator("J1")]
+    #[placement_hint("board edge, cable exits to the right")]
+    inst j: SOCKET_2X3_254_SMD
+    // 一个数组实例声明两颗真实的 LED 和两颗限流电阻；元素用下标引用。
+    inst leds: [LED_RED_0603; 2]
+    inst r_pwr: [passive::R_1K_F_0603; 2]
+    // 状态灯是一个普通的标量实例，交给下面的 fn 接线。
+    inst led_status: LED_RED_0603
+    inst hole: STANDOFF_M2
+
+    // 去耦电容：属性把它和被去耦的引脚关联起来，供布局工具使用。
+    #[bypass(j.P4, 100nF)]
+    inst c_byp: passive::C_100n_10V_X7R_0603
+
+    // ---- 复用单元：使用点即实例，端口在花括号里接到外部引脚 ----
+    subdesign lpf: RcLowPass {
+        IN: j.P1
+        OUT: j.P2
+        GND: j.P5
+    }
+
+    // ---- 网络：方括号里是电压或 gnd 注解，DRC 只读注解不读名字 ----
+    #[intent("P4 is the 3.3V supply from the host; the LED on P6 is a power indicator")]
+    #[high_current(500mA)]
+    net V3V3 [3.3V]: j.P4, c_byp.A, r_pwr[0..=1].A
+
+    // 范围扇出 leds[0..=1].Cathode 只是 leds[0].Cathode, leds[1].Cathode 的缩写，
+    // 它把两个引脚放进同一个网络，不会生成两条网络。
+    #[ground(primary)]
+    net GND [gnd]: j.P5, c_byp.B, leds[0..=1].Cathode
+
+    // 两颗电源指示灯各自有限流电阻：逐个元素接线。
+    net PWR_LED0: r_pwr[0].B, leds[0].Anode
+    net PWR_LED1: r_pwr[1].B, leds[1].Anode
+
+    // 状态灯：通过 fn 接线，调用时新增一颗电阻并把 led_status 接好。
+    drive_led(led_status, j.P3, j.P5)
+
+    // ---- 显式不接：required 引脚必须要么进 net，要么进 nc ----
+    nc: j.P6
+
+    // ---- 布局事实：合法时只进板文件和布局工具，不改变电气判定；写错目标或单位仍会报错 ----
+    layout {
+        // fmt 会把约束放在放置语句之前；这是规范形式，不改变含义。
+        net_class Supply { V3V3, GND }
+        place j at (0mm, 0mm) rotate 90
+        place leds[0] at (10mm, 2mm)
+        place leds[1] at (10mm, 6mm) side bottom
+        place led_status at (10mm, 10mm)
+        place r_pwr[0] at (14mm, 2mm)
+        place r_pwr[1] at (14mm, 6mm) side bottom
+        place c_byp at (4mm, 4mm)
+        place hole at (20mm, 0mm)
+        // 整体摆放一个 subdesign，再单独覆盖它内部一颗电容的位置。
+        place lpf at (5mm, 10mm)
+        place lpf.c at (9mm, 11mm)
+    }
+}
+// ANCHOR_END: design

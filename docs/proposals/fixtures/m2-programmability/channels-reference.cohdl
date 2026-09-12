@@ -1,0 +1,45 @@
+// Synthetic check-only interfaces; no procurement parts or hardware validation.
+device SignalSource {
+    pins { required OUT: 1 [output] }
+}
+device SignalSink {
+    pins { required IN: 1 [input] }
+}
+device Ground {
+    pins { required GND: 1 [passive] }
+}
+device SeriesR<R: Resistance> {
+    spec { resistance: R }
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+device ShuntC<C: Capacitance> {
+    spec { capacitance: C }
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+
+design FilterBank {
+    inst inputs: [SignalSource; 3]
+    inst outputs: [SignalSink; 3]
+    inst ground: Ground
+    inst r0: SeriesR<1kohm>
+    inst c0: ShuntC<100nF>
+    inst r1: SeriesR<1kohm>
+    inst c1: ShuntC<100nF>
+    inst r2: SeriesR<1kohm>
+    inst c2: ShuntC<100nF>
+    net IN0: inputs[0].OUT, r0.A
+    net FILTERED0: r0.B, c0.A, outputs[0].IN
+    net GND [gnd]: ground.GND, c0.B
+    net IN1: inputs[1].OUT, r1.A
+    net FILTERED1: r1.B, c1.A, outputs[1].IN
+    net GND [gnd]: ground.GND, c1.B
+    net IN2: inputs[2].OUT, r2.A
+    net FILTERED2: r2.B, c2.A, outputs[2].IN
+    net GND [gnd]: ground.GND, c2.B
+}

@@ -1,0 +1,128 @@
+{
+  "connection": "temporary stdio MCP client to Konnect; GUI data via IPC",
+  "records": [
+    {
+      "tool": "check_kicad_ui",
+      "arguments": {
+        "timeout_seconds": 5
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"elapsed_ms\":44,\"ipc_responsive\":true,\"process_detected\":true,\"running\":true,\"timed_out\":false,\"timeout_seconds\":5}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "open_project",
+      "arguments": {
+        "path": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"ipc_address\":\"ipc:///tmp/kicad/api.sock\",\"ipc_available\":true,\"kicad_ui_running\":true,\"message\":\"The requested board is open in KiCad.\",\"open_board_count\":1,\"open_boards\":[\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\"],\"open_boards_error\":null,\"requested_board\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\",\"requested_check_error\":null,\"requested_open\":true,\"requested_path\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\"}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "get_board_info",
+      "arguments": {
+        "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"company\":\"Kicad Demo\",\"copper_layer_count\":2,\"date\":\"\",\"file\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\",\"layer_count\":20,\"net_count\":42,\"paper\":\"A4\",\"paper_size_mm\":null,\"revision\":\"1\",\"source\":\"ipc\",\"title\":\"\"}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "get_component_list",
+      "arguments": {
+        "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"components\":[{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R14\",\"rotation\":180.0,\"value\":\"100\",\"x\":162.56,\"y\":88.9},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R9\",\"rotation\":180.0,\"value\":\"100\",\"x\":121.92,\"y\":80.518},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R4\",\"rotation\":180.0,\"value\":\"47\",\"x\":121.92,\"y\":104.14},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R13\",\"rotation\":180.0,\"value\":\"100\",\"x\":162.56,\"y\":105.41},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R12\",\"rotation\":180.0,\"value\":\"100\",\"x\":162.56,\"y\":99.06},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R11\",\"rotation\":180.0,\"value\":\"100\",\"x\":162.56,\"y\":93.98},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R8\",\"rotation\":180.0,\"value\":\"100\",\"x\":121.92,\"y\":87.63},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R7\",\"rotation\":180.0,\"value\":\"100\",\"x\":121.92,\"y\":92.71},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R6\",\"rotation\":180.0,\"value\":\"100\",\"x\":121.9327,\"y\":83.82},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R2\",\"rotation\":0.0,\"value\":\"5,1K\",\"x\":137.16,\"y\":72.39},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R5\",\"rotation\":0.0,\"value\":\"1K\",\"x\":151.13,\"y\":73.66},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R10\",\"rotation\":180.0,\"value\":\"100\",\"x\":121.92,\"y\":77.216},{\"footprint\":\"sonde-xilinx:D_A-405_P7.62mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"D2\",\"rotation\":180.0,\"value\":\"BAT46\",\"x\":160.02,\"y\":78.74},{\"footprint\":\"sonde-xilinx:D_A-405_P7.62mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"D1\",\"rotation\":180.0,\"value\":\"BAT46\",\"x\":134.62,\"y\":72.39},{\"footprint\":\"sonde-xilinx:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"R1\",\"rotation\":180.0,\"value\":\"100\",\"x\":121.92,\"y\":73.8632},{\"footprint\":\"sonde-xilinx:C_Axial_L5.1mm_D3.1mm_P12.50mm_Horizontal\",\"layer\":\"F.Cu\",\"reference\":\"C1\",\"rotation\":0.0,\"value\":\"1uF\",\"x\":134.62,\"y\":76.2},{\"footprint\":\"sonde-xilinx:PinHeader_1x06_P2.54mm_Vertical\",\"layer\":\"F.Cu\",\"reference\":\"P1\",\"rotation\":0.0,\"value\":\"CONN_6\",\"x\":169.672,\"y\":80.137},{\"footprint\":\"sonde-xilinx:DIP-14_W7.62mm_LongPads\",\"layer\":\"F.Cu\",\"reference\":\"U2\",\"rotation\":0.0,\"value\":\"74LS125\",\"x\":140.97,\"y\":82.55},{\"footprint\":\"sonde-xilinx:DIP-14_W7.62mm_LongPads\",\"layer\":\"F.Cu\",\"reference\":\"U1\",\"rotation\":0.0,\"value\":\"74LS125\",\"x\":127.0,\"y\":82.55},{\"footprint\":\"sonde-xilinx:C_Disc_D5.1mm_W3.2mm_P5.00mm\",\"layer\":\"F.Cu\",\"reference\":\"C5\",\"rotation\":-90.0,\"value\":\"100pF\",\"x\":145.0,\"y\":102.87},{\"footprint\":\"sonde-xilinx:C_Disc_D5.1mm_W3.2mm_P5.00mm\",\"layer\":\"F.Cu\",\"reference\":\"C4\",\"rotation\":-90.0,\"value\":\"100pF\",\"x\":149.0,\"y\":102.87},{\"footprint\":\"sonde-xilinx:C_Disc_D5.1mm_W3.2mm_P5.00mm\",\"layer\":\"F.Cu\",\"reference\":\"C3\",\"rotation\":0.0,\"value\":\"100pF\",\"x\":151.13,\"y\":69.85},{\"footprint\":\"sonde-xilinx:C_Disc_D5.1mm_W3.2mm_P5.00mm\",\"layer\":\"F.Cu\",\"reference\":\"C2\",\"rotation\":-90.0,\"value\":\"100pF\",\"x\":140.97,\"y\":102.87},{\"footprint\":\"sonde-xilinx:DSUB-25_Male_EdgeMount_P2.77mm\",\"layer\":\"F.Cu\",\"reference\":\"J1\",\"rotation\":-90.0,\"value\":\"DB25MALE\",\"x\":105.5116,\"y\":89.1032},{\"footprint\":\"sonde-xilinx:DSUB-9_Male_EdgeMount_P2.77mm\",\"layer\":\"B.Cu\",\"reference\":\"J2\",\"rotation\":-90.0,\"value\":\"DB9MALE\",\"x\":181.61,\"y\":90.1192}],\"count\":25}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "get_nets_list",
+      "arguments": {
+        "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"count\":43,\"nets\":[{\"name\":\"\",\"netcode\":0},{\"name\":\"/CLK-D1\",\"netcode\":1},{\"name\":\"/CTRL-D3\",\"netcode\":2},{\"name\":\"/DONE-SELECT*\",\"netcode\":3},{\"name\":\"/PWR_3,3-5V\",\"netcode\":4},{\"name\":\"/TCK-CCLK\",\"netcode\":5},{\"name\":\"/TD0-DONE\",\"netcode\":6},{\"name\":\"/TD0-PROG-D4\",\"netcode\":7},{\"name\":\"/TDI-DIN\",\"netcode\":8},{\"name\":\"/TDI-DIN-D0\",\"netcode\":9},{\"name\":\"/TMS-PROG\",\"netcode\":10},{\"name\":\"/TMS-PROG-D2\",\"netcode\":11},{\"name\":\"/VCC_SENSE-ERROR*\",\"netcode\":12},{\"name\":\"GND\",\"netcode\":13},{\"name\":\"Net-(D1-K)\",\"netcode\":22},{\"name\":\"Net-(J1-Pad11)\",\"netcode\":29},{\"name\":\"Net-(U1A-E)\",\"netcode\":35},{\"name\":\"Net-(U1A-O)\",\"netcode\":16},{\"name\":\"Net-(U1B-D)\",\"netcode\":36},{\"name\":\"Net-(U1B-E)\",\"netcode\":37},{\"name\":\"Net-(U1B-O)\",\"netcode\":15},{\"name\":\"Net-(U1C-D)\",\"netcode\":39},{\"name\":\"Net-(U1C-O)\",\"netcode\":21},{\"name\":\"Net-(U1D-D)\",\"netcode\":38},{\"name\":\"Net-(U1D-O)\",\"netcode\":20},{\"name\":\"Net-(U2A-O)\",\"netcode\":34},{\"name\":\"VCC\",\"netcode\":14},{\"name\":\"unconnected-(J1-P14-Pad14)\",\"netcode\":33},{\"name\":\"unconnected-(J1-P16-Pad16)\",\"netcode\":26},{\"name\":\"unconnected-(J1-P17-Pad17)\",\"netcode\":25},{\"name\":\"unconnected-(J1-P18-Pad18)\",\"netcode\":24},{\"name\":\"unconnected-(J1-P19-Pad19)\",\"netcode\":28},{\"name\":\"unconnected-(J1-P21-Pad21)\",\"netcode\":32},{\"name\":\"unconnected-(J1-P22-Pad22)\",\"netcode\":31},{\"name\":\"unconnected-(J1-P23-Pad23)\",\"netcode\":23},{\"name\":\"unconnected-(J1-P24-Pad24)\",\"netcode\":27},{\"name\":\"unconnected-(J1-Pad1)\",\"netcode\":17},{\"name\":\"unconnected-(J1-Pad10)\",\"netcode\":30},{\"name\":\"unconnected-(J1-Pad7)\",\"netcode\":18},{\"name\":\"unconnected-(J1-Pad9)\",\"netcode\":19},{\"name\":\"unconnected-(U2B-O-Pad6)\",\"netcode\":40},{\"name\":\"unconnected-(U2C-O-Pad8)\",\"netcode\":42},{\"name\":\"unconnected-(U2D-O-Pad11)\",\"netcode\":41}]}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "get_component_pads",
+      "arguments": {
+        "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb",
+        "reference": "R1"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"pad_count\":2,\"pads\":[{\"layers\":[\"F.Cu\",\"F.Mask\",\"B.Cu\",\"B.Mask\",\"In1.Cu\",\"In2.Cu\",\"In3.Cu\",\"In4.Cu\",\"In5.Cu\",\"In6.Cu\",\"In7.Cu\",\"In8.Cu\",\"In9.Cu\",\"In10.Cu\",\"In11.Cu\",\"In12.Cu\",\"In13.Cu\",\"In14.Cu\",\"In15.Cu\",\"In16.Cu\",\"In17.Cu\",\"In18.Cu\",\"In19.Cu\",\"In20.Cu\",\"In21.Cu\",\"In22.Cu\",\"In23.Cu\",\"In24.Cu\",\"In25.Cu\",\"In26.Cu\",\"In27.Cu\",\"In28.Cu\",\"In29.Cu\",\"In30.Cu\"],\"net\":\"Net-(D1-K)\",\"number\":\"1\",\"x\":121.92,\"y\":73.8632},{\"layers\":[\"F.Cu\",\"F.Mask\",\"B.Cu\",\"B.Mask\",\"In1.Cu\",\"In2.Cu\",\"In3.Cu\",\"In4.Cu\",\"In5.Cu\",\"In6.Cu\",\"In7.Cu\",\"In8.Cu\",\"In9.Cu\",\"In10.Cu\",\"In11.Cu\",\"In12.Cu\",\"In13.Cu\",\"In14.Cu\",\"In15.Cu\",\"In16.Cu\",\"In17.Cu\",\"In18.Cu\",\"In19.Cu\",\"In20.Cu\",\"In21.Cu\",\"In22.Cu\",\"In23.Cu\",\"In24.Cu\",\"In25.Cu\",\"In26.Cu\",\"In27.Cu\",\"In28.Cu\",\"In29.Cu\",\"In30.Cu\"],\"net\":\"/VCC_SENSE-ERROR*\",\"number\":\"2\",\"x\":111.76,\"y\":73.8632}],\"reference\":\"R1\",\"source\":\"ipc\"}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "get_component_pads",
+      "arguments": {
+        "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb",
+        "reference": "D1"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"pad_count\":2,\"pads\":[{\"layers\":[\"F.Cu\",\"F.Mask\",\"B.Cu\",\"B.Mask\",\"In1.Cu\",\"In2.Cu\",\"In3.Cu\",\"In4.Cu\",\"In5.Cu\",\"In6.Cu\",\"In7.Cu\",\"In8.Cu\",\"In9.Cu\",\"In10.Cu\",\"In11.Cu\",\"In12.Cu\",\"In13.Cu\",\"In14.Cu\",\"In15.Cu\",\"In16.Cu\",\"In17.Cu\",\"In18.Cu\",\"In19.Cu\",\"In20.Cu\",\"In21.Cu\",\"In22.Cu\",\"In23.Cu\",\"In24.Cu\",\"In25.Cu\",\"In26.Cu\",\"In27.Cu\",\"In28.Cu\",\"In29.Cu\",\"In30.Cu\"],\"net\":\"VCC\",\"number\":\"1\",\"x\":134.62,\"y\":72.39},{\"layers\":[\"F.Cu\",\"F.Mask\",\"B.Cu\",\"B.Mask\",\"In1.Cu\",\"In2.Cu\",\"In3.Cu\",\"In4.Cu\",\"In5.Cu\",\"In6.Cu\",\"In7.Cu\",\"In8.Cu\",\"In9.Cu\",\"In10.Cu\",\"In11.Cu\",\"In12.Cu\",\"In13.Cu\",\"In14.Cu\",\"In15.Cu\",\"In16.Cu\",\"In17.Cu\",\"In18.Cu\",\"In19.Cu\",\"In20.Cu\",\"In21.Cu\",\"In22.Cu\",\"In23.Cu\",\"In24.Cu\",\"In25.Cu\",\"In26.Cu\",\"In27.Cu\",\"In28.Cu\",\"In29.Cu\",\"In30.Cu\"],\"net\":\"Net-(D1-K)\",\"number\":\"2\",\"x\":127.0,\"y\":72.39}],\"reference\":\"D1\",\"source\":\"ipc\"}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "tool": "get_component_pads",
+      "arguments": {
+        "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb",
+        "reference": "J1"
+      },
+      "result": {
+        "content": [
+          {
+            "text": "{\"pad_count\":25,\"pads\":[{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"unconnected-(J1-Pad1)\",\"number\":\"1\",\"x\":105.5116,\"y\":72.4832},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"/TDI-DIN-D0\",\"number\":\"2\",\"x\":105.5116,\"y\":75.2532},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"/CLK-D1\",\"number\":\"3\",\"x\":105.5116,\"y\":78.0232},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"/TMS-PROG-D2\",\"number\":\"4\",\"x\":105.5116,\"y\":80.7932},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"/CTRL-D3\",\"number\":\"5\",\"x\":105.5116,\"y\":83.5632},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"/TD0-PROG-D4\",\"number\":\"6\",\"x\":105.5116,\"y\":86.3332},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"unconnected-(J1-Pad7)\",\"number\":\"7\",\"x\":105.5116,\"y\":89.1032},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"Net-(J1-Pad11)\",\"number\":\"8\",\"x\":105.5116,\"y\":91.8732},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"unconnected-(J1-Pad9)\",\"number\":\"9\",\"x\":105.5116,\"y\":94.6432},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"unconnected-(J1-Pad10)\",\"number\":\"10\",\"x\":105.5116,\"y\":97.4132},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"Net-(J1-Pad11)\",\"number\":\"11\",\"x\":105.5116,\"y\":100.1832},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"Net-(J1-Pad11)\",\"number\":\"12\",\"x\":105.5116,\"y\":102.9532},{\"layers\":[\"F.Cu\",\"F.Mask\",\"F.Paste\"],\"net\":\"/DONE-SELECT*\",\"number\":\"13\",\"x\":105.5116,\"y\":105.7232},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P14-Pad14)\",\"number\":\"14\",\"x\":105.5116,\"y\":73.8682},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"/VCC_SENSE-ERROR*\",\"number\":\"15\",\"x\":105.5116,\"y\":76.6382},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P16-Pad16)\",\"number\":\"16\",\"x\":105.5116,\"y\":79.4082},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P17-Pad17)\",\"number\":\"17\",\"x\":105.5116,\"y\":82.1782},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P18-Pad18)\",\"number\":\"18\",\"x\":105.5116,\"y\":84.9482},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P19-Pad19)\",\"number\":\"19\",\"x\":105.5116,\"y\":87.7182},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"GND\",\"number\":\"20\",\"x\":105.5116,\"y\":90.4882},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P21-Pad21)\",\"number\":\"21\",\"x\":105.5116,\"y\":93.2582},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P22-Pad22)\",\"number\":\"22\",\"x\":105.5116,\"y\":96.0282},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P23-Pad23)\",\"number\":\"23\",\"x\":105.5116,\"y\":98.7982},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"unconnected-(J1-P24-Pad24)\",\"number\":\"24\",\"x\":105.5116,\"y\":101.5682},{\"layers\":[\"B.Cu\",\"B.Mask\",\"B.Paste\"],\"net\":\"GND\",\"number\":\"25\",\"x\":105.5116,\"y\":104.3382}],\"reference\":\"J1\",\"source\":\"ipc\"}",
+            "type": "text"
+          }
+        ],
+        "isError": false
+      }
+    }
+  ]
+}

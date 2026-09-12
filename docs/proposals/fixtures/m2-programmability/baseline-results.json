@@ -1,0 +1,339 @@
+{
+  "baseline_commit": "ab44257f8fc017ee97eb7228b601007f929cbaa3",
+  "compiler_sha256": "a93913c447d1abef88b918271d61edaef5455ddb651ca008e9bf22f58f25011a",
+  "reference": {
+    "source": "reference.cohdl",
+    "source_sha256": "074028a42fcb0a30a84c51499e6a2c894d0bf3c114165856cf39173aa31cfded",
+    "command": [
+      "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+      "check",
+      "/Users/zhangalex/Work/Projects/cohdl/docs/proposals/fixtures/m2-programmability/reference.cohdl",
+      "--no-std",
+      "--json"
+    ],
+    "exit_code": 0,
+    "result": {
+      "schema_version": 1,
+      "verdict": "pass",
+      "diagnostics": []
+    }
+  },
+  "proposed": {
+    "source": "proposed.cohdl.txt",
+    "source_sha256": "666cec37233f6d027e080f182ba8dcab7b841a2c5886479b8a7b91cced20c33d",
+    "command": [
+      "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+      "check",
+      "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+      "--no-std",
+      "--json"
+    ],
+    "exit_code": 1,
+    "result": {
+      "schema_version": 1,
+      "verdict": "fail",
+      "diagnostics": [
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected `(` to open the call arguments, found `N`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 21,
+            "start_col": 11,
+            "end_line": 21,
+            "end_col": 12,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a whole-number index as the array length (e.g. `1`), found `N`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 25,
+            "start_col": 33,
+            "end_line": 25,
+            "end_col": 34,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "D003",
+          "severity": "warning",
+          "message": "single-driver: net `VCC` has only one connected pin (`LedChain::host.V5`, role `power_out`) — the driver drives nothing; likely unfinished wiring",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 27,
+            "start_col": 5,
+            "end_line": 27,
+            "end_col": 37,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a whole-number index as the range end (e.g. `1`), found `(`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 27,
+            "start_col": 37,
+            "end_line": 27,
+            "end_col": 38,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a statement (`inst`, `net`, `nc`, or a fn call), found `(`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 27,
+            "start_col": 37,
+            "end_line": 27,
+            "end_col": 38,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 27,
+            "start_col": 47,
+            "end_line": 27,
+            "end_col": 48,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a whole-number index as the range end (e.g. `1`), found `(`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 28,
+            "start_col": 39,
+            "end_line": 28,
+            "end_col": 40,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a statement (`inst`, `net`, `nc`, or a fn call), found `(`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 28,
+            "start_col": 39,
+            "end_line": 28,
+            "end_col": 40,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 28,
+            "start_col": 49,
+            "end_line": 28,
+            "end_col": 50,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "D003",
+          "severity": "warning",
+          "message": "single-driver: net `DATA` has only one connected pin (`LedChain::host.DATA`, role `output`) — the driver drives nothing; likely unfinished wiring",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 29,
+            "start_col": 5,
+            "end_line": 29,
+            "end_col": 37,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E211",
+          "severity": "error",
+          "message": "`leds` is not an array-typed instance — only `inst NAME: [Device; N]` can be indexed",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 29,
+            "start_col": 30,
+            "end_line": 29,
+            "end_col": 33,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a statement (`inst`, `net`, `nc`, or a fn call), found `for`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 30,
+            "start_col": 5,
+            "end_line": 30,
+            "end_col": 8,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 30,
+            "start_col": 34,
+            "end_line": 30,
+            "end_col": 35,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a whole-number index in the index (e.g. `1`), found `n`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 31,
+            "start_col": 21,
+            "end_line": 31,
+            "end_col": 22,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected `(` to open the call arguments, found `]`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 31,
+            "start_col": 22,
+            "end_line": 31,
+            "end_col": 23,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E010",
+          "severity": "error",
+          "message": "expected a top-level declaration (`trait`, `device`, `impl`, `fn`, `part`, `design`, `subdesign`, `footprint`, `pad`, or `use`), found `nc`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 33,
+            "start_col": 5,
+            "end_line": 33,
+            "end_col": 7,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 33,
+            "start_col": 23,
+            "end_line": 33,
+            "end_col": 24,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "unexpected character `*`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 38,
+            "start_col": 52,
+            "end_line": 38,
+            "end_col": 53,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "unexpected character `/`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 39,
+            "start_col": 40,
+            "end_line": 39,
+            "end_col": 41,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E001",
+          "severity": "error",
+          "message": "unexpected character `*`",
+          "primary": {
+            "file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-syntax-941gu7zu/proposed.cohdl",
+            "start_line": 39,
+            "start_col": 51,
+            "end_line": 39,
+            "end_col": 52,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        }
+      ]
+    }
+  }
+}

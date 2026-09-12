@@ -1,0 +1,98 @@
+[
+  {
+    "tool": "open_project",
+    "arguments": {
+      "path": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb"
+    },
+    "result": {
+      "content": [
+        {
+          "text": "{\"ipc_address\":\"ipc:///tmp/kicad/api.sock\",\"ipc_available\":true,\"kicad_ui_running\":true,\"message\":\"The requested board is open in KiCad.\",\"open_board_count\":1,\"open_boards\":[\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\"],\"open_boards_error\":null,\"requested_board\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\",\"requested_check_error\":null,\"requested_open\":true,\"requested_path\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\"}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "tool": "find_shorted_nets",
+    "arguments": {
+      "schematic": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_sch"
+    },
+    "result": {
+      "content": [
+        {
+          "text": "{\"short_count\":0,\"shorts\":[]}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "tool": "run_erc",
+    "arguments": {
+      "schematic": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_sch",
+      "severity": "info",
+      "output": "/tmp/cohdl-sonde-erc.json"
+    },
+    "result": {
+      "content": [
+        {
+          "text": "{\"errors\":0,\"total\":2,\"violations\":[{\"description\":\"在库 'Connector_Dsub' 中找不到封装 'DSUB-25_Male_EdgeMount_P2.77mm': 符号 J1 [DB25]\",\"items\":[{\"description\":\"符号 J1 [DB25]\",\"uuid\":\"00000000-0000-0000-0000-00003ebf7d04\",\"x\":0.4445,\"y\":0.7112}],\"rule\":\"footprint_link_issues\",\"severity\":\"warning\",\"sheet\":\"/\",\"x\":0.4445,\"y\":0.7112},{\"description\":\"在库 'Connector_Dsub' 中找不到封装 'DSUB-9_Male_EdgeMount_P2.77mm': 符号 J2 [DB9]\",\"items\":[{\"description\":\"符号 J2 [DB9]\",\"uuid\":\"00000000-0000-0000-0000-00003ecde5c8\",\"x\":2.7178,\"y\":0.9906}],\"rule\":\"footprint_link_issues\",\"severity\":\"warning\",\"sheet\":\"/\",\"x\":2.7178,\"y\":0.9906}],\"warnings\":2}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "tool": "get_design_rules",
+    "arguments": {
+      "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb"
+    },
+    "result": {
+      "content": [
+        {
+          "text": "{\"board\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb\",\"project\":\"/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pro\",\"rules\":{\"min_clearance\":0.0,\"min_hole_to_hole\":0.25,\"min_trace_width\":0.2032,\"min_via_drill\":0.508,\"min_via_size\":0.889}}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "tool": "run_drc",
+    "arguments": {
+      "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb",
+      "severity": "info",
+      "limit": 500,
+      "output": "/tmp/cohdl-sonde-drc.json"
+    },
+    "result": {
+      "content": [
+        {
+          "text": "{\"categories_not_reported\":[],\"design_rule_violations\":1,\"errors\":0,\"filtered_count\":1,\"schematic_parity\":0,\"severity_filter\":\"info\",\"shown\":1,\"total_violations\":1,\"truncated\":false,\"unconnected_items\":0,\"violations\":[{\"description\":\"封装 'DSUB-9_Male_EdgeMount_P2.77mm' 与库 'sonde-xilinx' 中的副本不匹配\",\"items\":[{\"description\":\"封装 J2\",\"pos\":{\"x\":181.61,\"y\":90.1192},\"uuid\":\"00000000-0000-0000-0000-00005a73b143\"}],\"pos\":{\"x\":181.61,\"y\":90.1192},\"rule\":\"lib_footprint_mismatch\",\"severity\":\"warning\"}],\"warnings\":1}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  },
+  {
+    "tool": "get_component_pads",
+    "arguments": {
+      "board": "/Users/zhangalex/Work/CoHDL/watch-lab/lessons/01-sonde/sonde xilinx.kicad_pcb",
+      "reference": "C1"
+    },
+    "result": {
+      "content": [
+        {
+          "text": "{\"pad_count\":2,\"pads\":[{\"layers\":[\"F.Cu\",\"F.Mask\",\"B.Cu\",\"B.Mask\",\"In1.Cu\",\"In2.Cu\",\"In3.Cu\",\"In4.Cu\",\"In5.Cu\",\"In6.Cu\",\"In7.Cu\",\"In8.Cu\",\"In9.Cu\",\"In10.Cu\",\"In11.Cu\",\"In12.Cu\",\"In13.Cu\",\"In14.Cu\",\"In15.Cu\",\"In16.Cu\",\"In17.Cu\",\"In18.Cu\",\"In19.Cu\",\"In20.Cu\",\"In21.Cu\",\"In22.Cu\",\"In23.Cu\",\"In24.Cu\",\"In25.Cu\",\"In26.Cu\",\"In27.Cu\",\"In28.Cu\",\"In29.Cu\",\"In30.Cu\"],\"net\":\"VCC\",\"number\":\"1\",\"x\":134.62,\"y\":76.2},{\"layers\":[\"F.Cu\",\"F.Mask\",\"B.Cu\",\"B.Mask\",\"In1.Cu\",\"In2.Cu\",\"In3.Cu\",\"In4.Cu\",\"In5.Cu\",\"In6.Cu\",\"In7.Cu\",\"In8.Cu\",\"In9.Cu\",\"In10.Cu\",\"In11.Cu\",\"In12.Cu\",\"In13.Cu\",\"In14.Cu\",\"In15.Cu\",\"In16.Cu\",\"In17.Cu\",\"In18.Cu\",\"In19.Cu\",\"In20.Cu\",\"In21.Cu\",\"In22.Cu\",\"In23.Cu\",\"In24.Cu\",\"In25.Cu\",\"In26.Cu\",\"In27.Cu\",\"In28.Cu\",\"In29.Cu\",\"In30.Cu\"],\"net\":\"GND\",\"number\":\"2\",\"x\":147.12,\"y\":76.2}],\"reference\":\"C1\",\"source\":\"ipc\"}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+]

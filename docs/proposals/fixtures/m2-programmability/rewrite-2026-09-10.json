@@ -1,0 +1,535 @@
+{
+  "date": "2026-09-10",
+  "scope": "Current-syntax reference and mutation checks only; no proposed syntax or manufacturing claims",
+  "compiler_git_head": "9ac0e3c2ec7731eb636cb33b9c9a781e1f144242",
+  "compiler_binary_sha256": "e97a239c9bab771da910bafce24e6c3e927dd5c7b736d6acc5368f1dd8c48946",
+  "results": [
+    {
+      "case": "led",
+      "source_sha256": "074028a42fcb0a30a84c51499e6a2c894d0bf3c114165856cf39173aa31cfded",
+      "exit": 0,
+      "verdict": "pass",
+      "codes": [],
+      "diagnostics": []
+    },
+    {
+      "case": "channels",
+      "source_sha256": "04c841e418f5bef1c3066cc9ca732655a0b4da1944b52d3ab60b1312802c983c",
+      "exit": 0,
+      "verdict": "pass",
+      "codes": [],
+      "diagnostics": []
+    },
+    {
+      "case": "nested",
+      "source_sha256": "1403d2a65d4dc35ca4913d9ddfb262c6c35aa143a2458a427fe2dc19c21b6092",
+      "exit": 0,
+      "verdict": "pass",
+      "codes": [],
+      "diagnostics": []
+    },
+    {
+      "case": "wrong-unit",
+      "source_sha256": "b118f76879b0d34aa29fcba385ffadf610b5f12ad52ab3e1627164ff990ca46a",
+      "exit": 1,
+      "verdict": "fail",
+      "codes": [
+        "E405",
+        "E405",
+        "E405",
+        "E405",
+        "E405",
+        "E112"
+      ],
+      "diagnostics": [
+        {
+          "code": "E405",
+          "severity": "error",
+          "message": "`R` is not a generic parameter in scope here (generic arguments must be concrete by instantiation — RFC-007)",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-unit.cohdl",
+            "start_line": 27,
+            "start_col": 21,
+            "end_line": 27,
+            "end_col": 22,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E405",
+          "severity": "error",
+          "message": "`R` is not a generic parameter in scope here (generic arguments must be concrete by instantiation — RFC-007)",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-unit.cohdl",
+            "start_line": 36,
+            "start_col": 18,
+            "end_line": 36,
+            "end_col": 19,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E405",
+          "severity": "error",
+          "message": "`R` is not a generic parameter in scope here (generic arguments must be concrete by instantiation — RFC-007)",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-unit.cohdl",
+            "start_line": 37,
+            "start_col": 18,
+            "end_line": 37,
+            "end_col": 19,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E405",
+          "severity": "error",
+          "message": "`R` is not a generic parameter in scope here (generic arguments must be concrete by instantiation — RFC-007)",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-unit.cohdl",
+            "start_line": 38,
+            "start_col": 18,
+            "end_line": 38,
+            "end_col": 19,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E405",
+          "severity": "error",
+          "message": "`R` is not a generic parameter in scope here (generic arguments must be concrete by instantiation — RFC-007)",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-unit.cohdl",
+            "start_line": 41,
+            "start_col": 19,
+            "end_line": 41,
+            "end_col": 20,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        },
+        {
+          "code": "E112",
+          "severity": "error",
+          "message": "generic argument for `R` has the wrong unit type: expected `Resistance`, found `Capacitance`",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-unit.cohdl",
+            "start_line": 46,
+            "start_col": 24,
+            "end_line": 46,
+            "end_col": 29,
+            "message": "`100nF` is a `Capacitance`"
+          },
+          "secondary": [],
+          "help": []
+        }
+      ]
+    },
+    {
+      "case": "missing-pin",
+      "source_sha256": "95569a2af0b9542c5f859d5d128b69fb7f0863e1844268d3e651bcc0e0c86007",
+      "exit": 1,
+      "verdict": "fail",
+      "codes": [
+        "E701"
+      ],
+      "diagnostics": [
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `FilterBank::c1.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/missing-pin.cohdl",
+            "start_line": 33,
+            "start_col": 5,
+            "end_line": 33,
+            "end_col": 27,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "/private/tmp/cohdl-m2-rewrite-probes/missing-pin.cohdl",
+              "start_line": 22,
+              "start_col": 9,
+              "end_line": 22,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `ShuntC` here"
+            }
+          ],
+          "help": []
+        }
+      ]
+    },
+    {
+      "case": "wrong-kind",
+      "source_sha256": "4df1e9a8d18675a47282ae8e40654ffc3da1f1761cf22f4e26e25361dcab2029",
+      "exit": 1,
+      "verdict": "fail",
+      "codes": [
+        "E701",
+        "E701",
+        "E602"
+      ],
+      "diagnostics": [
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `NestedBank::source.OUT` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-kind.cohdl",
+            "start_line": 44,
+            "start_col": 5,
+            "end_line": 44,
+            "end_col": 30,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-kind.cohdl",
+              "start_line": 3,
+              "start_col": 12,
+              "end_line": 3,
+              "end_col": 36,
+              "message": "`OUT` is declared `required` on device `SignalSource` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `NestedBank::ground.GND` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-kind.cohdl",
+            "start_line": 45,
+            "start_col": 5,
+            "end_line": 45,
+            "end_col": 24,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-kind.cohdl",
+              "start_line": 9,
+              "start_col": 12,
+              "end_line": 9,
+              "end_col": 37,
+              "message": "`GND` is declared `required` on device `Ground` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E602",
+          "severity": "error",
+          "message": "`source` is an instance — reference one of its pins (e.g. `source.OUT`)",
+          "primary": {
+            "file": "/private/tmp/cohdl-m2-rewrite-probes/wrong-kind.cohdl",
+            "start_line": 46,
+            "start_col": 38,
+            "end_line": 46,
+            "end_col": 44,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        }
+      ]
+    },
+    {
+      "case": "cross-wired",
+      "source_sha256": "1530261f776ef9f1035a43a437d2f23c26d9d251544221fdf657ba0ad3c91d42",
+      "exit": 0,
+      "verdict": "pass",
+      "codes": [],
+      "diagnostics": []
+    }
+  ],
+  "checked_ir_observations": {
+    "channels": {
+      "counts": {
+        "instances": 13,
+        "nets": 7,
+        "connected_pins": 19,
+        "nc": 0
+      },
+      "instances": [
+        [
+          "FilterBank::c0",
+          "ShuntC"
+        ],
+        [
+          "FilterBank::c1",
+          "ShuntC"
+        ],
+        [
+          "FilterBank::c2",
+          "ShuntC"
+        ],
+        [
+          "FilterBank::ground",
+          "Ground"
+        ],
+        [
+          "FilterBank::inputs_0",
+          "SignalSource"
+        ],
+        [
+          "FilterBank::inputs_1",
+          "SignalSource"
+        ],
+        [
+          "FilterBank::inputs_2",
+          "SignalSource"
+        ],
+        [
+          "FilterBank::outputs_0",
+          "SignalSink"
+        ],
+        [
+          "FilterBank::outputs_1",
+          "SignalSink"
+        ],
+        [
+          "FilterBank::outputs_2",
+          "SignalSink"
+        ],
+        [
+          "FilterBank::r0",
+          "SeriesR"
+        ],
+        [
+          "FilterBank::r1",
+          "SeriesR"
+        ],
+        [
+          "FilterBank::r2",
+          "SeriesR"
+        ]
+      ],
+      "partitions": [
+        [
+          "FilterBank::c0.A",
+          "FilterBank::outputs_0.IN",
+          "FilterBank::r0.B"
+        ],
+        [
+          "FilterBank::c0.B",
+          "FilterBank::c1.B",
+          "FilterBank::c2.B",
+          "FilterBank::ground.GND"
+        ],
+        [
+          "FilterBank::c1.A",
+          "FilterBank::outputs_1.IN",
+          "FilterBank::r1.B"
+        ],
+        [
+          "FilterBank::c2.A",
+          "FilterBank::outputs_2.IN",
+          "FilterBank::r2.B"
+        ],
+        [
+          "FilterBank::inputs_0.OUT",
+          "FilterBank::r0.A"
+        ],
+        [
+          "FilterBank::inputs_1.OUT",
+          "FilterBank::r1.A"
+        ],
+        [
+          "FilterBank::inputs_2.OUT",
+          "FilterBank::r2.A"
+        ]
+      ]
+    },
+    "nested": {
+      "counts": {
+        "instances": 11,
+        "nets": 5,
+        "connected_pins": 17,
+        "nc": 0
+      },
+      "instances": [
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn2_rc_channel::c",
+          "ShuntC"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn2_rc_channel::r",
+          "SeriesR"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn3_rc_channel::c",
+          "ShuntC"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn3_rc_channel::r",
+          "SeriesR"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn4_rc_channel::c",
+          "ShuntC"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn4_rc_channel::r",
+          "SeriesR"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::receivers_0",
+          "SignalSink"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::receivers_1",
+          "SignalSink"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::receivers_2",
+          "SignalSink"
+        ],
+        [
+          "NestedBank::ground",
+          "Ground"
+        ],
+        [
+          "NestedBank::source",
+          "SignalSource"
+        ]
+      ],
+      "partitions": [
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn2_rc_channel::c.A",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn2_rc_channel::r.B",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::receivers_0.IN"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn2_rc_channel::c.B",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn3_rc_channel::c.B",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn4_rc_channel::c.B",
+          "NestedBank::ground.GND"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn2_rc_channel::r.A",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn3_rc_channel::r.A",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn4_rc_channel::r.A",
+          "NestedBank::source.OUT"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn3_rc_channel::c.A",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn3_rc_channel::r.B",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::receivers_1.IN"
+        ],
+        [
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn4_rc_channel::c.A",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::__fn4_rc_channel::r.B",
+          "NestedBank::__fn0_receiver_cluster::__fn1_filter_bank::receivers_2.IN"
+        ]
+      ]
+    },
+    "cross-wired": {
+      "counts": {
+        "instances": 13,
+        "nets": 6,
+        "connected_pins": 19,
+        "nc": 0
+      },
+      "instances": [
+        [
+          "FilterBank::c0",
+          "ShuntC"
+        ],
+        [
+          "FilterBank::c1",
+          "ShuntC"
+        ],
+        [
+          "FilterBank::c2",
+          "ShuntC"
+        ],
+        [
+          "FilterBank::ground",
+          "Ground"
+        ],
+        [
+          "FilterBank::inputs_0",
+          "SignalSource"
+        ],
+        [
+          "FilterBank::inputs_1",
+          "SignalSource"
+        ],
+        [
+          "FilterBank::inputs_2",
+          "SignalSource"
+        ],
+        [
+          "FilterBank::outputs_0",
+          "SignalSink"
+        ],
+        [
+          "FilterBank::outputs_1",
+          "SignalSink"
+        ],
+        [
+          "FilterBank::outputs_2",
+          "SignalSink"
+        ],
+        [
+          "FilterBank::r0",
+          "SeriesR"
+        ],
+        [
+          "FilterBank::r1",
+          "SeriesR"
+        ],
+        [
+          "FilterBank::r2",
+          "SeriesR"
+        ]
+      ],
+      "partitions": [
+        [
+          "FilterBank::c0.A",
+          "FilterBank::c1.A",
+          "FilterBank::outputs_0.IN",
+          "FilterBank::outputs_1.IN",
+          "FilterBank::r0.B",
+          "FilterBank::r1.B"
+        ],
+        [
+          "FilterBank::c0.B",
+          "FilterBank::c1.B",
+          "FilterBank::c2.B",
+          "FilterBank::ground.GND"
+        ],
+        [
+          "FilterBank::c2.A",
+          "FilterBank::outputs_2.IN",
+          "FilterBank::r2.B"
+        ],
+        [
+          "FilterBank::inputs_0.OUT",
+          "FilterBank::r0.A"
+        ],
+        [
+          "FilterBank::inputs_1.OUT",
+          "FilterBank::r1.A"
+        ],
+        [
+          "FilterBank::inputs_2.OUT",
+          "FilterBank::r2.A"
+        ]
+      ]
+    }
+  },
+  "topology_comparison": "The cross-wired mutation checks successfully but merges two filtered nets: 6 vs 7 partitions. No proposed-language execution."
+}

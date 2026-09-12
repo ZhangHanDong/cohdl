@@ -1,0 +1,389 @@
+{
+  "compiler": "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+  "compiler_sha256": "a93913c447d1abef88b918271d61edaef5455ddb651ca008e9bf22f58f25011a",
+  "source_sha256": "05ba559cd4dcb8091bb14d2a0c1967482d0a31677d40ced16659a31b7235ff1a",
+  "check": {
+    "command": [
+      "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+      "check",
+      "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign",
+      "--json"
+    ],
+    "exit_code": 0,
+    "result": {
+      "schema_version": 1,
+      "verdict": "pass",
+      "diagnostics": []
+    }
+  },
+  "build": {
+    "command": [
+      "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+      "build",
+      "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign",
+      "--json"
+    ],
+    "exit_code": 0,
+    "result": {
+      "schema_version": 1,
+      "verdict": "pass",
+      "diagnostics": [],
+      "build": {
+        "netlist": "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/subdesign-lesson.net",
+        "bom": "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/subdesign-lesson-bom.csv",
+        "layout": "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/subdesign-lesson-layout.json",
+        "kicad_mod": [
+          "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod",
+          "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/footprints/passive-CHIP_0603.kicad_mod"
+        ]
+      }
+    }
+  },
+  "repeat_build": {
+    "command": [
+      "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+      "build",
+      "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign",
+      "--json"
+    ],
+    "exit_code": 0,
+    "result": {
+      "schema_version": 1,
+      "verdict": "pass",
+      "diagnostics": [],
+      "build": {
+        "netlist": "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/subdesign-lesson.net",
+        "bom": "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/subdesign-lesson-bom.csv",
+        "layout": "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/subdesign-lesson-layout.json",
+        "kicad_mod": [
+          "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod",
+          "/Users/zhangalex/Work/Projects/cohdl/book/examples/subdesign/out/footprints/passive-CHIP_0603.kicad_mod"
+        ]
+      }
+    }
+  },
+  "artifact_sha256": {
+    "out/subdesign-lesson.net": "33cdcb1bc8adfede61b4405dd741c86bb626c98e3bc9f0ac1e77b153db8d1427",
+    "out/subdesign-lesson-bom.csv": "d4b7907ed64e27787c78e705d476eb2f5696f808a5ee4839b840938967473205",
+    "out/subdesign-lesson-layout.json": "9f90802423954ba2d68d7cac016eac9700985a8672fb599676157f12f1bf1ea6",
+    "out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod": "7a33c107bea08d91394c182ebd6f1a144439d049d32951be516ce54c165f0124",
+    "out/footprints/passive-CHIP_0603.kicad_mod": "ce1396769f311debc63c256db7e7bb499301e6b1467b9d55111f87dcf2c8fe73",
+    "design.lock": "a8ccd33a23134b9ae1b199eae5f5455381b89e6698afc03b2ffe3dfed1d237c3",
+    "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b"
+  },
+  "verified": {
+    "components": [
+      "C1",
+      "C2",
+      "J1",
+      "R1",
+      "R2"
+    ],
+    "nets": {
+      "GND": [
+        [
+          "C1",
+          "2"
+        ],
+        [
+          "C2",
+          "2"
+        ],
+        [
+          "J1",
+          "5"
+        ]
+      ],
+      "IN0": [
+        [
+          "J1",
+          "1"
+        ],
+        [
+          "R1",
+          "1"
+        ]
+      ],
+      "IN1": [
+        [
+          "J1",
+          "3"
+        ],
+        [
+          "R2",
+          "1"
+        ]
+      ],
+      "OUT0": [
+        [
+          "C1",
+          "1"
+        ],
+        [
+          "J1",
+          "2"
+        ],
+        [
+          "R1",
+          "2"
+        ]
+      ],
+      "OUT1": [
+        [
+          "C2",
+          "1"
+        ],
+        [
+          "J1",
+          "4"
+        ],
+        [
+          "R2",
+          "2"
+        ]
+      ]
+    },
+    "placements_mm": {
+      "RcPair::connector": [
+        10,
+        6
+      ],
+      "RcPair::channels_1::c": [
+        24,
+        17
+      ],
+      "RcPair::channels_0::c": [
+        13,
+        15
+      ],
+      "RcPair::channels_0::r": [
+        10,
+        15
+      ],
+      "RcPair::channels_1::r": [
+        20,
+        15
+      ]
+    },
+    "bom_rows": 3,
+    "repeated_artifact_bytes_identical": true
+  },
+  "probes": {
+    "missing_required_port": {
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-subdesign-probe-b0ingh0s",
+        "--json"
+      ],
+      "exit_code": 1,
+      "result": {
+        "schema_version": 1,
+        "verdict": "fail",
+        "diagnostics": [
+          {
+            "code": "E1302",
+            "severity": "error",
+            "message": "required port `OUT` of `channels_0` (subdesign `RcChannel`) is not connected — connect it in the use site's port block or a `net`",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 31,
+              "start_col": 5,
+              "end_line": 31,
+              "end_col": 39,
+              "message": ""
+            },
+            "secondary": [],
+            "help": []
+          }
+        ]
+      },
+      "observed_codes": [
+        "E1302"
+      ]
+    },
+    "electrical_reach_in": {
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-subdesign-probe-n5adlori",
+        "--json"
+      ],
+      "exit_code": 1,
+      "result": {
+        "schema_version": 1,
+        "verdict": "fail",
+        "diagnostics": [
+          {
+            "code": "E1302",
+            "severity": "error",
+            "message": "required port `OUT` of `channels_0` (subdesign `RcChannel`) is not connected — connect it in the use site's port block or a `net`",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 31,
+              "start_col": 5,
+              "end_line": 31,
+              "end_col": 39,
+              "message": ""
+            },
+            "secondary": [],
+            "help": []
+          },
+          {
+            "code": "E1301",
+            "severity": "error",
+            "message": "subdesign `RcChannel` (use site `channels_0`) has no port named `r`",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 34,
+              "start_col": 41,
+              "end_line": 34,
+              "end_col": 42,
+              "message": ""
+            },
+            "secondary": [],
+            "help": [
+              "its ports are: GND, IN, OUT — internal nets and instances are behind the port boundary; only `place` may reach in (RFC-032)"
+            ]
+          },
+          {
+            "code": "E010",
+            "severity": "error",
+            "message": "expected a statement (`inst`, `net`, `nc`, or a fn call), found `.`",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 34,
+              "start_col": 42,
+              "end_line": 34,
+              "end_col": 43,
+              "message": ""
+            },
+            "secondary": [],
+            "help": []
+          }
+        ]
+      },
+      "observed_codes": [
+        "E010",
+        "E1301",
+        "E1302"
+      ]
+    },
+    "internal_name_is_not_a_port": {
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-subdesign-probe-m0wnu_10",
+        "--json"
+      ],
+      "exit_code": 1,
+      "result": {
+        "schema_version": 1,
+        "verdict": "fail",
+        "diagnostics": [
+          {
+            "code": "E1301",
+            "severity": "error",
+            "message": "subdesign `RcChannel` (use site `channels_0`) has no port named `r`",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 33,
+              "start_col": 56,
+              "end_line": 33,
+              "end_col": 57,
+              "message": ""
+            },
+            "secondary": [],
+            "help": [
+              "its ports are: GND, IN, OUT — internal nets and instances are behind the port boundary; only `place` may reach in (RFC-032)"
+            ]
+          }
+        ]
+      },
+      "observed_codes": [
+        "E1301"
+      ]
+    },
+    "wrong_port_type": {
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-subdesign-probe-eusonlmy",
+        "--json"
+      ],
+      "exit_code": 1,
+      "result": {
+        "schema_version": 1,
+        "verdict": "fail",
+        "diagnostics": [
+          {
+            "code": "E1303",
+            "severity": "error",
+            "message": "`Voltage` is not a port type — every subdesign port is `Pin`-typed",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 10,
+              "start_col": 22,
+              "end_line": 10,
+              "end_col": 29,
+              "message": ""
+            },
+            "secondary": [],
+            "help": []
+          }
+        ]
+      },
+      "observed_codes": [
+        "E1303"
+      ]
+    },
+    "nc_port": {
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-subdesign-probe-pryndsz8",
+        "--json"
+      ],
+      "exit_code": 1,
+      "result": {
+        "schema_version": 1,
+        "verdict": "fail",
+        "diagnostics": [
+          {
+            "code": "E1306",
+            "severity": "error",
+            "message": "a subdesign port cannot be marked `nc` — leave the optional port `channels[0].OUT` unconnected instead",
+            "primary": {
+              "file": "src/main.cohdl",
+              "start_line": 38,
+              "start_col": 23,
+              "end_line": 38,
+              "end_col": 38,
+              "message": ""
+            },
+            "secondary": [],
+            "help": []
+          }
+        ]
+      },
+      "observed_codes": [
+        "E1306"
+      ]
+    },
+    "cross_package_fn": {
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-subdesign-probe-5aezdpq_",
+        "--json"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "verdict": "pass",
+        "diagnostics": []
+      },
+      "observed_codes": []
+    }
+  }
+}

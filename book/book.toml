@@ -1,0 +1,28 @@
+[book]
+title = "CoHDL Book：从 PCB 入门到手表主板"
+authors = ["CoHDL contributors"]
+language = "zh-CN"
+src = "src"
+description = "用 Konnect 与 KiCad 学习 PCB，把手表设计中的知识和实践沉淀进 CoHDL。"
+
+[build]
+build-dir = "html"
+create-missing = false
+extra-watch-dirs = ["examples", "../lib/passive/src"]
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-css = ["theme/course.css"]
+additional-js = ["theme/mermaid.min.js", "theme/mermaid-init.js"]
+git-repository-url = "https://github.com/conol-ai/cohdl"
+
+[output.html.playground]
+runnable = false
+
+[output.html.search]
+enable = true
+
+[output.html.fold]
+enable = true
+level = 0

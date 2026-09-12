@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="290" viewBox="0 0 1080 290" role="img" aria-labelledby="title desc">
+  <title id="title">R1 两端的网络与底层铜连接</title>
+  <desc id="desc">J1 焊盘 15 经三段底层铜接 R1 焊盘 2；R1 本体另一端焊盘 1 经三段底层铜接 D1 焊盘 2。连接关系示意，不是等比例 PCB 布局。</desc>
+  <rect width="1080" height="290" rx="12" fill="#f8fafc"/>
+  <g font-family="sans-serif" text-anchor="middle" fill="#172033">
+    <text x="540" y="36" font-size="23">R1 两端：网络要求与实际铜连接</text>
+    <text x="540" y="62" font-size="15" fill="#536177">连接关系示意，不是等比例 PCB 布局；依据本次 Konnect IPC 读取</text>
+    <text x="265" y="107" font-size="18" fill="#185abc">/VCC_SENSE-ERROR*</text>
+    <text x="815" y="107" font-size="18" fill="#185abc">Net-(D1-K)</text>
+    <path d="M100 147 H430 M650 147 H980" fill="none" stroke="#2877d5" stroke-width="7" stroke-linecap="round"/>
+    <path d="M430 147 H480 M600 147 H650" fill="none" stroke="#a36713" stroke-width="4"/>
+    <rect x="480" y="127" width="120" height="40" rx="3" fill="#fff4dd" stroke="#a36713" stroke-width="3"/>
+    <text x="540" y="153" font-size="18">R1 · 100 Ω</text>
+    <g fill="#ffffff" stroke="#2877d5" stroke-width="3">
+      <circle cx="100" cy="147" r="8"/><circle cx="430" cy="147" r="8"/>
+      <circle cx="650" cy="147" r="8"/><circle cx="980" cy="147" r="8"/>
+    </g>
+    <text x="100" y="190" font-size="17">J1 pad 15</text>
+    <text x="430" y="190" font-size="17">R1 pad 2</text>
+    <text x="650" y="190" font-size="17">R1 pad 1</text>
+    <text x="980" y="190" font-size="17">D1 pad 2 / K</text>
+    <text x="265" y="224" font-size="16" fill="#185abc">B.Cu · 3 段 · 宽 0.635 mm</text>
+    <text x="815" y="224" font-size="16" fill="#185abc">B.Cu · 3 段 · 宽 0.635 mm</text>
+    <text x="540" y="265" font-size="16" fill="#536177">蓝线表示器件外部的铜连接；中间电阻本体连接两个不同的 net。</text>
+  </g>
+</svg>

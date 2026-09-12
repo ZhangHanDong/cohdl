@@ -33,6 +33,26 @@ are owned by the focused component packages listed below.
 
 **EasyEDA / LCEDA Pro netlist (no RFC — emitter tooling, user-directed 2026-08-27; contract in `docs/easyeda.md`).** `build --emit easyeda` writes `out/<name>.enet` — the Constitution's second named netlist target (LCEDA Pro JSON v2.0.0, **File → Import → Netlist**), whose MVP cut ("one faithful target is enough proof") is hereby superseded by the board author. A NETLIST, not a board: geometry stays with `kicad_pcb`/`ipc2581`, and all three `--emit` values compose. The byte shape is pinned against the v1 compiler's emitter (`legacy` branch, `crates/cohdl-codegen-lceda` — reference for the FORMAT only, per the no-porting rule): v1's top-level struct order, string-sorted object keys everywhere (v1's serde_json BTreeMap bytes), `gge<n>` Unique IDs counting up in designator natural order. Semantics are the `.net` re-projected through the SAME shared derivations (`kicad::principal_value`, footprint symbol fq path, `Device::pins_for` physical expansion — the two netlists cannot disagree; cross-checked in `tests/easyeda.rs`); multi-pad logical pins flatten to one `pinInfoMap` row per pad (the RFC-027 convention), `nc` pins are guaranteed-absent (DR-012), a pin-less mechanical part keeps an empty map, and every net gets a `designRule.netRule` row with the empty `TrackPhysics` binding. Hand-rolled JSON via `emit::json::json_str` — zero dependencies. A live LCEDA Pro import is the human checkpoint, as pcbnew is for `kicad_pcb`.
 
+## CoHDL Book and guided PCB learning
+
+`book/` is the Chinese mdBook for the Konnect/KiCad demo → watch-prototype →
+watch-mainboard course. The outline is `docs/book-outline.md`; maintenance
+steps and local commands are in `book/README.md`.
+
+When a guided learning session produces a durable observation or decision,
+add an actual session record under `book/src/learning/`, link it from
+`SUMMARY.md`, update `learning/progress.md`, and fold reusable explanations or
+failure cases into the relevant course/CoHDL chapter. Keep textbook readiness,
+the learner's progress, tool checks, and physical measurements distinct.
+Never invent learner mastery or unexecuted hardware results. Label proposed
+language features separately from currently implemented syntax. Use the
+project name **CoHDL**. The user renamed the local Konnect/demo parent to
+`/Users/zhangalex/Work/CoHDL/` on 2026-09-07; use that exact path spelling.
+
+Run `mdbook build book` and `python3 book/tools/check_book.py` for book edits;
+recheck executable teaching examples when they change. Book tooling is
+separate from compiler dependencies and from the site's publication workflow.
+
 ## Commands
 
 - `cargo build` / `cargo test` — build and run all tests

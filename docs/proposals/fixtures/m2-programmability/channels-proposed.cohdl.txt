@@ -1,0 +1,39 @@
+// Synthetic check-only interfaces; no procurement parts or hardware validation.
+device SignalSource {
+    pins { required OUT: 1 [output] }
+}
+device SignalSink {
+    pins { required IN: 1 [input] }
+}
+device Ground {
+    pins { required GND: 1 [passive] }
+}
+device SeriesR<R: Resistance> {
+    spec { resistance: R }
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+device ShuntC<C: Capacitance> {
+    spec { capacitance: C }
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+
+// PROPOSED M2 syntax, not implemented.
+design FilterBank {
+    const N: Int = 3
+    inst inputs: [SignalSource; N]
+    inst outputs: [SignalSink; N]
+    inst ground: Ground
+    for channels: i in 0..N {
+        inst r: SeriesR<1kohm>
+        inst c: ShuntC<100nF>
+        net IN: inputs[i].OUT, r.A
+        net FILTERED: r.B, c.A, outputs[i].IN
+        net GND [gnd]: ground.GND, c.B
+    }
+}

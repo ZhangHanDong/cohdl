@@ -1,0 +1,41 @@
+// 复用：subdesign 是带端口、可放置的电路单元；fn 是内联展开的电路片段。
+
+// 跨包的名字要么写全路径，要么用 use 导入一次。
+use passive::C_100n_10V_X7R_0603;
+use passive::R_1K_F_0603;
+
+// ANCHOR: subdesign
+// 一路 RC 低通。外部只能通过三个端口接线；内部的 r、c 是真实元件。
+// layout 给出相对于本单元原点的默认位置，外层设计整体摆放或单独覆盖。
+pub subdesign RcLowPass {
+    ports {
+        required IN: Pin
+        required OUT: Pin
+        required GND: Pin
+    }
+
+    inst r: R_1K_F_0603
+    inst c: C_100n_10V_X7R_0603
+
+    net _: IN, r.A
+    net _: OUT, r.B, c.A
+    net _: GND, c.B
+
+    layout {
+        place r at (0mm, 0mm)
+        place c at (3mm, 0mm)
+    }
+}
+// ANCHOR_END: subdesign
+
+// ANCHOR: fn
+// 一个 LED 驱动片段。参数 led 只要求“满足 Indicator”，
+// 所以 led.Anode / led.Cathode 通过 impl 映射解析到具体器件的引脚。
+// 每次调用都会新增一颗真实的电阻 r。
+pub fn drive_led(led: impl Indicator, drive: Pin, gnd: Pin) {
+    inst r: R_1K_F_0603
+    net _: drive, r.A
+    net _: r.B, led.Anode
+    net _: gnd, led.Cathode
+}
+// ANCHOR_END: fn

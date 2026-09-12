@@ -6,6 +6,15 @@ This is the **v2 ground-up implementation**, restarted 2026-07-13 from the redes
 
 The previous implementation lives on the [`legacy`](https://github.com/conol-ai/cohdl/tree/legacy) branch. It is not being fixed; this is a fresh build informed by its lessons.
 
+## Learn with CoHDL Book
+
+The Chinese [CoHDL Book](book/README.md) follows a hands-on path from KiCad
+demos through Konnect to a watch mainboard. It brings together PCB lessons,
+current language concepts, and learning records that grow with each exercise.
+Run `mdbook serve book --hostname 127.0.0.1 --port 3000` from the repository
+root and open <http://127.0.0.1:3000>. Lessons distinguish current capabilities,
+future language milestones, and experiments that have actually been run.
+
 ## Design repository
 
 The source of truth for the language design is the Coherent Design Repository on conol.ai:

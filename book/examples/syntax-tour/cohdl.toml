@@ -1,0 +1,11 @@
+[package]
+name = "syntax-tour"
+version = "0.1.0"
+
+[design]
+top = "SyntaxTour"
+
+[dependencies]
+connectors = "0.1.6"
+passive = "0.2.2"
+std = "0.3.0"

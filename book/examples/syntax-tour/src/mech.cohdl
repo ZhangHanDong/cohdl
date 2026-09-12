@@ -1,0 +1,26 @@
+// 机械件：没有引脚，只有一个定位孔。它出现在 BOM 和板文件里，但不参与任何网络。
+
+// ANCHOR: mechanical
+pub trait Mounting {
+    designator_prefix: "M"
+}
+
+// 一个没有 pins 块的器件是合法的：它不承担任何连接义务。
+pub device Standoff_M2 {
+}
+
+impl Mounting for Standoff_M2 {}
+
+// mount_hole 的编号与 pad 编号互不相关；这个封装没有任何 pad。
+pub footprint FP_Standoff_M2_NPTH {
+    mount_hole 1: non_plated at (0mm, 0mm) diameter 2.2mm
+    courtyard { shape: circle, at: (0mm, 0mm), size: (4.4mm) }
+}
+
+// 一个孔没有可采购的 MPN；这里沿用仓库 misc 包的做法，用制造特征说明占位。
+#[doc("docs/README.md")]
+pub part STANDOFF_M2: Standoff_M2 {
+    primary { mfr: "PCB Fabrication", mpn: "STANDOFF-M2-NPTH-2.2MM",
+              footprint: FP_Standoff_M2_NPTH }
+}
+// ANCHOR_END: mechanical

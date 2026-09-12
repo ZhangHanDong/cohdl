@@ -1,0 +1,22 @@
+{
+  "source": "saved .kicad_pro metadata inspected read-only after GUI corroboration; Konnect get_design_rules omits these fields",
+  "ignored_rule_severities": {
+    "connection_width": "ignore",
+    "footprint_filters_mismatch": "ignore",
+    "track_not_centered_on_via": "ignore",
+    "tuning_profile_track_geometries": "ignore"
+  },
+  "drc_exclusions": [],
+  "gui_schematic_parity": "not run",
+  "gui_drc": {
+    "errors": 0,
+    "warnings": 1,
+    "unconnected_items": 0
+  },
+  "checked_design_hashes": {
+    "sonde xilinx.kicad_sch": "5271d5d1472d4dab645870f97e62785be9eb95b793e1b8cf0d8ca607de95a985",
+    "sonde xilinx.kicad_pro": "bba95390f36eec4e1326fb349db14c69851e0395fab491eac4c714e5d3f1653b",
+    "sonde xilinx.kicad_pcb": "a1ab34cdb51d69cf5fd84c746a715fec5f78adbdafa26ff639d7c271f59d5635"
+  },
+  "backup_before_save": "/tmp/cohdl-sonde-before-first-save.tar.gz"
+}

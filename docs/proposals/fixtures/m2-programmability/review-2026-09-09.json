@@ -1,0 +1,39 @@
+{
+  "baseline_commit": "ab44257f8fc017ee97eb7228b601007f929cbaa3",
+  "compiler_sha256": "a93913c447d1abef88b918271d61edaef5455ddb651ca008e9bf22f58f25011a",
+  "scope": "Existing syntax probes only; no M2 syntax or implementation",
+  "cases": {
+    "helper_layout_constraints": {
+      "source": "fn f() { layout { net_class C0 {} net_class C1 {} } }\ndesign B { f() f() }\n",
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-review-mxelvwtt/helper_layout_constraints.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "verdict": "pass",
+        "diagnostics": []
+      }
+    },
+    "unused_legacy_duplicate_local": {
+      "source": "device D { pins {} }\nfn old() { inst x: D inst x: D }\nfn unused() { old() }\ndesign B {}\n",
+      "command": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-review-mxelvwtt/unused_legacy_duplicate_local.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit_code": 0,
+      "result": {
+        "schema_version": 1,
+        "verdict": "pass",
+        "diagnostics": []
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+[designators]
+"SyntaxTour::__fn0_drive_led::r" = "R1"
+"SyntaxTour::c_byp" = "C1"
+"SyntaxTour::hole" = "M1"
+"SyntaxTour::j" = "J1"
+"SyntaxTour::led_status" = "D1"
+"SyntaxTour::leds_0" = "D2"
+"SyntaxTour::leds_1" = "D3"
+"SyntaxTour::lpf::c" = "C2"
+"SyntaxTour::lpf::r" = "R2"
+"SyntaxTour::r_pwr_0" = "R3"
+"SyntaxTour::r_pwr_1" = "R4"
+
+[tombstones]

@@ -1,0 +1,5 @@
+[designators]
+"RcControl::capacitor" = "C1"
+"RcControl::resistor" = "R1"
+
+[tombstones]

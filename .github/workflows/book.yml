@@ -1,0 +1,83 @@
+name: CoHDL Book
+
+on:
+  push:
+    branches: [main, docs/proof-gated-agent-harness-rfc]
+    paths:
+      - 'book/**'
+      - 'docs/book-outline.md'
+      - 'docs/language-design-principles.md'
+      - 'docs/proposals/**'
+      - 'lib/passive/src/circuits.cohdl'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/book.yml'
+  pull_request:
+    paths:
+      - 'book/**'
+      - 'docs/book-outline.md'
+      - 'docs/language-design-principles.md'
+      - 'docs/proposals/**'
+      - 'lib/passive/src/circuits.cohdl'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/book.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  book:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Install mdBook
+        run: cargo install mdbook --version 0.5.3 --locked
+      - name: Build book
+        run: mdbook build book
+      - name: Check chapter links and resources
+        run: python3 book/tools/check_book.py
+      - name: Check teaching examples
+        run: |
+          cargo run --locked -- check book/examples/connections.cohdl --no-std
+          cargo run --locked -- fmt book/examples/connections.cohdl --check
+          cargo run --locked -- check book/examples/syntax-tour
+          cargo run --locked -- fmt book/examples/syntax-tour --check
+      - name: Upload reading copy
+        uses: actions/upload-artifact@v4
+        with:
+          name: cohdl-book
+          path: book/html
+          if-no-files-found: error
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: book/html
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: book
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

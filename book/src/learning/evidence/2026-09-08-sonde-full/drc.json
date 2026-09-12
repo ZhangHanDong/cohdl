@@ -1,0 +1,25 @@
+{
+  "violations": [
+    {
+      "severity": "warning",
+      "description": "封装 'DSUB-9_Male_EdgeMount_P2.77mm' 与库 'sonde-xilinx' 中的副本不匹配",
+      "rule": "lib_footprint_mismatch",
+      "pos": {
+        "x": 181.61,
+        "y": 90.1192
+      },
+      "items": [
+        {
+          "description": "封装 J2",
+          "pos": {
+            "x": 181.61,
+            "y": 90.1192
+          },
+          "uuid": "00000000-0000-0000-0000-00005a73b143"
+        }
+      ]
+    }
+  ],
+  "unconnected_items": [],
+  "schematic_parity": []
+}

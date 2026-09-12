@@ -1,0 +1,14 @@
+// A separately named modern 0603 component-binding control experiment.
+// These parts are NOT replacements selected for the original THT Sonde.
+// Open INPUT/GND terminals here are singleton passive nets, not external pins.
+use passive::C_100p_50V_C0G_0603;
+use passive::R_100R_F_0603;
+
+design RcControl {
+    inst resistor: R_100R_F_0603
+    inst capacitor: C_100p_50V_C0G_0603
+
+    net INPUT: resistor.A
+    net RC_NODE: resistor.B, capacitor.A
+    net GND [gnd]: capacitor.B
+}

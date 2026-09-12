@@ -1,0 +1,76 @@
+// 本文件演示“库作者”会写的声明：trait、device、impl、pad、footprint、part。
+// 真实元件来自 inst；fn/subdesign 中的 inst 在调用或实例化时展开，由顶层 design 汇总。
+
+// ANCHOR: trait
+// 一个自定义元件类别：它要求 Polarized 的 Anode/Cathode 引脚，
+// 额外要求一个正向电流规格，并把位号前缀定为 D。
+pub trait Indicator: Polarized {
+    designator_prefix: "D"
+    spec {
+        forward_current: Current
+    }
+}
+// ANCHOR_END: trait
+
+// ANCHOR: device
+// 器件只有引脚和规格，不声明自己属于哪个 trait。
+// 泛型参数 If 是一个 Current 类型的值，带默认值。
+// variants 列出封装变体；每个变体必须给出自己的引脚表。
+pub device ChipLed<If: Current = 20mA> {
+    variants { L0603, L0805 }
+
+    pins[L0603] {
+        required Cathode: 1 [passive]
+        required Anode: 2 [passive]
+    }
+
+    pins[L0805] {
+        required Cathode: 1 [passive]
+        required Anode: 2 [passive]
+    }
+
+    spec {
+        forward_current: If
+    }
+}
+// ANCHOR_END: device
+
+// ANCHOR: impl
+// impl 是独立语句：按名字匹配 trait 要求的引脚和规格。
+// Indicator 继承 Polarized，所以两条 impl 都要写。
+impl Polarized for ChipLed {}
+impl Indicator for ChipLed {}
+// ANCHOR_END: impl
+
+// ANCHOR: pad
+// 一个可复用的焊盘定义：形状、尺寸、铜层、工艺。
+pub pad P_Led_0603 {
+    shape: rect
+    size: (0.8mm, 0.8mm)
+    layer: top_copper
+    plating: smd
+}
+// ANCHOR_END: pad
+
+// ANCHOR: footprint
+// 封装引用焊盘并给出位置；用到的 pad 编号集合必须等于器件引脚号集合，同一编号可以有多块铜。
+// silkscreen 里的极性标记会展开成真实的丝印图元。
+pub footprint FP_LED_0603_1608Metric {
+    pad 1: P_Led_0603 at (-0.75mm, 0mm)
+    pad 2: P_Led_0603 at (0.75mm, 0mm)
+    silkscreen {
+        polarity_marker cathode_pin 1 shape band
+    }
+    courtyard { shape: rect, at: (0mm, 0mm), size: (2.8mm, 1.4mm) }
+    silkscreen_ref { at: (0mm, -1.2mm) }
+}
+// ANCHOR_END: footprint
+
+// ANCHOR: part
+// part 把一个完全具体的器件实例化（含变体选择）绑定到可采购物料。
+// primary 必须有 mpn 和 footprint；footprint 是符号引用，不是字符串。
+#[doc("docs/README.md")]
+pub part LED_RED_0603: ChipLed<20mA>[L0603] {
+    primary { mfr: "Lite-On", mpn: "LTST-C193KRKT-5A", footprint: FP_LED_0603_1608Metric }
+}
+// ANCHOR_END: part

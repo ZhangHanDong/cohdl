@@ -1,0 +1,48 @@
+// Check-only language fixture. These are synthetic interface types,
+// not procurement-backed devices or a validated hardware design.
+device AddressableLED {
+    pins {
+        required DIN: 1 [input]
+        required DOUT: 2 [output]
+        required VDD: 3 [power_in]
+        required GND: 4 [power_in]
+    }
+}
+device Host {
+    pins {
+        required DATA: 1 [output]
+        required V5: 2 [power_out]
+        required GND: 3 [passive]
+    }
+}
+
+design LedChain {
+    inst host: Host
+    inst leds: [AddressableLED; 10]
+    net VCC [5V]: host.V5, leds[0..=9].VDD
+    net GND [gnd]: host.GND, leds[0..=9].GND
+    net DATA: host.DATA, leds[0].DIN
+    net _: leds[0].DOUT, leds[1].DIN
+    net _: leds[1].DOUT, leds[2].DIN
+    net _: leds[2].DOUT, leds[3].DIN
+    net _: leds[3].DOUT, leds[4].DIN
+    net _: leds[4].DOUT, leds[5].DIN
+    net _: leds[5].DOUT, leds[6].DIN
+    net _: leds[6].DOUT, leds[7].DIN
+    net _: leds[7].DOUT, leds[8].DIN
+    net _: leds[8].DOUT, leds[9].DIN
+    nc: leds[9].DOUT
+    layout {
+        place host at (0mm, 0mm)
+        place leds[0] at (10mm, 10mm)
+        place leds[1] at (14mm, 10mm)
+        place leds[2] at (18mm, 10mm)
+        place leds[3] at (22mm, 10mm)
+        place leds[4] at (26mm, 10mm)
+        place leds[5] at (10mm, 14mm)
+        place leds[6] at (14mm, 14mm)
+        place leds[7] at (18mm, 14mm)
+        place leds[8] at (22mm, 14mm)
+        place leds[9] at (26mm, 14mm)
+    }
+}

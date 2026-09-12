@@ -1,0 +1,283 @@
+{
+  "baseline_commit": "ab44257f8fc017ee97eb7228b601007f929cbaa3",
+  "source_sha256": "074028a42fcb0a30a84c51499e6a2c894d0bf3c114165856cf39173aa31cfded",
+  "design_name": "LedChain",
+  "mode": "check-only IR observation, no parts/designators/emission",
+  "instances": [
+    "host",
+    "leds_0",
+    "leds_1",
+    "leds_2",
+    "leds_3",
+    "leds_4",
+    "leds_5",
+    "leds_6",
+    "leds_7",
+    "leds_8",
+    "leds_9"
+  ],
+  "net_partitions": [
+    [
+      [
+        "host",
+        "DATA"
+      ],
+      [
+        "leds_0",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "host",
+        "GND"
+      ],
+      [
+        "leds_0",
+        "GND"
+      ],
+      [
+        "leds_1",
+        "GND"
+      ],
+      [
+        "leds_2",
+        "GND"
+      ],
+      [
+        "leds_3",
+        "GND"
+      ],
+      [
+        "leds_4",
+        "GND"
+      ],
+      [
+        "leds_5",
+        "GND"
+      ],
+      [
+        "leds_6",
+        "GND"
+      ],
+      [
+        "leds_7",
+        "GND"
+      ],
+      [
+        "leds_8",
+        "GND"
+      ],
+      [
+        "leds_9",
+        "GND"
+      ]
+    ],
+    [
+      [
+        "host",
+        "V5"
+      ],
+      [
+        "leds_0",
+        "VDD"
+      ],
+      [
+        "leds_1",
+        "VDD"
+      ],
+      [
+        "leds_2",
+        "VDD"
+      ],
+      [
+        "leds_3",
+        "VDD"
+      ],
+      [
+        "leds_4",
+        "VDD"
+      ],
+      [
+        "leds_5",
+        "VDD"
+      ],
+      [
+        "leds_6",
+        "VDD"
+      ],
+      [
+        "leds_7",
+        "VDD"
+      ],
+      [
+        "leds_8",
+        "VDD"
+      ],
+      [
+        "leds_9",
+        "VDD"
+      ]
+    ],
+    [
+      [
+        "leds_0",
+        "DOUT"
+      ],
+      [
+        "leds_1",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_1",
+        "DOUT"
+      ],
+      [
+        "leds_2",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_2",
+        "DOUT"
+      ],
+      [
+        "leds_3",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_3",
+        "DOUT"
+      ],
+      [
+        "leds_4",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_4",
+        "DOUT"
+      ],
+      [
+        "leds_5",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_5",
+        "DOUT"
+      ],
+      [
+        "leds_6",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_6",
+        "DOUT"
+      ],
+      [
+        "leds_7",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_7",
+        "DOUT"
+      ],
+      [
+        "leds_8",
+        "DIN"
+      ]
+    ],
+    [
+      [
+        "leds_8",
+        "DOUT"
+      ],
+      [
+        "leds_9",
+        "DIN"
+      ]
+    ]
+  ],
+  "nc": [
+    [
+      "leds_9",
+      "DOUT"
+    ]
+  ],
+  "placements_mm_degrees": {
+    "host": [
+      0,
+      0,
+      0
+    ],
+    "leds_0": [
+      10,
+      10,
+      0
+    ],
+    "leds_1": [
+      14,
+      10,
+      0
+    ],
+    "leds_2": [
+      18,
+      10,
+      0
+    ],
+    "leds_3": [
+      22,
+      10,
+      0
+    ],
+    "leds_4": [
+      26,
+      10,
+      0
+    ],
+    "leds_5": [
+      10,
+      14,
+      0
+    ],
+    "leds_6": [
+      14,
+      14,
+      0
+    ],
+    "leds_7": [
+      18,
+      14,
+      0
+    ],
+    "leds_8": [
+      22,
+      14,
+      0
+    ],
+    "leds_9": [
+      26,
+      14,
+      0
+    ]
+  },
+  "counts": {
+    "instances": 11,
+    "net_classes": 12,
+    "connected_logical_pins": 42,
+    "nc": 1,
+    "placements": 11
+  }
+}

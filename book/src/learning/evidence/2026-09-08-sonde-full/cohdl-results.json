@@ -1,0 +1,240 @@
+{
+  "compiler_version": "cohdl 0.6.0 (aarch64-apple-darwin)",
+  "source_sha256": "c450c1acb8a4052087e25c9d2359a175db3e3f66ee1b6b248d4376c5e9b7bf4b",
+  "reference_sha256": "b503772d1458c4f0408359539be6f333105089fd28c954fc4d74f94a39ed767c",
+  "scope": "full topology check; full production build intentionally blocked by absent parts; separate modern RC build",
+  "runs": [
+    {
+      "name": "full_check",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "book/examples/sonde/sonde.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 0,
+      "verdict": "pass",
+      "diagnostic_counts": {},
+      "diagnostic_examples": {}
+    },
+    {
+      "name": "full_build_missing_procurement",
+      "command": [
+        "target/debug/cohdl",
+        "build",
+        "book/examples/sonde/sonde.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "E801": 25
+      },
+      "diagnostic_examples": {
+        "E801": "`Sonde::J1` (device `sonde::DB25`) has no part binding — the netlist/BOM would lie about what to buy"
+      }
+    },
+    {
+      "name": "wrong_resistance_unit",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "E112": 1
+      },
+      "diagnostic_examples": {
+        "E112": "generic argument for `R` has the wrong unit type: expected `Resistance`, found `Capacitance`"
+      }
+    },
+    {
+      "name": "missing_nc_endpoint",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "E701": 1
+      },
+      "diagnostic_examples": {
+        "E701": "required pin `Sonde::J1.P1` is unresolved: add it to a `net` or explicitly mark it `nc`"
+      }
+    },
+    {
+      "name": "connected_and_nc",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "E702": 1
+      },
+      "diagnostic_examples": {
+        "E702": "pin `Sonde::U2.O2` is contradictory: it appears in net `CONFLICT` AND in an `nc` declaration — a pin cannot be both connected and explicitly not-connected"
+      }
+    },
+    {
+      "name": "two_output_drivers",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "D004": 1
+      },
+      "diagnostic_examples": {
+        "D004": "multi-driver: net `SHORT` has 2 driver-type pins: `Sonde::U1.O2`, `Sonde::U1.O3`"
+      }
+    },
+    {
+      "name": "swapped_host_endpoints",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 0,
+      "verdict": "pass",
+      "diagnostic_counts": {},
+      "diagnostic_examples": {}
+    },
+    {
+      "name": "synthetic_minimum_voltage_gap",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 0,
+      "verdict": "pass",
+      "diagnostic_counts": {},
+      "diagnostic_examples": {}
+    },
+    {
+      "name": "synthetic_maximum_voltage_detected",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "D001": 2
+      },
+      "diagnostic_examples": {
+        "D001": "voltage-exceed: `Sonde::U1` is rated `5V`, but net `VCC` is annotated `6V`"
+      }
+    },
+    {
+      "name": "native_tristate_role_gap",
+      "command": [
+        "target/debug/cohdl",
+        "check",
+        "<probe>",
+        "--no-std",
+        "--json"
+      ],
+      "exit": 1,
+      "verdict": "fail",
+      "diagnostic_counts": {
+        "E010": 1
+      },
+      "diagnostic_examples": {
+        "E010": "`tri_state` is not a pin role"
+      }
+    },
+    {
+      "name": "rc_control_build",
+      "command": [
+        "target/debug/cohdl",
+        "build",
+        "book/examples/sonde/rc-control",
+        "--json"
+      ],
+      "exit": 0,
+      "verdict": "pass",
+      "diagnostic_counts": {},
+      "diagnostic_examples": {}
+    },
+    {
+      "name": "rc_control_repeat_build",
+      "command": [
+        "target/debug/cohdl",
+        "build",
+        "book/examples/sonde/rc-control",
+        "--json"
+      ],
+      "exit": 0,
+      "verdict": "pass",
+      "diagnostic_counts": {},
+      "diagnostic_examples": {}
+    }
+  ],
+  "topology": {
+    "instances": 25,
+    "connected_net_partitions": 26,
+    "connected_endpoints": 92,
+    "nc_endpoints": 16,
+    "physical_pins": 108,
+    "konnect_pads": 108
+  },
+  "independent_verifier_mutation": {
+    "compiler_exit": 0,
+    "rejected": true,
+    "reason": "connected endpoint partitions differ"
+  },
+  "rc_control": {
+    "bom": [
+      {
+        "Manufacturer": "Yageo",
+        "Comment": "CC0603JRNPO9BN101",
+        "Designator": "C1",
+        "Footprint": "CHIP_0603"
+      },
+      {
+        "Manufacturer": "Yageo",
+        "Comment": "RC0603FR-07100RL",
+        "Designator": "R1",
+        "Footprint": "CHIP_0603"
+      }
+    ],
+    "artifact_sha256": {
+      ".cohdl-manifest": "2d0fcd7fad63ad3f358191ea17959f5442fe1fe2c93e1e5956aeee69b4559f20",
+      "footprints/passive-CHIP_0603.kicad_mod": "ce1396769f311debc63c256db7e7bb499301e6b1467b9d55111f87dcf2c8fe73",
+      "sonde-rc-control-bom.csv": "cb032e63dac7098a91de73ca5e14952b1cbfd1212b871bf15614eec4d889c6cd",
+      "sonde-rc-control.net": "f800bf7da3acfae90adaceb19b5bb7e170f5259d1d232d7596cc8c332c869ccf"
+    },
+    "repeat_bytes_identical": true,
+    "emitted_netlist_endpoint_check": true
+  },
+  "format_checks": "full model and RC project passed"
+}

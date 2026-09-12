@@ -1,0 +1,10 @@
+[package]
+name = "sonde-rc-control"
+version = "0.1.0"
+
+[design]
+top = "RcControl"
+
+[dependencies]
+passive = "0.2.1"
+std = "0.3.0"

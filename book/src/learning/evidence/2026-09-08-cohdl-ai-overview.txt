@@ -1,0 +1,47 @@
+Source: English overview supplied by the learner on 2026-09-08.
+Historical status date in the document: 2026-07-18.
+No current website, DNS, deployment or product-status verification is implied.
+
+## What this is
+
+This is the living design repository for **cohdl.ai**, built by applying the *Coherent Complex Product Design* methodology to a single, sharpened goal:
+
+> **cohdl.ai is "Lovable for hardware"** — an idea-to-product experience. You describe the board you want; cohdl.ai's agent writes, compiles, verifies, and repairs the design in a closed loop, and hands you a real, fabricatable output.
+
+This note exists to draw a hard, explicit line that has been implicit until now: **cohdl.ai (the product) is not cohdl.dev (the language).** cohdl.dev is open-source infrastructure — a language, compiler, and library registry, the way React/Next.js/Vercel are infrastructure. cohdl.ai is the opinionated, monetizable *application* built on top of that infrastructure, the way Lovable is an application built on top of React/Next.js/Vercel. Every part of this repository exists to keep that boundary — and the product's own coherence — from drifting as cohdl.ai grows.
+
+This mirrors the sibling repository CoHDL — Coherent Design Repository, which governs the language. Read that one for how a `.cohdl` design is verified; read this one for how cohdl.ai turns a plain-language idea into that design, and beyond.
+
+## Status (2026-07-18)
+
+First pass. cohdl.ai is **early-stage — domain reserved, no DNS configured, no product built yet** (per Products & Domains). This repository is being written *before* the build starts, deliberately — the same discipline the language repository already used, so the product's identity is decided once, not discovered feature-by-feature.
+
+## The founding decisions (locked with Tony, 2026-07-18)
+
+| # | Question | Locked answer |
+| - | - | - |
+| 1 | What kind of product is this | **An outcome-oriented application** ("Lovable for hardware"), not a dev tool, not a language homepage. The user-visible surface is idea → product, not prompt → source code. |
+| 2 | Relationship to cohdl.dev | **Product vs. infrastructure.** cohdl.ai consumes cohdl.dev's compiler/registry as a dependency; it does not fork, replace, or duplicate the language. Every capability that is really a *language* capability belongs in cohdl.dev's repository instead. |
+| 3 | Relationship to Conol | **Shares Conol's underlying agent runtime engine** (sessions, tools, memory) as infrastructure, the same way it shares cohdl.dev as infrastructure. cohdl.ai is purpose-built and single-objective on top of that runtime, not a fork of it. |
+| 4 | Domain boundary of "product" today | **Idea → verified `.cohdl` design → netlist/BOM/(partial) layout artifacts.** Physical fabrication, enclosure/firmware, and full closed-loop layout are the roadmap, not the MVP — see note 6 (Decision Records) for the honesty discipline this inherits from the language repository. |
+| 5 | Where it lives | Co-located under the Conol workspace, Project Overview (this tree) — not spun into its own workspace, per the workspace's routing rule. |
+
+## The repository
+
+Read these in order.
+
+1. **Product Constitution** — why cohdl.ai exists, who it's for, non-goals, the trade-off priority ladder, hard constraints.
+2. **Conceptual Model** — the product-level concepts (Project, Turn, Verdict, Build…), deliberately reusing cohdl.dev's concepts rather than inventing parallel ones.
+3. **Capability Architecture** — the five capability layers, so no feature is optimized locally.
+4. **Principle → Constraint Mapping** — turning philosophy into enforceable design rules.
+5. **Coherence Matrix** — how any new capability disturbs the rest of the system.
+6. **Decision Records** — the founding decisions plus the format for future ones, including the competitive-positioning decision.
+7. **Evolution Governance** — how the product's scope grows (idea-to-schematic → idea-to-layout → idea-to-fabricated-product) without splitting its personality.
+
+## The operating loop
+
+1. Define goals → 2. Derive principles → 3. Convert to constraints → 4. Design the conceptual model → 5. Map capabilities → 6. Evaluate features via proposal → 7. Record decisions → 8. Check coherence → 9. Govern goal changes → 10. Run design regression tests → 11. Iterate.
+
+## One-sentence summary
+
+We are not building a chat UI in front of a compiler. We are building an evolving product whose every capability must explain how it moves a user further along idea → verified design → real, fabricatable hardware — without becoming a second, competing definition of the language underneath it, and without promising a step of that journey we haven't actually built yet.

@@ -1,0 +1,47 @@
+// Synthetic check-only interfaces; no procurement parts or hardware validation.
+device SignalSource {
+    pins { required OUT: 1 [output] }
+}
+device SignalSink {
+    pins { required IN: 1 [input] }
+}
+device Ground {
+    pins { required GND: 1 [passive] }
+}
+device SeriesR<R: Resistance> {
+    spec { resistance: R }
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+device ShuntC<C: Capacitance> {
+    spec { capacitance: C }
+    pins {
+        required A: 1 [passive]
+        required B: 2 [passive]
+    }
+}
+
+fn rc_channel<R: Resistance, C: Capacitance>(src: Pin, dst: Pin, gnd: Pin) {
+    inst r: SeriesR<R>
+    inst c: ShuntC<C>
+    net IN: src, r.A
+    net OUT: r.B, c.A, dst
+    net GND [gnd]: gnd, c.B
+}
+
+fn filter_bank<R: Resistance, C: Capacitance>(src: Pin, gnd: Pin) {
+    inst receivers: [SignalSink; 3]
+    rc_channel::<R, C>(src, receivers[0].IN, gnd)
+    rc_channel::<R, C>(src, receivers[1].IN, gnd)
+    rc_channel::<R, C>(src, receivers[2].IN, gnd)
+}
+fn receiver_cluster<R: Resistance, C: Capacitance>(src: Pin, gnd: Pin) {
+    filter_bank::<R, C>(src, gnd)
+}
+design NestedBank {
+    inst source: SignalSource
+    inst ground: Ground
+    receiver_cluster::<1kohm, 100nF>(source.OUT, ground.GND)
+}
