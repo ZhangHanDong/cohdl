@@ -1,0 +1,3316 @@
+{
+  "date": "2026-09-12",
+  "scope": "manifest/source/AST inventory only; no dependency-resolution validation and no old/new declaration-validator comparison",
+  "baseline_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "baseline_tracked_status": "",
+  "observer_source": "use cohdl::{ast::ItemKind, diag::Diagnostics, lex, parse, span::SourceMap};\nuse std::io::{self, BufRead};\n\nfn main() {\n    for path in io::stdin().lock().lines() {\n        let path = path.unwrap();\n        let source = std::fs::read_to_string(&path).unwrap();\n        if std::env::args().nth(1).as_deref() == Some(\"--check\") {\n            let checked = cohdl::pipeline::check_files_in_with_deps(\n                \"probe\", &[], &[(path.clone(), source)], None).unwrap();\n            let passed = !checked.diags.has_errors() && checked.selection_error.is_none();\n            println!(\"C\\t{}\\t{}\\t{}\\t{}\", path, passed,\n                checked.ir.as_ref().map_or(0, |ir| ir.instances.len()),\n                checked.ir.as_ref().map_or(0, |ir| ir.nets.len()));\n            for d in checked.diags.iter() {\n                println!(\"E\\t{}\\t{}\\t{}\\t{}\\t{}\", path, d.code, d.primary.span.start,\n                    d.primary.span.end, d.message.replace('\\t', \"\\\\t\").replace('\\n', \"\\\\n\"));\n            }\n            continue;\n        }\n        let mut sm = SourceMap::new();\n        let file = sm.add_file(path.clone(), source.clone());\n        let mut diags = Diagnostics::new();\n        let tokens = lex::lex(file, &source, &mut diags);\n        let ast = parse::parse(tokens, &mut diags);\n        println!(\"F\\t{}\\t{}\", path, diags.error_count());\n        for item in ast.items {\n            let decl = match &item.kind {\n                ItemKind::Fn(f) => Some((\"fn\", &f.name.name, f.generics.len())),\n                ItemKind::Subdesign(s) => Some((\"subdesign\", &s.name.name, s.generics.len())),\n                _ => None,\n            };\n            if let Some((kind, name, generics)) = decl {\n                println!(\"D\\t{}\\t{}\\t{}\\t{}\\t{}\\t{}\\t{}\", path, kind, name,\n                    item.decl_span.start, item.decl_span.end, generics, item.is_pub);\n            }\n        }\n        for d in diags.iter() {\n            println!(\"E\\t{}\\t{}\\t{}\\t{}\\t{}\", path, d.code, d.primary.span.start,\n                d.primary.span.end, d.message.replace('\\t', \"\\\\t\").replace('\\n', \"\\\\n\"));\n        }\n    }\n}\n",
+  "observer_sha256": "d220d4e1613c623be0542516bc40d757d7fc982196c7a63597f0349a96d45c9a",
+  "observer_binary_sha256": "f5519298b872cdcc290449e541af4630f852473a81029431f05428064b8a0bbc",
+  "compiler_rlib_sha256": "4b5f20e1036a8397a596ca997168d7c761c85560dc2ed866347ff43973b4c78b",
+  "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+  "observer_build_argv": [
+    "rustc",
+    "--edition=2021",
+    "/private/tmp/cohdl-m2-syntax-probes/observe.rs",
+    "--extern",
+    "cohdl=/private/tmp/cohdl-main-subdesign-ab44257/target/debug/libcohdl.rlib",
+    "-L",
+    "dependency=/private/tmp/cohdl-main-subdesign-ab44257/target/debug/deps",
+    "-o",
+    "/private/tmp/cohdl-m2-syntax-probes/observe"
+  ],
+  "summary": {
+    "packages": 60,
+    "source_files": 162,
+    "source_bytes": 12791522,
+    "fn_definitions": 2,
+    "subdesign_definitions": 0,
+    "parse_errors": 0,
+    "unowned_files": 0
+  },
+  "packages": [
+    {
+      "manifest": "lib/@contrib/analog-switch/cohdl.toml",
+      "manifest_sha256": "1598749b51b7ccaa61753ff9e627cd87414412f5d5a1817a7175e87d9a28f327",
+      "package": {
+        "name": "@contrib/analog-switch",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed analog switch / multiplexer devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/analog-switch/src/rs2257.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/analog-switch/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/audio-amp/cohdl.toml",
+      "manifest_sha256": "be68a1ddc84879b1a6aebd5d0ab45c2f7474203f23600fa3c6bd17c36a5c91bb",
+      "package": {
+        "name": "@contrib/audio-amp",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed audio amplifier device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/audio-amp/src/max98357a.cohdl",
+        "lib/@contrib/audio-amp/src/ns4150b.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/audio-amp/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/charger/cohdl.toml",
+      "manifest_sha256": "d2f42f17c54b3f5c16673b5b14d6abfb78e26d1eabfd714d9d8b1306664015c2",
+      "package": {
+        "name": "@contrib/charger",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Community-contributed battery charger / power-path management devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/charger/src/bq25185.cohdl",
+        "lib/@contrib/charger/src/sgm41562b.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/charger/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/display/cohdl.toml",
+      "manifest_sha256": "d16214ab92f1edadc75a3d677dcb634fc6d7e028745f6b9c0fbedca7a5026d63",
+      "package": {
+        "name": "@contrib/display",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed display module (AMOLED/LCD + touch) device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/display/src/co5300.cohdl",
+        "lib/@contrib/display/src/cst9220.cohdl",
+        "lib/@contrib/display/src/h0216f002am.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/display/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/env/cohdl.toml",
+      "manifest_sha256": "f25a89b2aa2e7d677853e904661b850a552e0ff12230827316974655d9d1421e",
+      "package": {
+        "name": "@contrib/env",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed environmental sensor (temperature/humidity/pressure) devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/env/src/bme280.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/env/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/esd/cohdl.toml",
+      "manifest_sha256": "209754de46ddeb48f75a5243fc50bf24354c27bdb3d2a2f12b347f1f9e458869",
+      "package": {
+        "name": "@contrib/esd",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed ESD protection / TVS devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/esd/src/gblc05c.cohdl",
+        "lib/@contrib/esd/src/ulc0511c.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/esd/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/fuel-gauge/cohdl.toml",
+      "manifest_sha256": "53f7f4ff34fb9d56ff48189e59d89c248e408083d133d9041e1d0cbe66cae4c1",
+      "package": {
+        "name": "@contrib/fuel-gauge",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed battery fuel-gauge devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/fuel-gauge/src/cw2015.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/fuel-gauge/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/gnss/cohdl.toml",
+      "manifest_sha256": "a4e63eb2c51c835bd578b949d7f972c07565254d2dd86e70025ebdbd80bcc405",
+      "package": {
+        "name": "@contrib/gnss",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed GNSS / GPS module device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/gnss/src/l76k.cohdl",
+        "lib/@contrib/gnss/src/mia-m10q.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/gnss/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/haptic/cohdl.toml",
+      "manifest_sha256": "07214f192e7e5d0302f1616a65158d59a547e97a30199d7b7b43642cc75142aa",
+      "package": {
+        "name": "@contrib/haptic",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed haptic / vibration driver devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/haptic/src/aw86224.cohdl",
+        "lib/@contrib/haptic/src/drv2605.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/haptic/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/imu/cohdl.toml",
+      "manifest_sha256": "22e31fe22a5bf5aceefbc0993983da93460b63b1ea9b5a4bddfdaf28e18eb54a",
+      "package": {
+        "name": "@contrib/imu",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Community-contributed IMU (inertial measurement unit) device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/imu/src/bhi260ap.cohdl",
+        "lib/@contrib/imu/src/lsm6ds3tr_c.cohdl",
+        "lib/@contrib/imu/src/mmc5603nj.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/imu/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/io-expander/cohdl.toml",
+      "manifest_sha256": "655247df168920e51e9532539c7184f8245c9455d9e9fb45cd11bdf3a7044b52",
+      "package": {
+        "name": "@contrib/io-expander",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed I2C/SMBus I/O expander device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/io-expander/src/xl9555.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/io-expander/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/ir-emitter/cohdl.toml",
+      "manifest_sha256": "3cc989b5335d15d2ac071f7345966a29c8522e1dd919bcfbecd7f15967e57916",
+      "package": {
+        "name": "@contrib/ir-emitter",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed infrared emitting diode devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/ir-emitter/src/vsmy14940.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/ir-emitter/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/keyscan/cohdl.toml",
+      "manifest_sha256": "60c5eacdc1a12ae7339bbd893e996e2ed2a8573170298b334a8bb0f46f09ca3e",
+      "package": {
+        "name": "@contrib/keyscan",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed keypad / keyboard scanner devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/keyscan/src/tca8418.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/keyscan/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/ldo/cohdl.toml",
+      "manifest_sha256": "f2c6ed12ee2076045c03470c297e211ed7ca0b6962e6cd179076595510826c76",
+      "package": {
+        "name": "@contrib/ldo",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Community-contributed low-dropout regulator devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/ldo/src/eta5060.cohdl",
+        "lib/@contrib/ldo/src/me6211.cohdl",
+        "lib/@contrib/ldo/src/rt9080.cohdl",
+        "lib/@contrib/ldo/src/xc6206.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/ldo/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/led-driver/cohdl.toml",
+      "manifest_sha256": "8bdccace0752c344267057711726b19862c371a4d6bf7e741e9c9c474ea465c0",
+      "package": {
+        "name": "@contrib/led-driver",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed LED driver devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/led-driver/src/aw21009.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/led-driver/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/level-shifter/cohdl.toml",
+      "manifest_sha256": "0727dd17d7d0017b0f728ecef147141030610aa0ae9f5d9e323148e01026ecae",
+      "package": {
+        "name": "@contrib/level-shifter",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Community-contributed voltage level translator devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "soic": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/level-shifter/src/rs0104.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/level-shifter/cohdl.lock",
+        "sha256": "cadc7599a0ea68c0d2e740ae566b26d5dfbab8d4e7aa71793993ff7daed714be",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "soic",
+              "version": "0.2.0",
+              "hash": "sha256:bab763d35a5aaa8c29628e49b3ed1bdecb8f2a74a24a44308c8cce5d0f0e096a"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/lora/cohdl.toml",
+      "manifest_sha256": "e3631feef4b646a97fb69c11e26dc4bdf3581cbff19d20b09b3a2d6aecdcb168",
+      "package": {
+        "name": "@contrib/lora",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed LoRa transceiver devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/lora/src/hpb16b3.cohdl",
+        "lib/@contrib/lora/src/hpd16a.cohdl",
+        "lib/@contrib/lora/src/sx1262.cohdl",
+        "lib/@contrib/lora/src/sx1280.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/lora/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/mic/cohdl.toml",
+      "manifest_sha256": "30327eac1258edd08140d1eccb33735dfaa634c3c300760010161ad1cdf521a8",
+      "package": {
+        "name": "@contrib/mic",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed MEMS microphone device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/mic/src/t3902.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/mic/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/nfc/cohdl.toml",
+      "manifest_sha256": "4e3af4cbe9a37dbaba1feb6df7d8f94a95f2f1e7f3049a88ba77c7357aecee1e",
+      "package": {
+        "name": "@contrib/nfc",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed NFC reader/IC devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/nfc/src/st25r3916.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/nfc/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/pmu/cohdl.toml",
+      "manifest_sha256": "f2feeea13bfdfce32a197d8efa238d6f2b1f1c819d537d34564a9c15c2b0821c",
+      "package": {
+        "name": "@contrib/pmu",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed power management unit (PMU) device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/pmu/src/axp2101.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/pmu/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/rtc/cohdl.toml",
+      "manifest_sha256": "0da276f36afcab78014252f5adf05c8675363396562db5aec718c18ee90dbd16",
+      "package": {
+        "name": "@contrib/rtc",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed real-time clock devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/rtc/src/pcf85063a.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/rtc/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/sd-card/cohdl.toml",
+      "manifest_sha256": "68d65e89cdcac470bd952d3ea1760228a5b22ddde2078b8898fe89f317a546b8",
+      "package": {
+        "name": "@contrib/sd-card",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed SD/MicroSD card connector devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/sd-card/src/microsd.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/sd-card/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@contrib/usb-uart/cohdl.toml",
+      "manifest_sha256": "ef131c8e4365cb1c4ff8fd4b3e20ff9cc44bd83974e9b40790ce8a9b68943267",
+      "package": {
+        "name": "@contrib/usb-uart",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Community-contributed USB-to-UART bridge device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@contrib/usb-uart/src/ch343p.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@contrib/usb-uart/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@espressif/esp32/cohdl.toml",
+      "manifest_sha256": "b24beaaa89fe695e97eb74bf95ee070af99d70f722cff6cc4b9d1a7166efea2c",
+      "package": {
+        "name": "@espressif/esp32",
+        "version": "0.2.0",
+        "license": "MIT AND CC-BY-SA-4.0",
+        "description": "Espressif ESP32 modules, devices, parts, and package land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "qfn": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@espressif/esp32/src/catalog_devices.cohdl",
+        "lib/@espressif/esp32/src/catalog_parts.cohdl",
+        "lib/@espressif/esp32/src/chips/s3.cohdl",
+        "lib/@espressif/esp32/src/footprints.cohdl",
+        "lib/@espressif/esp32/src/kicad_generated_footprints.cohdl",
+        "lib/@espressif/esp32/src/modules/wroom_s3.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@espressif/esp32/cohdl.lock",
+        "sha256": "b25f867f51071dfbd5829825d6cbdb9d4de791efcbe24e38e4d3457471517601",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "qfn",
+              "version": "0.2.0",
+              "hash": "sha256:35f00df7f09e3dd9b4bf6cc686277d1a99ca9f86a4a95742278abace3786c44d"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@raspberrypi/mcu/cohdl.toml",
+      "manifest_sha256": "0af8bc4edd67b97465cfc65982a148eacfb4844e73d1259cb8aa674086727f4c",
+      "package": {
+        "name": "@raspberrypi/mcu",
+        "version": "0.1.2",
+        "license": "MIT",
+        "description": "Raspberry Pi microcontrollers, parts, and package land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "qfn": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@raspberrypi/mcu/src/rp2350.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@raspberrypi/mcu/cohdl.lock",
+        "sha256": "b25f867f51071dfbd5829825d6cbdb9d4de791efcbe24e38e4d3457471517601",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "qfn",
+              "version": "0.2.0",
+              "hash": "sha256:35f00df7f09e3dd9b4bf6cc686277d1a99ca9f86a4a95742278abace3786c44d"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@richtek/dcdc/cohdl.toml",
+      "manifest_sha256": "8ca37655133f93cc5cc6508137fc0ca6018a25f15111b821d8af2b22ffba6505",
+      "package": {
+        "name": "@richtek/dcdc",
+        "version": "0.1.2",
+        "license": "MIT",
+        "description": "Richtek DC/DC converters, parts, and package land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "qfn": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@richtek/dcdc/src/buck_boost/rt6150b.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@richtek/dcdc/cohdl.lock",
+        "sha256": "b25f867f51071dfbd5829825d6cbdb9d4de791efcbe24e38e4d3457471517601",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "qfn",
+              "version": "0.2.0",
+              "hash": "sha256:35f00df7f09e3dd9b4bf6cc686277d1a99ca9f86a4a95742278abace3786c44d"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@sifli/sf32/cohdl.toml",
+      "manifest_sha256": "7160bce681471e475b458878faac19be5fe9fa639e592e002ca09324b5c99e28",
+      "package": {
+        "name": "@sifli/sf32",
+        "version": "0.1.2",
+        "license": "MIT",
+        "description": "SiFli SF32LB52X AIoT MCU device declarations.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@sifli/sf32/src/sf32lb52x.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@sifli/sf32/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@st/stm32/cohdl.toml",
+      "manifest_sha256": "3013b7dad22b6567bc49b66188d448e1777cfa7fa99378a057d36e0f9292c1f9",
+      "package": {
+        "name": "@st/stm32",
+        "version": "0.2.1",
+        "license": "MIT AND BSD-3-Clause AND CC-BY-SA-4.0",
+        "description": "STMicroelectronics STM32 MCU catalog with source-joined exact parts and attributed fabrication data.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "bga": "0.2.0",
+        "csp": "0.1.0",
+        "qfp": "0.2.0",
+        "soic": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@st/stm32/src/c0.cohdl",
+        "lib/@st/stm32/src/c5.cohdl",
+        "lib/@st/stm32/src/catalog_coverage.cohdl",
+        "lib/@st/stm32/src/f0.cohdl",
+        "lib/@st/stm32/src/f1.cohdl",
+        "lib/@st/stm32/src/f2.cohdl",
+        "lib/@st/stm32/src/f3.cohdl",
+        "lib/@st/stm32/src/f4.cohdl",
+        "lib/@st/stm32/src/f7.cohdl",
+        "lib/@st/stm32/src/g0.cohdl",
+        "lib/@st/stm32/src/g4.cohdl",
+        "lib/@st/stm32/src/h5.cohdl",
+        "lib/@st/stm32/src/h7.cohdl",
+        "lib/@st/stm32/src/l0.cohdl",
+        "lib/@st/stm32/src/l1.cohdl",
+        "lib/@st/stm32/src/l4.cohdl",
+        "lib/@st/stm32/src/l4_plus.cohdl",
+        "lib/@st/stm32/src/l5.cohdl",
+        "lib/@st/stm32/src/n6.cohdl",
+        "lib/@st/stm32/src/u0.cohdl",
+        "lib/@st/stm32/src/u3.cohdl",
+        "lib/@st/stm32/src/u5.cohdl",
+        "lib/@st/stm32/src/wb.cohdl",
+        "lib/@st/stm32/src/wb0.cohdl",
+        "lib/@st/stm32/src/wba.cohdl",
+        "lib/@st/stm32/src/wl.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@st/stm32/cohdl.lock",
+        "sha256": "153cbf225f09cea292c762706a2e1ccb0126233c15e237a78577551a21111cc0",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "bga",
+              "version": "0.2.0",
+              "hash": "sha256:997b238b4ea7097e976b03c3ceebbf59100febd12be15e3fe7c5ed407d99da76"
+            },
+            {
+              "name": "csp",
+              "version": "0.1.0",
+              "hash": "sha256:e04af120c2e56ad844b42f1a8f9f1a380b858dd19ebf68a9ef532137616c15e3"
+            },
+            {
+              "name": "qfp",
+              "version": "0.2.0",
+              "hash": "sha256:5fbbbd39a0bf07ee50fa24020267d701945f3546f1c4f856c77676e3700a8b48"
+            },
+            {
+              "name": "soic",
+              "version": "0.2.0",
+              "hash": "sha256:bab763d35a5aaa8c29628e49b3ed1bdecb8f2a74a24a44308c8cce5d0f0e096a"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@ti/dcdc/cohdl.toml",
+      "manifest_sha256": "7a2b31ac66acfbc897e3e84db385ca22f632293f06f788f4cc7f6309183122b6",
+      "package": {
+        "name": "@ti/dcdc",
+        "version": "0.1.2",
+        "license": "MIT",
+        "description": "Texas Instruments DC/DC controller devices, parts, and package land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "qfn": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@ti/dcdc/src/controllers/multiphase.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@ti/dcdc/cohdl.lock",
+        "sha256": "b25f867f51071dfbd5829825d6cbdb9d4de791efcbe24e38e4d3457471517601",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "qfn",
+              "version": "0.2.0",
+              "hash": "sha256:35f00df7f09e3dd9b4bf6cc686277d1a99ca9f86a4a95742278abace3786c44d"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@ti/logic/cohdl.toml",
+      "manifest_sha256": "3a16e7d2040ed442fada3fb5ee4af066115694ff91b746aa9ccce367d1d44619",
+      "package": {
+        "name": "@ti/logic",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Texas Instruments logic devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "soic": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@ti/logic/src/transceivers.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@ti/logic/cohdl.lock",
+        "sha256": "cadc7599a0ea68c0d2e740ae566b26d5dfbab8d4e7aa71793993ff7daed714be",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "soic",
+              "version": "0.2.0",
+              "hash": "sha256:bab763d35a5aaa8c29628e49b3ed1bdecb8f2a74a24a44308c8cce5d0f0e096a"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/@ti/power-switch/cohdl.toml",
+      "manifest_sha256": "1c47af7fbbf6f53246102109ddb0766e8a566929b117d7955cd8cbef3a483baf",
+      "package": {
+        "name": "@ti/power-switch",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Texas Instruments eFuses and protected power-path devices.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/@ti/power-switch/src/tps25982.cohdl"
+      ],
+      "lock": {
+        "path": "lib/@ti/power-switch/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/antenna/cohdl.toml",
+      "manifest_sha256": "9f13e9515db2bc054fafcdbfbbfd5c44f2b25ab3599f9d0625d9d22462482427",
+      "package": {
+        "name": "antenna",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "RF antennas with verified terminal lands and layout guidance.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/antenna/src/2450at18b100.cohdl"
+      ],
+      "lock": {
+        "path": "lib/antenna/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/audio-amp/cohdl.toml",
+      "manifest_sha256": "1d0bfccb8f53e6e0bf134a3ecbc1a84e90d1a858e27f8ff610aa538ccb347478",
+      "package": {
+        "name": "audio-amp",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Audio power amplifiers with their verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/audio-amp/src/ns4168.cohdl"
+      ],
+      "lock": {
+        "path": "lib/audio-amp/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/bga/cohdl.toml",
+      "manifest_sha256": "d54067b6f244c202a9da9ae9df5defa51c2797c296ee4fc7d529692cc3fcb55b",
+      "package": {
+        "name": "bga",
+        "version": "0.2.0",
+        "license": "MIT AND CC-BY-SA-4.0",
+        "description": "Verified BGA land patterns, including pinned KiCad-derived STM32 footprints.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/bga/src/footprints.cohdl",
+        "lib/bga/src/kicad_generated.cohdl"
+      ],
+      "lock": {
+        "path": "lib/bga/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/can/cohdl.toml",
+      "manifest_sha256": "babb84a64b41974c261becd71a976fe0c2313dd2efbd0b94d12fd38181690728",
+      "package": {
+        "name": "can",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "CAN bus physical-layer transceivers.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "soic": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/can/src/sn65hvd230.cohdl"
+      ],
+      "lock": {
+        "path": "lib/can/cohdl.lock",
+        "sha256": "cadc7599a0ea68c0d2e740ae566b26d5dfbab8d4e7aa71793993ff7daed714be",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "soic",
+              "version": "0.2.0",
+              "hash": "sha256:bab763d35a5aaa8c29628e49b3ed1bdecb8f2a74a24a44308c8cce5d0f0e096a"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/cellular/cohdl.toml",
+      "manifest_sha256": "0f905817636cb1d8c1017fe3502ae1b18b6ac39f47c0eeeb9f2fefa9d33879d7",
+      "package": {
+        "name": "cellular",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "4G/LTE cellular module devices and parts with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/cellular/src/air780e.cohdl",
+        "lib/cellular/src/air780eg.cohdl",
+        "lib/cellular/src/t520.cohdl"
+      ],
+      "lock": {
+        "path": "lib/cellular/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/connectors/cohdl.toml",
+      "manifest_sha256": "d08b6d61293a22652ac80ae8ddee6dcb01966c9a010b730e53944ac0bb5fcfe8",
+      "package": {
+        "name": "connectors",
+        "version": "0.1.6",
+        "license": "MIT",
+        "description": "General-purpose board connectors and their land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/connectors/src/coax/hirose_ufl.cohdl",
+        "lib/connectors/src/fpc/fpc.cohdl",
+        "lib/connectors/src/fpc/hirose_fh12_26.cohdl",
+        "lib/connectors/src/fpc/lailan_cx01_31p.cohdl",
+        "lib/connectors/src/headers/castellated_254.cohdl",
+        "lib/connectors/src/headers/lailan_pz127.cohdl",
+        "lib/connectors/src/headers/micro_fit_3.cohdl",
+        "lib/connectors/src/headers/smd_254.cohdl",
+        "lib/connectors/src/headers/xfcn_pz127v.cohdl",
+        "lib/connectors/src/sim/jae_sf72s006.cohdl",
+        "lib/connectors/src/wire_to_board/lailan_phc125.cohdl"
+      ],
+      "lock": {
+        "path": "lib/connectors/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/csp/cohdl.toml",
+      "manifest_sha256": "132e941fb09ecd71cdf23c6b2abdeb9412e166cb1c39faae16775e5d39de7d64",
+      "package": {
+        "name": "csp",
+        "version": "0.1.0",
+        "license": "CC-BY-SA-4.0",
+        "description": "Pinned KiCad-derived chip-scale package land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/csp/src/kicad_generated.cohdl"
+      ],
+      "lock": {
+        "path": "lib/csp/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/dcdc/cohdl.toml",
+      "manifest_sha256": "d3a315b54e3ac3dc602e622ff7c37f21a78e933be360d67dbd679f563b79b8b2",
+      "package": {
+        "name": "dcdc",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "DC/DC step-down converters with their verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/dcdc/src/jw5033s.cohdl",
+        "lib/dcdc/src/sgm6029.cohdl"
+      ],
+      "lock": {
+        "path": "lib/dcdc/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/diode/cohdl.toml",
+      "manifest_sha256": "1ea07a1de113b49d13a5e7e2add1722bf76be1921d1af0e648f001bde4077c3b",
+      "package": {
+        "name": "diode",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Discrete diodes with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/diode/src/schottky.cohdl",
+        "lib/diode/src/small_signal.cohdl"
+      ],
+      "lock": {
+        "path": "lib/diode/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/esd/cohdl.toml",
+      "manifest_sha256": "a23fca29e00d7a4032090644d3ce9360fbde5e5391c638054ed9f269852973e9",
+      "package": {
+        "name": "esd",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "ESD protection devices with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/esd/src/hongjiacheng.cohdl",
+        "lib/esd/src/ti.cohdl",
+        "lib/esd/src/usblc6.cohdl"
+      ],
+      "lock": {
+        "path": "lib/esd/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/esim/cohdl.toml",
+      "manifest_sha256": "5f133f65478dc96ca953f90bd33c487df3b02f0c113e96ee50f3681063d1e9c2",
+      "package": {
+        "name": "esim",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "eUICC (eSIM) devices with their verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/esim/src/esim.cohdl"
+      ],
+      "lock": {
+        "path": "lib/esim/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/flash/cohdl.toml",
+      "manifest_sha256": "e40f262b48c580529bab0a92bb4f726bb7a02691bb3003985e2c8923a48971c7",
+      "package": {
+        "name": "flash",
+        "version": "0.1.4",
+        "license": "MIT",
+        "description": "Flash memory devices with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "qfn": "0.2.0",
+        "soic": "0.2.0",
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/flash/src/w25q128jv.cohdl",
+        "lib/flash/src/w25q32.cohdl"
+      ],
+      "lock": {
+        "path": "lib/flash/cohdl.lock",
+        "sha256": "42fc1e9146ad1d9caec362247f7d68a399366c00c36b8d5dac0d8510443fa308",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "qfn",
+              "version": "0.2.0",
+              "hash": "sha256:35f00df7f09e3dd9b4bf6cc686277d1a99ca9f86a4a95742278abace3786c44d"
+            },
+            {
+              "name": "soic",
+              "version": "0.2.0",
+              "hash": "sha256:bab763d35a5aaa8c29628e49b3ed1bdecb8f2a74a24a44308c8cce5d0f0e096a"
+            },
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/ldo/cohdl.toml",
+      "manifest_sha256": "94c063f19e2794de620e3c993593d2ea08dbc0398d249776ff897a60c44b1759",
+      "package": {
+        "name": "ldo",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Low-dropout voltage regulators with their verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/ldo/src/ap2112k.cohdl",
+        "lib/ldo/src/rt9193.cohdl"
+      ],
+      "lock": {
+        "path": "lib/ldo/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/led/cohdl.toml",
+      "manifest_sha256": "ae8b9952ff560e1510915854d58913cf64797420dc6236fc29690be9901db43d",
+      "package": {
+        "name": "led",
+        "version": "0.1.2",
+        "license": "MIT",
+        "description": "Discrete and addressable LEDs with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/led/src/chip.cohdl",
+        "lib/led/src/green_0603.cohdl",
+        "lib/led/src/sk6812.cohdl",
+        "lib/led/src/source_exact_0402.cohdl",
+        "lib/led/src/traits.cohdl"
+      ],
+      "lock": {
+        "path": "lib/led/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/load-switch/cohdl.toml",
+      "manifest_sha256": "d4495b83ba84d57120e63f81d9d404be7a9661a0b0cb06285489c18e45267398",
+      "package": {
+        "name": "load-switch",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Power-distribution load switches with their verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/load-switch/src/mt9700.cohdl",
+        "lib/load-switch/src/sgm2554.cohdl",
+        "lib/load-switch/src/tps22918.cohdl"
+      ],
+      "lock": {
+        "path": "lib/load-switch/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/logic/cohdl.toml",
+      "manifest_sha256": "86a9f7a3ba825f68409a11b3094e1900f6001f4fb6b11b24024a13f00575fa8b",
+      "package": {
+        "name": "logic",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Logic gates, buffers, and translators with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/logic/src/sn74ahct1g125.cohdl"
+      ],
+      "lock": {
+        "path": "lib/logic/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/mic/cohdl.toml",
+      "manifest_sha256": "c17ee84da0470cc8dedf3ea2aa4ffb282c3d52c92151b2e0f3e821546a6d427d",
+      "package": {
+        "name": "mic",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Microphone devices and purchasable parts.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/mic/src/ics40300.cohdl",
+        "lib/mic/src/ics43434.cohdl",
+        "lib/mic/src/microphone.cohdl"
+      ],
+      "lock": {
+        "path": "lib/mic/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/misc/cohdl.toml",
+      "manifest_sha256": "875759a6b415c4113c606f272d81963be7a014ca9ae93871eb8edf0269032014",
+      "package": {
+        "name": "misc",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Reusable PCB fabrication primitives such as test points and mounting holes.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/misc/src/misc.cohdl"
+      ],
+      "lock": {
+        "path": "lib/misc/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/mosfet/cohdl.toml",
+      "manifest_sha256": "2eb98138b08eb179782cad666051663055fa15eaa54a20eb6cb42b222f540e87",
+      "package": {
+        "name": "mosfet",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Discrete MOSFETs with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/mosfet/src/nmos.cohdl"
+      ],
+      "lock": {
+        "path": "lib/mosfet/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/motor-driver/cohdl.toml",
+      "manifest_sha256": "7b9caac5ce63e2fd4d2c181820a872333447096c9e4bc113066287b605aab028",
+      "package": {
+        "name": "motor-driver",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Integrated brushed and brushless motor driver ICs.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/motor-driver/src/drv8231a.cohdl"
+      ],
+      "lock": {
+        "path": "lib/motor-driver/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/osc/cohdl.toml",
+      "manifest_sha256": "630707b0b2ad9e7d1b81ced817b7e4d7cbfb63a87507084800c522cf3d74e198",
+      "package": {
+        "name": "osc",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "Crystals and oscillators with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/osc/src/crystal.cohdl",
+        "lib/osc/src/crystal_12mhz.cohdl",
+        "lib/osc/src/crystal_32khz.cohdl",
+        "lib/osc/src/crystal_40mhz.cohdl",
+        "lib/osc/src/crystal_48mhz.cohdl"
+      ],
+      "lock": {
+        "path": "lib/osc/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/passive/cohdl.toml",
+      "manifest_sha256": "f0d7028d1aa28a16954744e92304bf1705f0c89ba645285957af10b773d9850b",
+      "package": {
+        "name": "passive",
+        "version": "0.2.2",
+        "license": "MIT",
+        "description": "Chip resistors, MLCC capacitors, and inductors with verified land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/passive/src/capacitors_0201.cohdl",
+        "lib/passive/src/capacitors_0402.cohdl",
+        "lib/passive/src/capacitors_0603.cohdl",
+        "lib/passive/src/capacitors_0805.cohdl",
+        "lib/passive/src/capacitors_1206.cohdl",
+        "lib/passive/src/capacitors_1210.cohdl",
+        "lib/passive/src/circuits.cohdl",
+        "lib/passive/src/devices.cohdl",
+        "lib/passive/src/ferrite_beads.cohdl",
+        "lib/passive/src/footprints.cohdl",
+        "lib/passive/src/inductors.cohdl",
+        "lib/passive/src/pads.cohdl",
+        "lib/passive/src/polymer_capacitors.cohdl",
+        "lib/passive/src/resistors_0201.cohdl",
+        "lib/passive/src/resistors_0402.cohdl",
+        "lib/passive/src/resistors_0603.cohdl",
+        "lib/passive/src/resistors_0805.cohdl",
+        "lib/passive/src/resistors_1206.cohdl",
+        "lib/passive/src/resistors_1210.cohdl",
+        "lib/passive/src/resistors_2010.cohdl",
+        "lib/passive/src/resistors_2512.cohdl"
+      ],
+      "lock": {
+        "path": "lib/passive/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/qfn/cohdl.toml",
+      "manifest_sha256": "9c69a3404baf99184536c58bff5c01ca8f04467a9f997699b84b05d44a1f105e",
+      "package": {
+        "name": "qfn",
+        "version": "0.2.0",
+        "license": "MIT AND CC-BY-SA-4.0",
+        "description": "Verified QFN, DFN, and SON package land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/qfn/src/esp32_kicad_generated.cohdl",
+        "lib/qfn/src/footprints.cohdl"
+      ],
+      "lock": {
+        "path": "lib/qfn/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/qfp/cohdl.toml",
+      "manifest_sha256": "b6647c91efbee35e28b8940b03389f183a9a667c11ed41ffb86b57d4d53f2dda",
+      "package": {
+        "name": "qfp",
+        "version": "0.2.0",
+        "license": "MIT AND CC-BY-SA-4.0",
+        "description": "Verified QFP land patterns, including pinned KiCad-derived STM32 footprints.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/qfp/src/footprints.cohdl",
+        "lib/qfp/src/kicad_generated.cohdl"
+      ],
+      "lock": {
+        "path": "lib/qfp/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/soic/cohdl.toml",
+      "manifest_sha256": "a28a110a76c5a197e066f1a5224b74a7abf986b8b8b74ae69f340bbd374bc8bc",
+      "package": {
+        "name": "soic",
+        "version": "0.2.0",
+        "license": "MIT AND CC-BY-SA-4.0",
+        "description": "Audited SOIC/TSSOP land patterns, including pinned KiCad-derived STM32 footprints.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/soic/src/footprints.cohdl",
+        "lib/soic/src/kicad_generated.cohdl"
+      ],
+      "lock": {
+        "path": "lib/soic/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/std/cohdl.toml",
+      "manifest_sha256": "08fcd3d1381d1ea757d55391f86e3b2d0b4e62ff67819d989e2012afe3dab6d4",
+      "package": {
+        "name": "std",
+        "version": "0.3.0",
+        "license": "MIT",
+        "description": "The CoHDL standard library: the core traits every component library builds on.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {},
+      "source_files": [
+        "lib/std/src/prelude.cohdl"
+      ],
+      "lock": null
+    },
+    {
+      "manifest": "lib/switches/cohdl.toml",
+      "manifest_sha256": "9d2993e7428c273bf4e3b1aa38e84b47d21c35b770f8b5dc3ea73d777fc43023",
+      "package": {
+        "name": "switches",
+        "version": "0.1.2",
+        "license": "MIT",
+        "description": "Evidence-backed tactile and electromechanical switches.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/switches/src/max16054.cohdl",
+        "lib/switches/src/tactile.cohdl"
+      ],
+      "lock": {
+        "path": "lib/switches/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/transistor/cohdl.toml",
+      "manifest_sha256": "2dcd6f7a440a6b3b4ce5c58673109924525155d507151fb1f5e24db20bc81a79",
+      "package": {
+        "name": "transistor",
+        "version": "0.1.0",
+        "license": "MIT",
+        "description": "Discrete bipolar transistors with verified pinouts and land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/transistor/src/s8050.cohdl"
+      ],
+      "lock": {
+        "path": "lib/transistor/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "manifest": "lib/usb/cohdl.toml",
+      "manifest_sha256": "cb5ee4481ac7113e077f6fef19205c2d6862332ae892c563e6fc7a557f7fd0a0",
+      "package": {
+        "name": "usb",
+        "version": "0.1.1",
+        "license": "MIT",
+        "description": "USB connectors and controllers with authored land patterns.",
+        "repository": "https://github.com/conol-ai/cohdl"
+      },
+      "declared_dependencies": {
+        "std": "0.3.0"
+      },
+      "source_files": [
+        "lib/usb/src/connectors/micro_b.cohdl",
+        "lib/usb/src/connectors/type_c.cohdl",
+        "lib/usb/src/pd/ccg6df.cohdl"
+      ],
+      "lock": {
+        "path": "lib/usb/cohdl.lock",
+        "sha256": "ba40e982ab132e176e0705f1f2769517226506db6a5a6c2ed5d463414be92325",
+        "recorded_contents": {
+          "package": [
+            {
+              "name": "std",
+              "version": "0.3.0",
+              "hash": "sha256:5b5fc2d184722d4a4fd32f531656c32f2de2f0920c94d7a8e5f2d2203527fbca"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "lib/@contrib/analog-switch/src/rs2257.cohdl",
+      "sha256": "c37fd05364e96c5ba054df07ea41d8a6955adcf6e8f085b069c44eb2209cbbd1",
+      "bytes": 2706,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/audio-amp/src/max98357a.cohdl",
+      "sha256": "7dbc21c3ab897ea80a37c01274307b1a113f03a076f8b3d32ac08c2764adaa29",
+      "bytes": 3371,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/audio-amp/src/ns4150b.cohdl",
+      "sha256": "45c54eabab6922e9986c88a334338516c9f39fc02c4e596aeef028be4eddaa65",
+      "bytes": 2124,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/charger/src/bq25185.cohdl",
+      "sha256": "cfb10c7ba32da32e66d605fd208c0863593822ccac1710cc1bdd6c093be7df41",
+      "bytes": 2419,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/charger/src/sgm41562b.cohdl",
+      "sha256": "27302b95707fe54b95c7da7f595165c03c7cce63932482e576654b730e231362",
+      "bytes": 3503,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/display/src/co5300.cohdl",
+      "sha256": "ae6a2ce2614e84718ec9fbc3145c22d869e3008247a3f4e5060e134f0b632daf",
+      "bytes": 3067,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/display/src/cst9220.cohdl",
+      "sha256": "0e8390b29f819e29c5839ccfc382af2d139fe970b314ca5405d8cb4ad8533e1b",
+      "bytes": 1095,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/display/src/h0216f002am.cohdl",
+      "sha256": "33ca61bc63539a81c88570981e77497c303fd13975336bac686a042f104aa076",
+      "bytes": 2861,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/env/src/bme280.cohdl",
+      "sha256": "309592becdaa97f14291a0336297d28300aff51c9b811f4ecdc3240f3cdc8468",
+      "bytes": 2978,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/esd/src/gblc05c.cohdl",
+      "sha256": "a01765c8e7182cb8a7de023971234a978df65c872572b1ba87e7dc1b1c46ff29",
+      "bytes": 1175,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/esd/src/ulc0511c.cohdl",
+      "sha256": "72eca55c74062c3d1e11a41ef038ff908e187e33d1089379a66e25250539d747",
+      "bytes": 1457,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/fuel-gauge/src/cw2015.cohdl",
+      "sha256": "ca4c865bbaaf7c2521276a703047d11fd712fdfdbfb0e0a806c5c3a16d0e1bd3",
+      "bytes": 2480,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/gnss/src/l76k.cohdl",
+      "sha256": "a17ba0210c681047f74a7315c6c80898312273a409a339cd12cd20cec4913994",
+      "bytes": 3519,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/gnss/src/mia-m10q.cohdl",
+      "sha256": "e7637a686050da43b88b92d2eb027cacb1149e08af1d845f8ba33fd500c51b33",
+      "bytes": 6789,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/haptic/src/aw86224.cohdl",
+      "sha256": "9f08919874805bf109b6d5cb24fd5ee0fab56e8e6edc90a5dacf47c454ba8f4d",
+      "bytes": 2182,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/haptic/src/drv2605.cohdl",
+      "sha256": "c93d2d1baa2903c27df54292faa5db9ca6ad046d642f31b19ba7088d0c4acb2f",
+      "bytes": 1926,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/imu/src/bhi260ap.cohdl",
+      "sha256": "d95ad3543049edb394efa06fa7fab07862d055fb0d716c3d4f0e38e6a8f3f118",
+      "bytes": 7962,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/imu/src/lsm6ds3tr_c.cohdl",
+      "sha256": "99b4a6ecab098c880414b899a348e21a46900dd7da187c23ff483074c21690fd",
+      "bytes": 2391,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/imu/src/mmc5603nj.cohdl",
+      "sha256": "b816393c4e5f02c5f1670f1f607ed3dfd6e78f539183124d762a072015cbe776",
+      "bytes": 1429,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/io-expander/src/xl9555.cohdl",
+      "sha256": "e65a92b99d319d77b6ee852f96e99fc4e0ea483bd00c2ffa4a0def103f62cd83",
+      "bytes": 6923,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/ir-emitter/src/vsmy14940.cohdl",
+      "sha256": "7277c5902fee34c19573a7628658bf2e29a67cc1e0a64549cfff1d502f24b237",
+      "bytes": 1471,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/keyscan/src/tca8418.cohdl",
+      "sha256": "087ae049b9f6739a2a885108c61c10449a70ab9593c74123f6f4f1ab4af1212e",
+      "bytes": 4133,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/ldo/src/eta5060.cohdl",
+      "sha256": "92d0c1d2d5b6cbfb9fc2bd45384c81418d9ae55e7ba369d45c1a529b8d2f3767",
+      "bytes": 2025,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/ldo/src/me6211.cohdl",
+      "sha256": "78a7d03cd29bea3000176a3592259c9c29399194a08b8d2ce46b9a348ef6535d",
+      "bytes": 2178,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/ldo/src/rt9080.cohdl",
+      "sha256": "a1ea9c67983187d30d17fa8dbc249f7949498963e0acb28f2f38bf456d82fc36",
+      "bytes": 3600,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/ldo/src/xc6206.cohdl",
+      "sha256": "c60da81ae67193914bcaea6b514df4e516175463214ce71048e2eacbdfcda917",
+      "bytes": 2405,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/led-driver/src/aw21009.cohdl",
+      "sha256": "a971975bcd9800c4768683562021f1de790f5357bfdf4d836e48ae4c198389b1",
+      "bytes": 3284,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/level-shifter/src/rs0104.cohdl",
+      "sha256": "b8e2bc53cae5667667d93b4c04611e0bf28ab90237bb754bb87ad04eb0ab38f4",
+      "bytes": 7841,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/lora/src/hpb16b3.cohdl",
+      "sha256": "bda38e39e9356c91fd32e6b285ff15efaa7dc3c063769d378c6f43d0fb4053fd",
+      "bytes": 1618,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/lora/src/hpd16a.cohdl",
+      "sha256": "d164af492d70e60343d8140ec1b2dba1eede52ad417b2f5f3cb12d15ec1b6b50",
+      "bytes": 1807,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/lora/src/sx1262.cohdl",
+      "sha256": "dc0233b9f95216a9af7417d3259f679459460734aced6726823e0d3f1ba968e5",
+      "bytes": 3997,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/lora/src/sx1280.cohdl",
+      "sha256": "a14cb60777d5398f82743136fb06fb7c5f619239e0fd5d71198a4bdb0e35e25f",
+      "bytes": 1828,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/mic/src/t3902.cohdl",
+      "sha256": "ebe979257ba39f80b2b757d5331bce9f5fe483871e5d878d8ae07dc6b07f3de8",
+      "bytes": 1714,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/nfc/src/st25r3916.cohdl",
+      "sha256": "391353441505e5e1d9b8a70cbd11fdeadbca6a75c41f362d03899f3eb1972f57",
+      "bytes": 5413,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/pmu/src/axp2101.cohdl",
+      "sha256": "71beb25197940e677f2abadce151bbe132d9f3fd3149bb02715f978d06c8f48a",
+      "bytes": 3120,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/rtc/src/pcf85063a.cohdl",
+      "sha256": "dc1a6e05c9412af17b6d959c953e98912fdf5618b308397607f05deef7eb44ff",
+      "bytes": 5899,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/sd-card/src/microsd.cohdl",
+      "sha256": "217d44e339fb1137ac1c8fa669c60819a1ee167b0dca9b490b87a9e5c89774fe",
+      "bytes": 2315,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@contrib/usb-uart/src/ch343p.cohdl",
+      "sha256": "212204c3716f85471c5c6239ea1a08ae1593e88400213fcbe55a60338851de7f",
+      "bytes": 1846,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@espressif/esp32/src/catalog_devices.cohdl",
+      "sha256": "eaef3624457fe074a9cb6e06e635378fa7e4a51d9c5e663bb5a2d1ebbc382fa9",
+      "bytes": 130489,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@espressif/esp32/src/catalog_parts.cohdl",
+      "sha256": "f637cbab8bfaaa43eee0769ab97814d5cba948a442d54f69312c90021a3152c2",
+      "bytes": 37710,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@espressif/esp32/src/chips/s3.cohdl",
+      "sha256": "b88445f5e52d393328a7254a728797e8bdd44669bd71a74d529a0eae6d041a25",
+      "bytes": 6967,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@espressif/esp32/src/footprints.cohdl",
+      "sha256": "09249481b16d0ad53f3e755545a99358dba43a44bc054776ab6c623adc2d1ae7",
+      "bytes": 6639,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@espressif/esp32/src/kicad_generated_footprints.cohdl",
+      "sha256": "27c1d66c1f16f8cb392c44f179bd933af8f3e116f1ae16faa714460bdee405d4",
+      "bytes": 145065,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@espressif/esp32/src/modules/wroom_s3.cohdl",
+      "sha256": "43695726842ecd94a949efed7eb9c106da97b99c1522d79c5d6030185e5886fa",
+      "bytes": 2556,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@raspberrypi/mcu/src/rp2350.cohdl",
+      "sha256": "0e7142449ee121916648472dad5e63cec87a61af2bdb6f277dd7f231c6e51473",
+      "bytes": 3411,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@richtek/dcdc/src/buck_boost/rt6150b.cohdl",
+      "sha256": "33713ca13867ae4c140c0d0f46943b1d9b63cb79e411d59529ecf96fbfcaa775",
+      "bytes": 843,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@sifli/sf32/src/sf32lb52x.cohdl",
+      "sha256": "c1d236a785a4d8e78bd06b1c849d43c96f6cfc5f07daf8760a0ccdc35d61c6f7",
+      "bytes": 14507,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/c0.cohdl",
+      "sha256": "89d2e011dae410f66b4d10b8cef4a75a0c6438eec344de0e9dbd474ad8d105fe",
+      "bytes": 112466,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/c5.cohdl",
+      "sha256": "d664bd109bf273e398be6c90dbdea577d50ffa40521b97dfbe69f7405f841e94",
+      "bytes": 233842,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/catalog_coverage.cohdl",
+      "sha256": "7641ece7f7b366fdb4a5f5824af207ba4893f073165b14040c52f936f5888d6b",
+      "bytes": 60649,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/f0.cohdl",
+      "sha256": "afd7f8e747671f1e4209c9900284c294eb1c2f46cee9240f3089363f5467f83b",
+      "bytes": 228778,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/f1.cohdl",
+      "sha256": "994f41c6375c27c7c4dbea95f46dccfa642d2cf31b990bc3818fd176fb61d4f0",
+      "bytes": 409791,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/f2.cohdl",
+      "sha256": "51c9d93e9e3fb1bfbb9bfb5b7c5acf064fe4b48e5311454cacb4cfd0f76c35c3",
+      "bytes": 242054,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/f3.cohdl",
+      "sha256": "5b9e3134352db3a4df46d298d588214584be8aa5d0a1111f181c5f598c306c63",
+      "bytes": 273594,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/f4.cohdl",
+      "sha256": "c02ae8b399a9274fc3cee9e488ce41e80fc5a6e2af2eef7d86845a2f7bfd2d69",
+      "bytes": 1072587,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/f7.cohdl",
+      "sha256": "4998d708f8f03eda5d672ebb6b5a854314ccff1ca65aecd9fc678a0d0ece76f7",
+      "bytes": 767966,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/g0.cohdl",
+      "sha256": "cbe5f1932d895cd6b29bec27d556897b636ff4a34cb15ad6510365c90c859ed6",
+      "bytes": 309177,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/g4.cohdl",
+      "sha256": "f9cabd9c110d68b6eb44a8e0cf8a5f605f0e8d2f9d4fdaccc9d286aff426a189",
+      "bytes": 509273,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/h5.cohdl",
+      "sha256": "cfc99b6a1452ddb179522753d797c7194cb19cdde09d50e412dec49f282d5eb7",
+      "bytes": 677455,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/h7.cohdl",
+      "sha256": "4c80ddf90630725eb9122151f4399bc1b34313be95f89f78bda01942c9bdc3fa",
+      "bytes": 1189828,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/l0.cohdl",
+      "sha256": "b720dd662c7e6e83bf41ff67cafe32c7a13f45f8e97f66e6c9b289c514a32257",
+      "bytes": 339183,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/l1.cohdl",
+      "sha256": "65ea08706e0add72c90be77a11297fec2290573b6eeec6968e1ce2b95e27ae97",
+      "bytes": 423372,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/l4.cohdl",
+      "sha256": "c8006d893b211bcbda0005d78c35d82b6f740c6623fb6a964b9dba575110bc7d",
+      "bytes": 584547,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/l4_plus.cohdl",
+      "sha256": "a3769414f72f45f34e30a824688350d69f0975d529f8f1dcc250ab8888256b50",
+      "bytes": 393606,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/l5.cohdl",
+      "sha256": "f97333123df1d0b432e87efe0c3b9789caec3dfef58b0cfdcba5170c442192fd",
+      "bytes": 133444,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/n6.cohdl",
+      "sha256": "1c87babde58a62bde881d8df139e3a9bf25b6ec77a52c3b37b409bb61e244ed6",
+      "bytes": 197164,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/u0.cohdl",
+      "sha256": "087eda0e43d5aa4bb07e9d52ab1d9019bb2d782a027f91cbd5157a65718140a9",
+      "bytes": 94433,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/u3.cohdl",
+      "sha256": "4d2ee46bd00dae419b3d2163285169bc2392fed0be1fcff0809b6cadf556c119",
+      "bytes": 413977,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/u5.cohdl",
+      "sha256": "359a6b9575177647eddab09dc1b842bcde30078d500f787d2d023f10240a0344",
+      "bytes": 677073,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/wb.cohdl",
+      "sha256": "16416811075ae57c154260ada308d443b50f6a8687760c0bac6993eba3d6304d",
+      "bytes": 39560,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/wb0.cohdl",
+      "sha256": "5d58a3eb2a3d0657810788e4b35b858d5afc5d4790d1d1bd9f3df67537728715",
+      "bytes": 7746,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/wba.cohdl",
+      "sha256": "d866e72b6b524f366daa3396f61f11d1f0c4cc2c7a43f406bba23c97c3227dba",
+      "bytes": 47798,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@st/stm32/src/wl.cohdl",
+      "sha256": "6c876c71d09414af5143e4bcfccb6fd63fbe30bdc163d36d89f9d70c2fbf2204",
+      "bytes": 30865,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@ti/dcdc/src/controllers/multiphase.cohdl",
+      "sha256": "ba867fa1fe9c1a1953c6722ca0ab72878d6d20a9dc692e959f465c364fd396a7",
+      "bytes": 2495,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@ti/logic/src/transceivers.cohdl",
+      "sha256": "5088412818cbce06cb27b0f5c6454b8ad8f80d7fbfdb52fae1e9658aa9acf626",
+      "bytes": 1648,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/@ti/power-switch/src/tps25982.cohdl",
+      "sha256": "96b9c51dbbd5767179b46d353f86173180553c2a7e7809d5dd44ae40f22d4956",
+      "bytes": 5618,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/antenna/src/2450at18b100.cohdl",
+      "sha256": "ede0496896b9a6c626cea10bc608225bc5748b2c0ef8eedec0b80e379c80501b",
+      "bytes": 1083,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/audio-amp/src/ns4168.cohdl",
+      "sha256": "5a31d3dd39fdb5ce7b0b3a71ee974e4e226042503ab208a57727c8a5f884e4bf",
+      "bytes": 1967,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/bga/src/footprints.cohdl",
+      "sha256": "64d7ee5f9b887571a00060213830d2e25df419abb7d090c099f176007063e1e9",
+      "bytes": 9932,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/bga/src/kicad_generated.cohdl",
+      "sha256": "e910307b4eae24d17146d7df2d3f771e57e94a9c461d2d82afe32da7564f9379",
+      "bytes": 129020,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/can/src/sn65hvd230.cohdl",
+      "sha256": "74dcdb7d3834a1c28420d448e287c6e7d52bb65c45e1e3bcb18785ce384aeb4f",
+      "bytes": 1468,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/cellular/src/air780e.cohdl",
+      "sha256": "dfed4ff21290e615f378820db20afe717f1fcec41553d3566d6006f25e5f21cd",
+      "bytes": 13154,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/cellular/src/air780eg.cohdl",
+      "sha256": "1a8e59072af1d70ee0ffcb1bba291ca50377c55790cb82e149fb5749066e2d59",
+      "bytes": 3148,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/cellular/src/t520.cohdl",
+      "sha256": "52346d37faadf1d91f7073627f43ec2b5ef73073682017287bc49eb3b6b3c43f",
+      "bytes": 1546,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/coax/hirose_ufl.cohdl",
+      "sha256": "9f3c13d552cd6df9d5dcac0c602f3822e2eb0b321e63312ca6c477f177b275be",
+      "bytes": 1270,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/fpc/fpc.cohdl",
+      "sha256": "abe6136bfb37c4e3c5f77baa69119199ef8f5cf1d348273510111924d22c12b0",
+      "bytes": 11180,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/fpc/hirose_fh12_26.cohdl",
+      "sha256": "a0a1ff55cfa6084d6585987475eedcad2607d0db39b0a9623479f6ff5a60eb68",
+      "bytes": 3659,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/fpc/lailan_cx01_31p.cohdl",
+      "sha256": "013fe9a8b2a4d1ded4f8935a216731a8e884ecc12535550c052f564cc4d7a5d9",
+      "bytes": 4311,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/headers/castellated_254.cohdl",
+      "sha256": "5e304c17e5b8bb51e5b4e5f59b9d36a5b3d4fcb7f146c21b34cb948d3da634c5",
+      "bytes": 1687,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/headers/lailan_pz127.cohdl",
+      "sha256": "19241242b2e7c371f562f22fd28a9fb051637ae3efdc12b840d4df168babee65",
+      "bytes": 1544,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/headers/micro_fit_3.cohdl",
+      "sha256": "190552be6b139e533bac42d8eb6090d5a7f83d752a32c728eeeed6394ace6f66",
+      "bytes": 4383,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/headers/smd_254.cohdl",
+      "sha256": "4b872624eb1b94ef3f955d96ca130d1f8e523a0d8a3a3c18acf9cef845431c31",
+      "bytes": 2033,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/headers/xfcn_pz127v.cohdl",
+      "sha256": "b163ca04831c14a4eca4bfa57cdfaca4cc59d68c8a8069cabe0f1550fb1dd80c",
+      "bytes": 1286,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/sim/jae_sf72s006.cohdl",
+      "sha256": "7715af9972bb6c07c0e37b55cbc28d9d72b774a9320111c49712148b46266697",
+      "bytes": 2889,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/connectors/src/wire_to_board/lailan_phc125.cohdl",
+      "sha256": "d4c3608ad0cd0f36cb65972bc7816b4ffe32220fb20476f82cdc698d9741f993",
+      "bytes": 1898,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/csp/src/kicad_generated.cohdl",
+      "sha256": "04bac5118e21e97a07fb712b726bf0a6eb7feff7658267a612e4a5dc8d8aa392",
+      "bytes": 275533,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/dcdc/src/jw5033s.cohdl",
+      "sha256": "04319d8030b757e104347eadbd34250c3652eeabbd8c88e0c5a4a9ad54a12fec",
+      "bytes": 2255,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/dcdc/src/sgm6029.cohdl",
+      "sha256": "d868d46bddffe6583d4eb6cb10cfae6ca86730ca118fcf2cf847a65c9c5e47f5",
+      "bytes": 1506,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/diode/src/schottky.cohdl",
+      "sha256": "96c1722dac897032d40fca04d8de2455275acc54ebb22fdd34aaef423601842a",
+      "bytes": 1152,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/diode/src/small_signal.cohdl",
+      "sha256": "614685ed441470279c1c8726e5321c793c3eb7f263360f2d53b79e3214c99d04",
+      "bytes": 1396,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/esd/src/hongjiacheng.cohdl",
+      "sha256": "aaa6e2d622b1a49544fdc21dd0e40312a31986b5f57adb10b6e80257970ae247",
+      "bytes": 1435,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/esd/src/ti.cohdl",
+      "sha256": "81ab2b79a2009b696f19ab3d6f9e6f93c35becc5b5a8831357272f2f5713a051",
+      "bytes": 2688,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/esd/src/usblc6.cohdl",
+      "sha256": "9565b13db1608f019cd726b3e643c27657e1fb673e8b8619b84b11fdf507b2af",
+      "bytes": 1710,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/esim/src/esim.cohdl",
+      "sha256": "41b14d68f9143a81e2cdcc2d1f68e3c174ebfa5eee8daef461c4cef10f469e4d",
+      "bytes": 2185,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/flash/src/w25q128jv.cohdl",
+      "sha256": "4b0972196ef7f8b35fe3dd5df4c2b5ce4aa385d882391c71b404f6071c099ea4",
+      "bytes": 2837,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/flash/src/w25q32.cohdl",
+      "sha256": "3b1e0b87a56a8edad9c1d60dc16f1499fb15271fad6b66e0ca596299491c70bd",
+      "bytes": 897,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/ldo/src/ap2112k.cohdl",
+      "sha256": "6ebd07346aae8b4ece7e9c0297543691b840cee0c91e2ad2a38cbab6941067bf",
+      "bytes": 1477,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/ldo/src/rt9193.cohdl",
+      "sha256": "f6a27b1e7dfa507057eff15afca1617938140583e363a983a45c3d781d001413",
+      "bytes": 1871,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/led/src/chip.cohdl",
+      "sha256": "3ccc73bafb20a45c529771352c3bb66287be10753063d5d6c3144ae13867f000",
+      "bytes": 1029,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/led/src/green_0603.cohdl",
+      "sha256": "715864ff1738527cc9bbeb6abc5bb89e454e6fea452ab9b92fb28295b8643597",
+      "bytes": 629,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/led/src/sk6812.cohdl",
+      "sha256": "c9e7ac2a89b7c1f0daf9e7cd29aea737c18668b06624e50b7ef23b0c9b09f248",
+      "bytes": 2784,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/led/src/source_exact_0402.cohdl",
+      "sha256": "4b56914addd5110d63b7fc37be338d62c18ca5eba4cb0e352551d31e73fb793f",
+      "bytes": 1620,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/led/src/traits.cohdl",
+      "sha256": "282de16943b8ea076180da5a7dfd797dc209173f9af0d6a5409ead63ae2201f0",
+      "bytes": 59,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/load-switch/src/mt9700.cohdl",
+      "sha256": "3a55831b62b513b1b99ae3ecdc65565caf620c6c3c99aa1e9ffe86dabf7f65a5",
+      "bytes": 2500,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/load-switch/src/sgm2554.cohdl",
+      "sha256": "b56d960c1756198e65557fc4c5debec316d2b8970eed71d608a1f90bceb97ecf",
+      "bytes": 1506,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/load-switch/src/tps22918.cohdl",
+      "sha256": "854a3a7f5f6d8c17dbd9ca90bc9b0b042b15ae12115d434811dfc378a9734d43",
+      "bytes": 1595,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/logic/src/sn74ahct1g125.cohdl",
+      "sha256": "febf58598386e69cddc9b167c41c9654c1b977520b7e7d315093b341bb96fbbc",
+      "bytes": 1247,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/mic/src/ics40300.cohdl",
+      "sha256": "7092e8848c61f948c5a054a41aaff28c857b5fa2a28e6b381d0005f1e51e0bd2",
+      "bytes": 1564,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/mic/src/ics43434.cohdl",
+      "sha256": "8690f2770a8bb4991bf6aea372f062fcfd746b694fb019f21c796f2d83e00878",
+      "bytes": 2182,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/mic/src/microphone.cohdl",
+      "sha256": "cd8bc0d90102cbaca23d12753a5c20616357689c71b3cf0f0c6c02f450e3a05d",
+      "bytes": 53,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/misc/src/misc.cohdl",
+      "sha256": "67eee7887d21856a4468d6166444aa0306379428a4c3f1b36ea6fcb91b9cf1a2",
+      "bytes": 1937,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/mosfet/src/nmos.cohdl",
+      "sha256": "ccacc9cebc5d59928aa2b05072f94ec3f300901808ca456646ab0f917d9f7ff5",
+      "bytes": 1194,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/motor-driver/src/drv8231a.cohdl",
+      "sha256": "f2cef0534109b60f15df305f9e6fe4a5bae6dd37dafac5a2d2caaeda181480f8",
+      "bytes": 2913,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/osc/src/crystal.cohdl",
+      "sha256": "c48844461d26117d93fa8beba15ed8e5d2a5d824d5999803ee9451eb4d78a3dc",
+      "bytes": 1549,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/osc/src/crystal_12mhz.cohdl",
+      "sha256": "3769903200156e156639a8cbd05f233eee34b12eb067853583b80290b2f6e202",
+      "bytes": 1344,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/osc/src/crystal_32khz.cohdl",
+      "sha256": "83ffb4d391e10368c357d2abbe7e23a76e61a928ccbd2788a5c1dd5b2a6874c1",
+      "bytes": 1148,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/osc/src/crystal_40mhz.cohdl",
+      "sha256": "4a8651962b3f14e23849f0463c2c0452a7f5d12c89458c22f2c0c5f33dab108b",
+      "bytes": 790,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/osc/src/crystal_48mhz.cohdl",
+      "sha256": "419d5b2ad067607f7c48a3d059270b1c56417a1bae63e28daf1122d7f74280a1",
+      "bytes": 1297,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/capacitors_0201.cohdl",
+      "sha256": "e5750386ff090523548ff2d570e16badab1dfb0904d32afd7539cfe87d482661",
+      "bytes": 40071,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/capacitors_0402.cohdl",
+      "sha256": "947c9e608c8a05c1ef7ed823e2327da17637781a5b7b1daacde4c6a8ba60d76d",
+      "bytes": 63224,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/capacitors_0603.cohdl",
+      "sha256": "2a86018489616b8e2127a8b34d4e2223fe76ae4535402b962c7ac4ccff3987b8",
+      "bytes": 81348,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/capacitors_0805.cohdl",
+      "sha256": "9a148353936f3f83b4b0b33883b6f2dc06b4309ce147f6951c25402702870768",
+      "bytes": 45027,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/capacitors_1206.cohdl",
+      "sha256": "3e8cdc3bb2b3c893008a201ea9e9df0aad30a558dbe84b04bcc8e4b68c9decf9",
+      "bytes": 41543,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/capacitors_1210.cohdl",
+      "sha256": "2d518052cfbeeeda741cc1c7e28e1ed76a24cd18b30aa4e352118bd9d99bd5a3",
+      "bytes": 330,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/circuits.cohdl",
+      "sha256": "2e602320e42cdfbf5b681ec418c39adbb3e2c7f1ee4f07f37f1148256fbd53e6",
+      "bytes": 660,
+      "declarations": [
+        {
+          "kind": "fn",
+          "name": "decoupling_100n",
+          "decl_span_start": 301,
+          "decl_span_end": 304,
+          "generic_count": 0,
+          "public": true
+        },
+        {
+          "kind": "fn",
+          "name": "bulk_10u",
+          "decl_span_start": 549,
+          "decl_span_end": 552,
+          "generic_count": 0,
+          "public": true
+        }
+      ],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/devices.cohdl",
+      "sha256": "966b5be61be9f4b2a8f6406387fd00a1efd5909a3e169fac8f8c4cbf152a1966",
+      "bytes": 3000,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/ferrite_beads.cohdl",
+      "sha256": "ab4626b1145fb2e002a83824ecc0dacdb6013ad683e7f2d2d223cd01863c372d",
+      "bytes": 1209,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/footprints.cohdl",
+      "sha256": "e1bb40b6077130cc37f7c1d9962f9d57a15e45cbf17689d183f5f74e51e37f96",
+      "bytes": 2191,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/inductors.cohdl",
+      "sha256": "7193b14aa776384d8e278b9abb91d8deff5894442d33dfa4fc5f8d3a0d0b1414",
+      "bytes": 4127,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/pads.cohdl",
+      "sha256": "6e9f4bdd4345a52e14a05ac241c441dd44c9a1ee8f545bcd83a890f40db9ceff",
+      "bytes": 1745,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/polymer_capacitors.cohdl",
+      "sha256": "b9119ccf36b9c12557e82cfbb69fa9329313b6999fcab380f3290c60f0f1e895",
+      "bytes": 1483,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_0201.cohdl",
+      "sha256": "98efda3336a1eca3f13c30eb3ce9f15581cdc5e7f96b8e52a3850efbb6ebc1d5",
+      "bytes": 229234,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_0402.cohdl",
+      "sha256": "1150c2f22326ea8cb31ca70838e02c8c8b281296d3aea9bc17689fc5f52b2bd6",
+      "bytes": 229236,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_0603.cohdl",
+      "sha256": "776fd27169193a4d1d6e924fe2f6cfef94be0393ebe0fc9cc3dda7fb0fc5d46a",
+      "bytes": 229235,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_0805.cohdl",
+      "sha256": "34e7d4dc75ff5be3397e4b30a936bef4113e2f3dcd6705aba051a4eceb17f402",
+      "bytes": 229235,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_1206.cohdl",
+      "sha256": "cdc0d4ecf350e84e5f325088c997a503e475e60fe0f392bb2cc6a7dd8ded6885",
+      "bytes": 229235,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_1210.cohdl",
+      "sha256": "a89ac986d214c5763fe55488383f5c15eccd8ae9682c9a578daf9849fc617d89",
+      "bytes": 228521,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_2010.cohdl",
+      "sha256": "61f0dcbd1aabedebf567f1f93f2758b78a657c9abe0761968468851936182b43",
+      "bytes": 228521,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/passive/src/resistors_2512.cohdl",
+      "sha256": "b685a4471262836cf74090924dcf7dcd4469b8549ebfd1efaec901abdc936272",
+      "bytes": 228756,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/qfn/src/esp32_kicad_generated.cohdl",
+      "sha256": "abb1651caa89e0d75108b8b1cfc9a526553851827fe75597d125452f92890ab8",
+      "bytes": 66373,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/qfn/src/footprints.cohdl",
+      "sha256": "2a59401648d2ab521bf11c888dfd4cb3fe9d4559bab9a4310f3e379da86cd3a5",
+      "bytes": 33203,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/qfp/src/footprints.cohdl",
+      "sha256": "09d145d797b1c320b2f173060ef1f2334425f3a94dacb87aba1a433e8f503e11",
+      "bytes": 13331,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/qfp/src/kicad_generated.cohdl",
+      "sha256": "78b026b807f4966b5ee5980bd52a76c27cec6e7fb4a3a8009b9acf6212e77748",
+      "bytes": 57709,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/soic/src/footprints.cohdl",
+      "sha256": "d99a6b724e59694b28f081cca9cbe04421e00d360013bf2d4a274c3b7725b65f",
+      "bytes": 5596,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/soic/src/kicad_generated.cohdl",
+      "sha256": "fb6bf5c453ef1c4f7c584f02b5ee0cef62a45d3017f0240cf1798c25d0fb962f",
+      "bytes": 4069,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/std/src/prelude.cohdl",
+      "sha256": "caaa42414bd04d228e5c87c5f7e7bd749490b87df27da8d3ec11a4db07c6f4cf",
+      "bytes": 1209,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/switches/src/max16054.cohdl",
+      "sha256": "437f9c5bc8c76f3f79e9034a4562cf3e2287b94b3997a4b135998a6971cfff5e",
+      "bytes": 1310,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/switches/src/tactile.cohdl",
+      "sha256": "58d4f81ce14f7fc01ec5a710cda554a00491a8887ac56657e96bf5e0c77f4f7c",
+      "bytes": 1613,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/transistor/src/s8050.cohdl",
+      "sha256": "ffe85fe9db0fe4ceee9b105f39cad8e280ac1def0bfddc1b4a0df7b07c8aee21",
+      "bytes": 1269,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/usb/src/connectors/micro_b.cohdl",
+      "sha256": "0d1ee3f81642168b74f70cf5964fd542e87c6476e206f95b530e469988d25e78",
+      "bytes": 3107,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/usb/src/connectors/type_c.cohdl",
+      "sha256": "2df62252e6bb29278b326ee347dbd59fd2b2a13ea3bc1043c95d38ba79b9b6d4",
+      "bytes": 5107,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    },
+    {
+      "path": "lib/usb/src/pd/ccg6df.cohdl",
+      "sha256": "e63d5496f4298580b79f1ddcbe05a3ddf44dc6898aefcfdb7323beabdea771a5",
+      "bytes": 9328,
+      "declarations": [],
+      "parse_diagnostics": [],
+      "parse_error_count": 0
+    }
+  ],
+  "observer_stderr": "",
+  "prototype_status": "not implemented; semantic verdicts, new-error deltas and migration audit not measured"
+}

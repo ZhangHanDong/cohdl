@@ -500,6 +500,52 @@ design B {{
 }
 
 #[test]
+fn array_element_internal_placement_override_preserves_siblings_and_nets() {
+    let src = format!(
+        "{LIB}
+design B {{
+    subdesign vrs: [Vreg<100nF>; 2]
+    inst load: C1U
+    inst load2: C1U
+    net rail [5V]: load.A, load2.A, vrs[0].VIN, vrs[1].VIN
+    net o0: load.B, vrs[0].VOUT
+    net o1: load2.B, vrs[1].VOUT
+    layout {{
+        place vrs[0] at (10mm, 0mm)
+        place vrs[1] at (30mm, 0mm)
+    }}
+}}
+"
+    );
+    let baseline = checked_ok(&src);
+    let overridden = checked_ok(&src.replace(
+        "place vrs[1] at (30mm, 0mm)",
+        "place vrs[1] at (30mm, 0mm)\n        place vrs[1].c_in at (32mm, 7mm) rotate 180",
+    ));
+    let before = baseline.ir.as_ref().unwrap();
+    let after = overridden.ir.as_ref().unwrap();
+    let target = place_of(after, "B::vrs_1::c_in");
+    assert_eq!(
+        (target.at.0.femto, target.at.1.femto, target.rotate),
+        (32_000_000_000_000_000, 7_000_000_000_000_000, 180)
+    );
+    for path in ["B::vrs_0::reg", "B::vrs_0::c_in", "B::vrs_1::reg"] {
+        let a = place_of(before, path);
+        let b = place_of(after, path);
+        assert_eq!(
+            (a.at.0.femto, a.at.1.femto, a.rotate),
+            (b.at.0.femto, b.at.1.femto, b.rotate),
+            "sibling moved: {path}"
+        );
+    }
+    assert_eq!(
+        cohdl::emit::kicad::emit_kicad_net(&baseline.world, before),
+        cohdl::emit::kicad::emit_kicad_net(&overridden.world, after),
+        "a placement override must not change component identity or connectivity"
+    );
+}
+
+#[test]
 fn reach_in_path_failure_names_the_exact_segment() {
     let src = format!(
         "{LIB}

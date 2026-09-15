@@ -1,0 +1,59 @@
+{
+  "compiler_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "compiler_version": "cohdl 0.7.0 (aarch64-apple-darwin)",
+  "compiler_sha256": "127ceb68f0c486c711b628f256de1de08e52ffe1c48963c16092012b25b11ff3",
+  "source_sha256": {
+    "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b",
+    "cohdl.toml": "ef849eaa0d57ac44bdb3c21275c7a263dc5b0ccbbf517b9a7d85b3d768ee3b74",
+    "design.lock": "5058f9c4185894e90cee6ed91032a3e648de7f9c3d7825142f21504cc7f8de8c",
+    "docs/README.md": "536f58eaa04afad7785807e28714fcd7f13a724c91996aac2b8367b79c6e8bc0",
+    "src/filter.cohdl": "04985a8c3c1ad21419038dbd079a29bc75e5f3750160c09586d62fe664a6f2bb",
+    "src/led.cohdl": "af3d25d2bb8266fba280851c662c76ea6a46a78e505f901b0a53d2b769f770fc",
+    "src/main.cohdl": "b4ba27ffddc62179cf612809f8aeae2aeab137019bc9068b79168a15487f548d",
+    "src/mech.cohdl": "c38c973de5ddfbb96a4fde5cbfeedac574335e89c95b9bac5c4ba85ce05acb40"
+  },
+  "results": [
+    {
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "fmt",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "  All files are in canonical form.\n"
+    },
+    {
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "build",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour",
+        "--emit",
+        "kicad_pcb",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": [],\n  \"build\": {\n    \"netlist\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/syntax-tour.net\",\n    \"bom\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/syntax-tour-bom.csv\",\n    \"layout\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/syntax-tour-layout.json\",\n    \"kicad_pcb\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/syntax-tour.kicad_pcb\",\n    \"kicad_mod\": [\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/footprints/passive-CHIP_0603.kicad_mod\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/footprints/syntax_tour-FP_LED_0603_1608Metric.kicad_mod\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/footprints/syntax_tour-FP_Standoff_M2_NPTH.kicad_mod\"\n    ],\n    \"quilter\": [\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/bga_components.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/bypass_capacitors.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/crystal_oscillators.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/differential_pairs.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/ground_nets.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/high_current_nets.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/single_ended_impedance_signals.csv\",\n      \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-syntax-repair-3ecwaky1/syntax-tour/out/switching_converters.csv\"\n    ]\n  }\n}\n",
+      "stderr": ""
+    }
+  ],
+  "counts": {
+    "instances": 11,
+    "nets": 8,
+    "bom_rows": 5,
+    "placements": 10
+  },
+  "scope": "Book text and example comment repair. Commands executed on a temporary course copy, including fresh native PCB emission; no KiCad GUI/import/DRC, manufacturing or hardware measurements."
+}

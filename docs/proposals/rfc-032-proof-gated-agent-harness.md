@@ -1,5 +1,7 @@
 # RFC-032: Proof-gated CoHDL Agent Harness（从硬件意图到可制造 PCB）
 
+> **历史提案编号说明（2026-09-10）：** 本文对应用户已说明关闭的旧 harness PR，原稿编号不构成语言规范编号。main 中 Accepted 的 RFC-032 是 `docs/design/rfc-032-subdesign.md`；两者不是同一提案。本文不作为 M2 的语言规范依据。
+
 **Status:** Proposed
 **Date:** 2026-09-05
 **Scope:** 位于 CoHDL compiler 之外的 partner-layer agent harness；不修改 CoHDL 语言语法，不扩大现有四条 residual DRC

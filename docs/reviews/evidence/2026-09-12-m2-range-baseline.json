@@ -1,0 +1,202 @@
+{
+  "date": "2026-09-12",
+  "baseline_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "baseline_tracked_status": "",
+  "observer_source": "use cohdl::{ast::ItemKind, diag::Diagnostics, lex, parse, span::SourceMap};\nuse std::io::{self, BufRead};\n\nfn main() {\n    for path in io::stdin().lock().lines() {\n        let path = path.unwrap();\n        let source = std::fs::read_to_string(&path).unwrap();\n        if std::env::args().nth(1).as_deref() == Some(\"--check\") {\n            let checked = cohdl::pipeline::check_files_in_with_deps(\n                \"probe\", &[], &[(path.clone(), source)], None).unwrap();\n            let passed = !checked.diags.has_errors() && checked.selection_error.is_none();\n            println!(\"C\\t{}\\t{}\\t{}\\t{}\", path, passed,\n                checked.ir.as_ref().map_or(0, |ir| ir.instances.len()),\n                checked.ir.as_ref().map_or(0, |ir| ir.nets.len()));\n            for d in checked.diags.iter() {\n                println!(\"E\\t{}\\t{}\\t{}\\t{}\\t{}\", path, d.code, d.primary.span.start,\n                    d.primary.span.end, d.message.replace('\\t', \"\\\\t\").replace('\\n', \"\\\\n\"));\n            }\n            continue;\n        }\n        let mut sm = SourceMap::new();\n        let file = sm.add_file(path.clone(), source.clone());\n        let mut diags = Diagnostics::new();\n        let tokens = lex::lex(file, &source, &mut diags);\n        let ast = parse::parse(tokens, &mut diags);\n        println!(\"F\\t{}\\t{}\", path, diags.error_count());\n        for item in ast.items {\n            let decl = match &item.kind {\n                ItemKind::Fn(f) => Some((\"fn\", &f.name.name, f.generics.len())),\n                ItemKind::Subdesign(s) => Some((\"subdesign\", &s.name.name, s.generics.len())),\n                _ => None,\n            };\n            if let Some((kind, name, generics)) = decl {\n                println!(\"D\\t{}\\t{}\\t{}\\t{}\\t{}\\t{}\\t{}\", path, kind, name,\n                    item.decl_span.start, item.decl_span.end, generics, item.is_pub);\n            }\n        }\n        for d in diags.iter() {\n            println!(\"E\\t{}\\t{}\\t{}\\t{}\\t{}\", path, d.code, d.primary.span.start,\n                d.primary.span.end, d.message.replace('\\t', \"\\\\t\").replace('\\n', \"\\\\n\"));\n        }\n    }\n}\n",
+  "observer_sha256": "d220d4e1613c623be0542516bc40d757d7fc982196c7a63597f0349a96d45c9a",
+  "observer_binary_sha256": "f5519298b872cdcc290449e541af4630f852473a81029431f05428064b8a0bbc",
+  "compiler_rlib_sha256": "4b5f20e1036a8397a596ca997168d7c761c85560dc2ed866347ff43973b4c78b",
+  "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+  "observer_build_argv": [
+    "rustc",
+    "--edition=2021",
+    "/private/tmp/cohdl-m2-syntax-probes/observe.rs",
+    "--extern",
+    "cohdl=/private/tmp/cohdl-main-subdesign-ab44257/target/debug/libcohdl.rlib",
+    "-L",
+    "dependency=/private/tmp/cohdl-main-subdesign-ab44257/target/debug/deps",
+    "-o",
+    "/private/tmp/cohdl-m2-syntax-probes/observe"
+  ],
+  "scope": "existing-syntax check pipeline, synthetic unbound Contact device, no build/hardware/M2 execution",
+  "probes": [
+    {
+      "name": "inclusive",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[0..=2].A\n}\n",
+      "expected_passed": true,
+      "expected_code": null,
+      "source_sha256": "8f0959555f542b74a14ba66083135751a5332d56d238a7a1c622a5c42dc681c1",
+      "diagnostics": [],
+      "passed": true,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "singleton",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[1..=1].A\n}\n",
+      "expected_passed": true,
+      "expected_code": null,
+      "source_sha256": "a296d66ad6a5b49fce8bb927575d3d6ce9bafa81a8a0ea1f186252ace88f00ed",
+      "diagnostics": [],
+      "passed": true,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "unselected_end",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[0..=3 step 2].A\n}\n",
+      "expected_passed": true,
+      "expected_code": null,
+      "source_sha256": "ca20e335debe0691cd8161b589b607bb8c4dbbf84a22fdacfaeb77a0ca4d04df",
+      "diagnostics": [],
+      "passed": true,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "selected_out_of_bounds",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[0..=3].A\n}\n",
+      "expected_passed": false,
+      "expected_code": "E202",
+      "source_sha256": "0e726e95172e870a64bebbc5c0fd2c177ff8d8a4d0cec511410e5c15438966dd",
+      "diagnostics": [
+        {
+          "code": "E202",
+          "span_start": 134,
+          "span_end": 141,
+          "message": "index 3 is out of bounds for `ps` — valid indices are 0..=2 (length 3)"
+        }
+      ],
+      "passed": false,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "reversed",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[2..=1].A\n}\n",
+      "expected_passed": false,
+      "expected_code": "E211",
+      "source_sha256": "f8d2eb81a56a51deb07fff7a3e8d986123d9c3c075499e58ff531240f140aff2",
+      "diagnostics": [
+        {
+          "code": "E211",
+          "span_start": 134,
+          "span_end": 141,
+          "message": "range `2..=1` is empty — the end must not be below the start"
+        },
+        {
+          "code": "E010",
+          "span_start": 141,
+          "span_end": 142,
+          "message": "expected a statement (`inst`, `net`, `nc`, or a fn call), found `.`"
+        }
+      ],
+      "passed": false,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "zero_step",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[0..=2 step 0].A\n}\n",
+      "expected_passed": false,
+      "expected_code": "E211",
+      "source_sha256": "4270f617c55c53af26faed3ebe0ac09ccafb6a1eb44501522d905124ad831cb2",
+      "diagnostics": [
+        {
+          "code": "E211",
+          "span_start": 134,
+          "span_end": 148,
+          "message": "stride `0` must be 1 or more"
+        },
+        {
+          "code": "E010",
+          "span_start": 148,
+          "span_end": 149,
+          "message": "expected a statement (`inst`, `net`, `nc`, or a fn call), found `.`"
+        }
+      ],
+      "passed": false,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "half_open",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[0..3].A\n}\n",
+      "expected_passed": false,
+      "expected_code": "E010",
+      "source_sha256": "4088e52e41bc2e16f1eca99b0edc656b81b397c0a0d2b8482f925549d83d4cef",
+      "diagnostics": [
+        {
+          "code": "E202",
+          "span_start": 134,
+          "span_end": 140,
+          "message": "index 3 is out of bounds for `ps` — valid indices are 0..=2 (length 3)"
+        },
+        {
+          "code": "E010",
+          "span_start": 138,
+          "span_end": 139,
+          "message": "expected `=` in the range `..=` (ranges are inclusive), found number `3`"
+        }
+      ],
+      "passed": false,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "empty_half_open",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[1..1].A\n}\n",
+      "expected_passed": false,
+      "expected_code": "E010",
+      "source_sha256": "84357793093051615e0343e9ba99f67eec24f2f9d9b5f334bb53c18c27fa2707",
+      "diagnostics": [
+        {
+          "code": "E010",
+          "span_start": 138,
+          "span_end": 139,
+          "message": "expected `=` in the range `..=` (ranges are inclusive), found number `1`"
+        }
+      ],
+      "passed": false,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "duplicate_list",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe {\n inst ps: [Contact; 3]\n net COVER: ps[0].A, ps[1].A, ps[2].A\n net TARGET: ps[0, 0].A\n}\n",
+      "expected_passed": true,
+      "expected_code": null,
+      "source_sha256": "5aa913301d56bd15f1641d9422a9cc369c6a6529e543c5dbb770db34ba58ff55",
+      "diagnostics": [],
+      "passed": true,
+      "instances": 3,
+      "nets": 1
+    },
+    {
+      "name": "one_physical_member",
+      "source": "device Contact { pins { A: 1 [passive] } }\ndesign Probe { inst p: Contact\n net ONLY: p.A\n}\n",
+      "expected_passed": true,
+      "expected_code": null,
+      "source_sha256": "5d8cdb40ad4337e247b78e7574f97f5a4200ed59c4d48adf05ff12d1a0b54f58",
+      "diagnostics": [],
+      "passed": true,
+      "instances": 1,
+      "nets": 1
+    }
+  ],
+  "existing_inst_array_suite": {
+    "argv": [
+      "cargo",
+      "test",
+      "--manifest-path",
+      "/private/tmp/cohdl-main-subdesign-ab44257/Cargo.toml",
+      "--locked",
+      "--offline",
+      "--test",
+      "inst_array"
+    ],
+    "passed": 15,
+    "failed": 0,
+    "ignored": 0
+  }
+}

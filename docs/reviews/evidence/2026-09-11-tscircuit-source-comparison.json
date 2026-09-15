@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-09-11T15:09:23.997630+00:00",
+  "review_at": "2026-09-11T14:59:10.717Z",
+  "scope": "Source inspection and selected-file hash comparison only; upstream tests, render/edit experiments, npm artifact parity and M2 candidates were not executed",
+  "checkouts": [
+    {
+      "path": "/private/tmp/cohdl-ref-tscircuit-core",
+      "commit": "e1f5a0edc482897d67969e694c8fbe3e18d4f339",
+      "package_version": "0.0.1875",
+      "file_sha256": {
+        "tests/projects/seveibar__rp2040-zero/lib/RP2040Circuit.tsx": "3e10b325e8cc53ae08909a2f2908515c62aaa3135563af61e5b857a2e2854fa8",
+        "lib/components/base-components/PrimitiveComponent/PrimitiveComponent.ts": "7b0e4539fb7b237b692cc5c9f072c9077ec0b31e492cbfe100bcc2179c7b83ca",
+        "lib/components/base-components/NormalComponent/NormalComponent.ts": "1bc4d7a7b54fc53d5f8dad44adc53c7df56d0fb5b3602109241944d1d28837e7",
+        "lib/components/primitive-components/Group/Group.ts": "c23b999e4106833e8a79e2107b657a2a4706088af9a0b5af041a14b90ae9cfdc",
+        "lib/components/base-components/Renderable.ts": "67537c782177e1aaf3f2fe8ea70070865d933995347489a2dddf094f636430e7",
+        "lib/IsolatedCircuit.ts": "4dbc3733006b00a2aac40e564b9e22b7d7540278bb8fd7dbd3799646d9f33dff"
+      }
+    },
+    {
+      "path": "/private/tmp/claude-501/-Users-zhangalex-Work-Projects-cohdl/d353a61e-4076-4f7e-a2e8-dc70afcb5b67/scratchpad/tscore",
+      "commit": "c298605b2779793876f20f1139a2ebd024a1d7f3",
+      "package_version": "0.0.1875",
+      "file_sha256": {
+        "tests/projects/seveibar__rp2040-zero/lib/RP2040Circuit.tsx": "3e10b325e8cc53ae08909a2f2908515c62aaa3135563af61e5b857a2e2854fa8",
+        "lib/components/base-components/PrimitiveComponent/PrimitiveComponent.ts": "7b0e4539fb7b237b692cc5c9f072c9077ec0b31e492cbfe100bcc2179c7b83ca",
+        "lib/components/base-components/NormalComponent/NormalComponent.ts": "1bc4d7a7b54fc53d5f8dad44adc53c7df56d0fb5b3602109241944d1d28837e7",
+        "lib/components/primitive-components/Group/Group.ts": "c23b999e4106833e8a79e2107b657a2a4706088af9a0b5af041a14b90ae9cfdc",
+        "lib/components/base-components/Renderable.ts": "67537c782177e1aaf3f2fe8ea70070865d933995347489a2dddf094f636430e7",
+        "lib/IsolatedCircuit.ts": "4dbc3733006b00a2aac40e564b9e22b7d7540278bb8fd7dbd3799646d9f33dff"
+      }
+    }
+  ],
+  "all_six_selected_files_identical": true,
+  "mechanisms": {
+    "unnamed_counter": "Group.ts:678-681",
+    "selector_fallback": "PrimitiveComponent.ts:1250-1258 and 1303-1313",
+    "duplicate_name_error_and_removal": "NormalComponent.ts:236-270",
+    "manual_edit_conflict": "NormalComponent.ts:1003-1019",
+    "throwing_render_error": "Renderable.ts:527-541",
+    "schematic_box_ports_guard": "Group.ts:386-388",
+    "render_completion_and_json": "IsolatedCircuit.ts:216-261"
+  }
+}

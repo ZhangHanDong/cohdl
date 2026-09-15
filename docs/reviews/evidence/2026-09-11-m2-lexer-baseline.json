@@ -1,0 +1,307 @@
+{
+  "measured_at": "2026-09-11T03:32:04.967262+00:00",
+  "scope": "Unmodified main lexer only; not M2 implementation or full compiler acceptance",
+  "source_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "source_sha256": {
+    "src/span.rs": "27f3df49695607b312633a738d0963ab6f160c878fe00535f57e50f95471fc6d",
+    "src/diag.rs": "80b6c3722275bf753ca26437b8af0cb7d4856ed4b0917be733ab500a5b4a055b",
+    "src/units.rs": "b7c18a2c324f3df544de86a527e375e55f397e5a273b6e5530102635d2f24131",
+    "src/lex.rs": "bcc422af0fc8067d2fa8f9120edee051410540f9514694fe673600d50b0fc8b8"
+  },
+  "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+  "harness_source": "use cohdl::{span, diag, lex};\nfn main() {\n for source in std::env::args().skip(1) {\n  let mut sm = span::SourceMap::new();\n  let file = sm.add_file(\"probe.cohdl\", source.clone());\n  let mut ds = diag::Diagnostics::new();\n  let ts = lex::lex(file, &source, &mut ds);\n  println!(\"CASE\");\n  for t in ts { println!(\"TOKEN {:?} {} {}\", t.kind, t.span.start, t.span.end); }\n  for d in ds.iter() { println!(\"DIAG {} {} {} {}\", d.code, d.primary.span.start, d.primary.span.end, d.message); }\n }\n}\n",
+  "harness_compile_command": [
+    "rustc",
+    "--edition=2021",
+    "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-lex-y2jw6zfi/probe.rs",
+    "--extern",
+    "cohdl=/private/tmp/cohdl-main-subdesign-ab44257/target/debug/libcohdl.rlib",
+    "-L",
+    "dependency=/private/tmp/cohdl-main-subdesign-ab44257/target/debug/deps",
+    "-o",
+    "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-m2-lex-y2jw6zfi/probe"
+  ],
+  "cases": [
+    {
+      "source": "n-1",
+      "tokens": [
+        "Ident(\"n\") 0 1",
+        "Eof 3 3"
+      ],
+      "diagnostics": [
+        {
+          "code": "E102",
+          "start": 1,
+          "end": 3,
+          "message": "a bare number cannot be negative — only `Temperature` and `Length` literals may carry a leading `-` (e.g. `-40C`, `-0.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "n - 1",
+      "tokens": [
+        "Ident(\"n\") 0 1",
+        "Number(\"1\") 4 5",
+        "Eof 5 5"
+      ],
+      "diagnostics": [
+        {
+          "code": "E001",
+          "start": 2,
+          "end": 3,
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "-PITCH",
+      "tokens": [
+        "Ident(\"PITCH\") 1 6",
+        "Eof 6 6"
+      ],
+      "diagnostics": [
+        {
+          "code": "E001",
+          "start": 0,
+          "end": 1,
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "for links: n in -1..N {}",
+      "tokens": [
+        "For 0 3",
+        "Ident(\"links\") 4 9",
+        "Colon 9 10",
+        "Ident(\"n\") 11 12",
+        "Ident(\"in\") 13 15",
+        "Dot 18 19",
+        "Dot 19 20",
+        "Ident(\"N\") 20 21",
+        "LBrace 22 23",
+        "RBrace 23 24",
+        "Eof 24 24"
+      ],
+      "diagnostics": [
+        {
+          "code": "E102",
+          "start": 16,
+          "end": 18,
+          "message": "a bare number cannot be negative — only `Temperature` and `Length` literals may carry a leading `-` (e.g. `-40C`, `-0.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "const in: Int = 2",
+      "tokens": [
+        "Ident(\"const\") 0 5",
+        "Ident(\"in\") 6 8",
+        "Colon 8 9",
+        "Ident(\"Int\") 10 13",
+        "Eq 14 15",
+        "Number(\"2\") 16 17",
+        "Eof 17 17"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "-1.00mm",
+      "tokens": [
+        "Unit(UnitValue { unit: Length, femto: -1000000000000000, text: \"-1.00mm\" }) 0 7",
+        "Eof 7 7"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "- 1.00mm",
+      "tokens": [
+        "Unit(UnitValue { unit: Length, femto: 1000000000000000, text: \"1.00mm\" }) 2 8",
+        "Eof 8 8"
+      ],
+      "diagnostics": [
+        {
+          "code": "E001",
+          "start": 0,
+          "end": 1,
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "-(1.00mm)",
+      "tokens": [
+        "LParen 1 2",
+        "Unit(UnitValue { unit: Length, femto: 1000000000000000, text: \"1.00mm\" }) 2 8",
+        "RParen 8 9",
+        "Eof 9 9"
+      ],
+      "diagnostics": [
+        {
+          "code": "E001",
+          "start": 0,
+          "end": 1,
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "-40C",
+      "tokens": [
+        "Unit(UnitValue { unit: Temperature, femto: -40000000000000000, text: \"-40C\" }) 0 4",
+        "Eof 4 4"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "- 40C",
+      "tokens": [
+        "Unit(UnitValue { unit: Temperature, femto: 40000000000000000, text: \"40C\" }) 2 5",
+        "Eof 5 5"
+      ],
+      "diagnostics": [
+        {
+          "code": "E001",
+          "start": 0,
+          "end": 1,
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "-5V",
+      "tokens": [
+        "Eof 3 3"
+      ],
+      "diagnostics": [
+        {
+          "code": "E105",
+          "start": 0,
+          "end": 3,
+          "message": "`Voltage` cannot be negative — only `Temperature` and `Length` literals may carry a leading `-`"
+        }
+      ]
+    },
+    {
+      "source": "-1",
+      "tokens": [
+        "Eof 2 2"
+      ],
+      "diagnostics": [
+        {
+          "code": "E102",
+          "start": 0,
+          "end": 2,
+          "message": "a bare number cannot be negative — only `Temperature` and `Length` literals may carry a leading `-` (e.g. `-40C`, `-0.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "10%",
+      "tokens": [
+        "Unit(UnitValue { unit: Tolerance, femto: 10000000000000000, text: \"10%\" }) 0 3",
+        "Eof 3 3"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "10 % 3",
+      "tokens": [
+        "Number(\"10\") 0 2",
+        "Percent 3 4",
+        "Number(\"3\") 5 6",
+        "Eof 6 6"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "10%3",
+      "tokens": [
+        "Eof 4 4"
+      ],
+      "diagnostics": [
+        {
+          "code": "E103",
+          "start": 0,
+          "end": 4,
+          "message": "`10%3` is not a unit: `%3` is not one of CoHDL's unit symbols"
+        }
+      ]
+    },
+    {
+      "source": "0..10",
+      "tokens": [
+        "Number(\"0\") 0 1",
+        "Dot 1 2",
+        "Dot 2 3",
+        "Number(\"10\") 3 5",
+        "Eof 5 5"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "0..=9",
+      "tokens": [
+        "Number(\"0\") 0 1",
+        "Dot 1 2",
+        "Dot 2 3",
+        "Eq 3 4",
+        "Number(\"9\") 4 5",
+        "Eof 5 5"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "n--1",
+      "tokens": [
+        "Ident(\"n\") 0 1",
+        "Eof 4 4"
+      ],
+      "diagnostics": [
+        {
+          "code": "E001",
+          "start": 1,
+          "end": 2,
+          "message": "`-` is only valid as the sign of a `Temperature` or `Length` literal (e.g. `-40C`, `-1.5mm`)"
+        },
+        {
+          "code": "E102",
+          "start": 2,
+          "end": 4,
+          "message": "a bare number cannot be negative — only `Temperature` and `Length` literals may carry a leading `-` (e.g. `-40C`, `-0.5mm`)"
+        }
+      ]
+    },
+    {
+      "source": "1mm-1mm",
+      "tokens": [
+        "Unit(UnitValue { unit: Length, femto: 1000000000000000, text: \"1mm\" }) 0 3",
+        "Unit(UnitValue { unit: Length, femto: -1000000000000000, text: \"-1mm\" }) 3 7",
+        "Eof 7 7"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "// -PITCH\n-40C",
+      "tokens": [
+        "Unit(UnitValue { unit: Temperature, femto: -40000000000000000, text: \"-40C\" }) 10 14",
+        "Eof 14 14"
+      ],
+      "diagnostics": []
+    },
+    {
+      "source": "-9223372036854775808",
+      "tokens": [
+        "Eof 20 20"
+      ],
+      "diagnostics": [
+        {
+          "code": "E102",
+          "start": 0,
+          "end": 20,
+          "message": "a bare number cannot be negative — only `Temperature` and `Length` literals may carry a leading `-` (e.g. `-40C`, `-0.5mm`)"
+        }
+      ]
+    }
+  ]
+}

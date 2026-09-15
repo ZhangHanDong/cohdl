@@ -1,0 +1,30 @@
+{
+  "measured_at": "2026-09-11T14:48:37.931797+00:00",
+  "compiler_source_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "compiler_version": "cohdl 0.7.0 (aarch64-apple-darwin)",
+  "compiler_sha256": "127ceb68f0c486c711b628f256de1de08e52ffe1c48963c16092012b25b11ff3",
+  "source_sha256": "7b198699f38ae4190964412115573cb2124a2cfdb8493df7aca04d617543f706",
+  "source_fixture": "docs/proposals/fixtures/m2-programmability/rc-workflow/current-10.cohdl",
+  "command": [
+    "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+    "docs",
+    "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-rfc-docs-6qn0riju"
+  ],
+  "exit_code": 0,
+  "schema_version": 1,
+  "subdesign_use_markers": [
+    {
+      "path": "/items/0/design",
+      "entry": {
+        "name": "channels",
+        "type": "rc_workflow::RcChannel",
+        "kind": "subdesign",
+        "array": 10
+      }
+    }
+  ],
+  "dependency_lock_unchanged": true,
+  "api_docs_sha256": "9c203a691d80ba6d072e1b221dec56faad7e26394af8dd54270da89c587698c1",
+  "api_docs_file": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-rfc-docs-6qn0riju/api-docs.json",
+  "scope": "Current-syntax API docs extraction only; no M2 implementation"
+}

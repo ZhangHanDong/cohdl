@@ -1,0 +1,286 @@
+{
+  "compiler_source": "/private/tmp/cohdl-main-subdesign-ab44257",
+  "compiler_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "compiler_version": "cohdl 0.7.0 (aarch64-apple-darwin)",
+  "compiler_sha256": "127ceb68f0c486c711b628f256de1de08e52ffe1c48963c16092012b25b11ff3",
+  "observer_source": "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/review_probes.py",
+  "observer_sha256": "dc77b6e613063ad9aa6c90db3d21163509f9e2fcfc0cb1aa18ecc9c508a0dd5c",
+  "teaching_source_sha256": {
+    "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b",
+    "cohdl.toml": "ef849eaa0d57ac44bdb3c21275c7a263dc5b0ccbbf517b9a7d85b3d768ee3b74",
+    "design.lock": "5058f9c4185894e90cee6ed91032a3e648de7f9c3d7825142f21504cc7f8de8c",
+    "docs/README.md": "536f58eaa04afad7785807e28714fcd7f13a724c91996aac2b8367b79c6e8bc0",
+    "src/filter.cohdl": "04985a8c3c1ad21419038dbd079a29bc75e5f3750160c09586d62fe664a6f2bb",
+    "src/led.cohdl": "f189ca4bc3b1eb4ac060ba27d7a6adb78afa97d0095c78e2e06b4c5ca5204419",
+    "src/main.cohdl": "2ec3fc5d93c099994b08b2b478877b6b3aabec7bf34aa748be4da2847f4dc05c",
+    "src/mech.cohdl": "c38c973de5ddfbb96a4fde5cbfeedac574335e89c95b9bac5c4ba85ce05acb40"
+  },
+  "results": [
+    {
+      "label": "baseline check",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": []\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    },
+    {
+      "label": "baseline fmt",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "fmt",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "  All files are in canonical form.\n"
+    },
+    {
+      "label": "baseline build IPC-2581",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "build",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline",
+        "--emit",
+        "ipc2581",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": [],\n  \"build\": {\n    \"netlist\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/syntax-tour.net\",\n    \"bom\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/syntax-tour-bom.csv\",\n    \"layout\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/syntax-tour-layout.json\",\n    \"ipc2581\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/syntax-tour.xml\",\n    \"kicad_mod\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/footprints/passive-CHIP_0603.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/footprints/syntax_tour-FP_LED_0603_1608Metric.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/footprints/syntax_tour-FP_Standoff_M2_NPTH.kicad_mod\"\n    ],\n    \"quilter\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/bga_components.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/bypass_capacitors.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/crystal_oscillators.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/differential_pairs.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/ground_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/high_current_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/single_ended_impedance_signals.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/baseline/out/switching_converters.csv\"\n    ]\n  }\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    },
+    {
+      "label": "cross-package-fn",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": []\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    },
+    {
+      "label": "bad-layout-target",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/bad-layout-target",
+        "--json"
+      ],
+      "exit_code": 1,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"fail\",\n  \"diagnostics\": [\n    {\n      \"code\": \"E1007\",\n      \"severity\": \"error\",\n      \"message\": \"`place` names `missing_instance`, which is not an instance or subdesign in this scope\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 56,\n        \"start_col\": 15,\n        \"end_line\": 56,\n        \"end_col\": 31,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "verdict": "fail",
+      "codes": [
+        "E1007"
+      ]
+    },
+    {
+      "label": "bad-attribute-unit",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/bad-attribute-unit",
+        "--json"
+      ],
+      "exit_code": 1,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"fail\",\n  \"diagnostics\": [\n    {\n      \"code\": \"E110\",\n      \"severity\": \"error\",\n      \"message\": \"`#[high_current]` current is a `Current` value — `500mV` is a `Voltage`\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 31,\n        \"start_col\": 7,\n        \"end_line\": 31,\n        \"end_col\": 19,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    },\n    {\n      \"code\": \"E010\",\n      \"severity\": \"error\",\n      \"message\": \"expected a statement (`inst`, `net`, `nc`, or a fn call), found `)`\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 31,\n        \"start_col\": 25,\n        \"end_line\": 31,\n        \"end_col\": 26,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "verdict": "fail",
+      "codes": [
+        "E110",
+        "E010"
+      ]
+    },
+    {
+      "label": "annulus-pad",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/annulus-pad",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": []\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    },
+    {
+      "label": "array-instance-argument",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/array-instance-argument",
+        "--json"
+      ],
+      "exit_code": 1,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"fail\",\n  \"diagnostics\": [\n    {\n      \"code\": \"E701\",\n      \"severity\": \"error\",\n      \"message\": \"required pin `SyntaxTour::j.P3` is unresolved: add it to a `net` or explicitly mark it `nc`\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 10,\n        \"start_col\": 5,\n        \"end_line\": 10,\n        \"end_col\": 31,\n        \"message\": \"\"\n      },\n      \"secondary\": [\n        {\n          \"file\": \"connectors/headers/smd_254.cohdl\",\n          \"start_line\": 8,\n          \"start_col\": 9,\n          \"end_line\": 8,\n          \"end_col\": 33,\n          \"message\": \"`P3` is declared `required` on device `Socket_2x3` here\"\n        }\n      ],\n      \"help\": []\n    },\n    {\n      \"code\": \"E701\",\n      \"severity\": \"error\",\n      \"message\": \"required pin `SyntaxTour::led_status.Cathode` is unresolved: add it to a `net` or explicitly mark it `nc`\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 15,\n        \"start_col\": 5,\n        \"end_line\": 15,\n        \"end_col\": 34,\n        \"message\": \"\"\n      },\n      \"secondary\": [\n        {\n          \"file\": \"src/led.cohdl\",\n          \"start_line\": 23,\n          \"start_col\": 9,\n          \"end_line\": 23,\n          \"end_col\": 38,\n          \"message\": \"`Cathode` is declared `required` on device `ChipLed` here\"\n        }\n      ],\n      \"help\": []\n    },\n    {\n      \"code\": \"E701\",\n      \"severity\": \"error\",\n      \"message\": \"required pin `SyntaxTour::led_status.Anode` is unresolved: add it to a `net` or explicitly mark it `nc`\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 15,\n        \"start_col\": 5,\n        \"end_line\": 15,\n        \"end_col\": 34,\n        \"message\": \"\"\n      },\n      \"secondary\": [\n        {\n          \"file\": \"src/led.cohdl\",\n          \"start_line\": 24,\n          \"start_col\": 9,\n          \"end_line\": 24,\n          \"end_col\": 36,\n          \"message\": \"`Anode` is declared `required` on device `ChipLed` here\"\n        }\n      ],\n      \"help\": []\n    },\n    {\n      \"code\": \"E202\",\n      \"severity\": \"error\",\n      \"message\": \"unknown instance `leds` in this scope\",\n      \"primary\": {\n        \"file\": \"src/main.cohdl\",\n        \"start_line\": 44,\n        \"start_col\": 15,\n        \"end_line\": 44,\n        \"end_col\": 19,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "verdict": "fail",
+      "codes": [
+        "E701",
+        "E701",
+        "E701",
+        "E202"
+      ]
+    },
+    {
+      "label": "repeated-pad-number",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "build",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": [],\n  \"build\": {\n    \"netlist\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/syntax-tour.net\",\n    \"bom\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/syntax-tour-bom.csv\",\n    \"layout\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/syntax-tour-layout.json\",\n    \"kicad_mod\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/footprints/passive-CHIP_0603.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/footprints/syntax_tour-FP_LED_0603_1608Metric.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/footprints/syntax_tour-FP_Standoff_M2_NPTH.kicad_mod\"\n    ],\n    \"quilter\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/bga_components.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/bypass_capacitors.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/crystal_oscillators.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/differential_pairs.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/ground_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/high_current_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/single_ended_impedance_signals.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/repeated-pad-number/out/switching_converters.csv\"\n    ]\n  }\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    },
+    {
+      "label": "two fn calls before reorder",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "build",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": [],\n  \"build\": {\n    \"netlist\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/syntax-tour.net\",\n    \"bom\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/syntax-tour-bom.csv\",\n    \"layout\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/syntax-tour-layout.json\",\n    \"kicad_mod\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/passive-CHIP_0603.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/syntax_tour-FP_LED_0603_1608Metric.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/syntax_tour-FP_Standoff_M2_NPTH.kicad_mod\"\n    ],\n    \"quilter\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/bga_components.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/bypass_capacitors.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/crystal_oscillators.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/differential_pairs.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/ground_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/high_current_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/single_ended_impedance_signals.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/switching_converters.csv\"\n    ]\n  }\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    },
+    {
+      "label": "two fn calls after reorder with same design.lock",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "build",
+        "/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": [],\n  \"build\": {\n    \"netlist\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/syntax-tour.net\",\n    \"bom\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/syntax-tour-bom.csv\",\n    \"layout\": \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/syntax-tour-layout.json\",\n    \"kicad_mod\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/passive-CHIP_0603.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/syntax_tour-FP_LED_0603_1608Metric.kicad_mod\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/footprints/syntax_tour-FP_Standoff_M2_NPTH.kicad_mod\"\n    ],\n    \"quilter\": [\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/bga_components.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/bypass_capacitors.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/crystal_oscillators.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/differential_pairs.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/ground_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/high_current_nets.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/single_ended_impedance_signals.csv\",\n      \"/private/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-review-dw3z83ne/cross-package-fn/out/switching_converters.csv\"\n    ]\n  }\n}\n",
+      "stderr": "",
+      "verdict": "pass",
+      "codes": []
+    }
+  ],
+  "ipc_stackups": [
+    {
+      "name": "stackup",
+      "overallThickness": "1.6",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "whereMeasured": "MASK"
+    }
+  ],
+  "ipc_stackup_layers": [
+    {
+      "layerOrGroupRef": "F.Silkscreen",
+      "thickness": "0",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "0"
+    },
+    {
+      "layerOrGroupRef": "F.Paste",
+      "thickness": "0",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "1"
+    },
+    {
+      "layerOrGroupRef": "F.Mask",
+      "thickness": "0.01",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "2"
+    },
+    {
+      "layerOrGroupRef": "F.Cu",
+      "thickness": "0.035",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "3"
+    },
+    {
+      "layerOrGroupRef": "DIELECTRIC_1",
+      "thickness": "1.51",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "4"
+    },
+    {
+      "layerOrGroupRef": "B.Cu",
+      "thickness": "0.035",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "5"
+    },
+    {
+      "layerOrGroupRef": "B.Mask",
+      "thickness": "0.01",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "6"
+    },
+    {
+      "layerOrGroupRef": "B.Paste",
+      "thickness": "0",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "7"
+    },
+    {
+      "layerOrGroupRef": "B.Silkscreen",
+      "thickness": "0",
+      "tolPlus": "0",
+      "tolMinus": "0",
+      "sequence": "8"
+    }
+  ],
+  "fn_reorder": {
+    "before_lock": "[designators]\n\"SyntaxTour::__fn0_drive_led::r\" = \"R1\"\n\"SyntaxTour::__fn1_bulk_10u::c\" = \"C3\"\n\"SyntaxTour::c_byp\" = \"C1\"\n\"SyntaxTour::hole\" = \"M1\"\n\"SyntaxTour::j\" = \"J1\"\n\"SyntaxTour::led_status\" = \"D1\"\n\"SyntaxTour::leds_0\" = \"D2\"\n\"SyntaxTour::leds_1\" = \"D3\"\n\"SyntaxTour::lpf::c\" = \"C2\"\n\"SyntaxTour::lpf::r\" = \"R2\"\n\"SyntaxTour::r_pwr_0\" = \"R3\"\n\"SyntaxTour::r_pwr_1\" = \"R4\"\n\n[tombstones]\n",
+    "after_lock": "[designators]\n\"SyntaxTour::__fn0_bulk_10u::c\" = \"C4\"\n\"SyntaxTour::__fn1_drive_led::r\" = \"R5\"\n\"SyntaxTour::c_byp\" = \"C1\"\n\"SyntaxTour::hole\" = \"M1\"\n\"SyntaxTour::j\" = \"J1\"\n\"SyntaxTour::led_status\" = \"D1\"\n\"SyntaxTour::leds_0\" = \"D2\"\n\"SyntaxTour::leds_1\" = \"D3\"\n\"SyntaxTour::lpf::c\" = \"C2\"\n\"SyntaxTour::lpf::r\" = \"R2\"\n\"SyntaxTour::r_pwr_0\" = \"R3\"\n\"SyntaxTour::r_pwr_1\" = \"R4\"\n\n[tombstones]\n\"SyntaxTour::__fn0_drive_led::r\" = \"R1\"\n\"SyntaxTour::__fn1_bulk_10u::c\" = \"C3\"\n"
+  },
+  "scope": "Read-only review of existing 0.7.0 behavior, using disposable project copies. No M2 implementation or declaration-validator prototype; no GUI, routing, manufacturing or hardware test.",
+  "reviewed_chapter_sha256": {
+    "book/src/cohdl/syntax/composition.md": "cadd707b97bb82853b715e281263cc9eb1bb1d993e8d62756c789af6868a32bb",
+    "book/src/cohdl/syntax/design-nets.md": "a0dc7604eb5d41a4d3fc8472472383aaef697be2c3dc3820f9fd8bbbd0dc9149",
+    "book/src/cohdl/syntax/index.md": "3f6c001f1cb9d9075b7b37765557491245129aa9832109bd1a4903f0f5777cb0",
+    "book/src/cohdl/syntax/layout-facts.md": "6a8aadda6d19579985c920db0e632c8cf3d7100c2e422f1ca739621e533852b3",
+    "book/src/cohdl/syntax/parts-footprints.md": "4f1a3a7822d31392c5452aaa20e81265fb374efdeb655cef3e2485b20a39a5d3",
+    "book/src/cohdl/syntax/tour.md": "ef39336a16b4bbff02d2d1eaab3ed1e759081d3bab8ba70483b8e18a9bdbaf1e",
+    "book/src/cohdl/syntax/units-devices.md": "4a1033e28f6d1459a0beed9eb7516da6a0b5c3728f34977d2fd191340f6c96eb"
+  },
+  "live_messages": [
+    {
+      "session_file": "/Users/zhangalex/.claude/projects/-Users-zhangalex-Work-Projects-cohdl/d353a61e-4076-4f7e-a2e8-dc70afcb5b67.jsonl",
+      "timestamp": "2026-09-12T05:23:43.935Z",
+      "sha256": "5e26abe40ea37bd6baed88a3812fe10336a100c156cde03637699247a68e239f",
+      "text": "写完了，七篇章节，一个可编译的配套工程，全部在 CoHDL 0.7.0 上验证过。\n\n**新增位置**\n\n目录「CoHDL 当前能力」下，紧跟连接模型：\n\n- `cohdl/syntax/index.md` 语法总览。一张表列出八种顶层声明，每行是关键字、编译器里的作用、对应的 PCB 概念、来源 RFC；再给出按判定阶梯排的阅读顺序。\n- `units-devices.md` 11 种单位类型、`trait`、`device`（引脚义务、六种角色、引脚总线、变体、泛型）、`impl`。\n- `parts-footprints.md` `part`（primary/alt、按名与精确匹配绑定、E801）、`pad`（含槽孔、圆角、钢网、阻焊）、`footprint`（六种体内语句：焊盘、外框、位号文字、丝印图元与标记、定位孔、开窗）、无引脚机械件、`#[doc]`。\n- `design-nets.md` `design`、`inst` 与数组、`net` 注解与合并与扇出、`nc`、三组属性、位号与 `design.lock`。\n- `composition.md` 模块路径与 `use`/`pub`、`fn` 三种参数与展开路径、`subdesign` 声明与使用点与七个 E130x 边界、四种复用机制怎么选。\n- `layout-facts.md` `layout` 位置、`place`/`rotate`/`side`、点路径覆盖规则、`board_outline`、三种约束、七个物理属性与 Quilter CSV。\n- `tour.md` 走一遍：文件、命令、产物逐项解释、五个故意改错的真实结果。\n\n每节末尾都有「这一层编译器不检查什么」，把语法和 PCB 知识的边界钉住。\n\n**配套工程** `book/examples/syntax-tour/`\n\n四个源文件覆盖全部八种声明和全部体内语句，依赖只锁定 std/passive/connectors。`check` 无诊断，`fmt --check` 已是规范形式，`build --emit kicad_pcb` 输出 11 个实例 8 条网络，BOM 五行，位号表里普通实例、数组元素、subdesign 内部、`fn` 展开四种路径并排出现。章节里的代码块都用 `{{#include}}` 锚点直接引这些文件，改源码章节自动跟着变。\n\n**验证**\n\n书构建 71 章、3655 个链接通过，所有 include 都已解析。章节里写到的每个错误码我都跑了探针或查了注册表：E701、E202、E010、E302、E111、E112、E113 各自在什么位置触发，都是实测。这一步纠正了我初稿的三处：删父 `impl` 是 E302 不是 E403，网络注解写裸数字是解析器的 E010 不是 E111，焊盘与引脚不匹配是 E807 单独一个码。\n\n**一个编译器发现，需要你看**\n\n把数组元素当实例参数传给 `fn`，`drive_led(leds[0], …)`，在 0.7.0 上报 `E202 unknown instance leds`，`impl Trait` 和显式泛型两种写法都一样；元素的引脚作为 `Pin` 参数是可以的。`docs/compliance-report.md` 第 1797 行把「fn 调用参数」列为数组元素的合法位置之一，实现与账本不符。我在 composition.md 和 tour.md 里如实记了，示例改用标量实例绕过。\n\n**刻意没写的**\n\n`rule` 块：规范单位一节提到它，但 lexer 和 parser 里都没有，未实现。`annulus` 焊盘形状：AST 里有这个变体，parser 不认，没写。任何 `for`、`const`、算术：全部属于 Proposed，只在语言设计研究区出现。"
+    },
+    {
+      "session_file": "/Users/zhangalex/.claude/projects/-Users-zhangalex-Work-Projects-cohdl/d353a61e-4076-4f7e-a2e8-dc70afcb5b67.jsonl",
+      "timestamp": "2026-09-12T06:08:38.717Z",
+      "sha256": "bb626201b3d9d6c1f99563cf843e745d0e0a268255264e5bd109230e7aaebf31",
+      "text": "**先确认问题**：你问的是，作为一门语言，CoHDL 是否应该把三件事纳入自己的模型：板子的正反两面、走线、以及层叠结构。这三件事现在的状态不一样，分开答。\n\n**正反面：已经管了，管到放置为止。**\n\nRFC-026 给 `place` 加了 `side top|bottom`，封装只写一份，镜像由输出端做，`.kicad_pcb` 里落到 B.Cu，IPC-2581 里落到 layerRef。这已经在 syntax-tour 里演示过，`leds[1]` 和 `r_pwr[1]` 在背面。焊盘自己的 `layer` 字段是另一个问题，规范特意把两者分开。这一项不需要再考虑。\n\n**走线：不该进语言，但走线的“要求”和“验收”要进。**\n\nConstitution 的 DR-003 把布局布线定为伙伴工具的事，这个边界是对的。理由不是做不到，而是走线是几何求解，输入随工厂、随人变，把它放进一个承诺“同源同字节”的编译器里，语言就得为求解器的每次改动背书。\n\n语言已经在做的是走线**要求**：`net_class`、`diff_pair` 带阻抗频率、`length_match`、`#[impedance]`、`#[high_current]`。这条路线该继续，缺什么加什么，形态不变。\n\n真正缺的是走线**验收**：布好线的板子回来之后，谁来证明它和检查过的 IR 是同一个电路。这正是分支上那份 harness 提案的核心问题，它列的六项现在 `build` 都不能推出：元件在板框内、外框不冲突、网络全部布通、不同网络铜图形无短路、线宽间距钻孔在工厂能力内、交付文件与 IR 一致。这些属于 harness 和 kicad-cli DRC 的事，不属于语法。\n\n**叠层：这是真正的缺口，而且是下一个该做的语言项。**\n\n规范的「Not yet specified」明写叠层是 RFC-015 遗留的待办，RFC-020 和 RFC-026 都特意声明不碰它。它现在拖住了三件已有的事：\n\n| 已有功能 | 没有叠层时的问题 |\n| --- | --- |\n| `#[impedance(50ohm, frequency: 1GHz)]` | 50 欧姆相对于哪层参考平面、多厚的介质，语言说不出，只能原样交给 Quilter |\n| IPC-2581 输出 | 一份没有 Stackup 段的 IPC-2581 不是完整的制造交付 |\n| `pad.layer` 只有 top/bottom/through_all | 四层以上的盲埋孔、内层焊盘没有可引用的层名 |\n\nharness 提案里那个「JLCPCB 标准双层裸板工艺 Profile」也需要一个地方落：层数、铜厚、最小线宽间距、最小钻孔。这些是**声明的事实**，不是计算结果，和 `board_outline` 同一性质。\n\n我建议的形态，明确标注是提案：`layout` 块里一条 `stackup: profile_ref`，profile 是注册表里 `@jlcpcb/profiles` 这类厂商包提供的声明，内容是层序、厚度、铜重和工艺下限。零判定影响，和整个 layout 层同一条纪律。先做叠层，再谈更丰富的 padstack，规范自己也是这个顺序。\n\n**对书的影响**：叠层、走线、回流路径是你缺口的正中心，属于「编译器不再说话之后」那一章，不属于语法章节。要的话我在语法总览后面加一页「CoHDL 明确不管的三件事」，把上面这个边界写进教材。"
+    }
+  ]
+}

@@ -1,0 +1,963 @@
+{
+  "compiler": "/private/tmp/cohdl-book-setup-odhytbub/cohdl-compiler-0e3d770/target/debug/cohdl",
+  "compiler_sha256": "99935dae72c1af7130a1b9b879d9f625a584577ff4ec0e7f6c41eaab5a18c586",
+  "scope": "Literal current syntax, real library parts, no M2 evaluation or physical clearance checks",
+  "stages": {
+    "current-10.cohdl": {
+      "source_sha256": "7b198699f38ae4190964412115573cb2124a2cfdb8493df7aca04d617543f706",
+      "build_exit_code": 0,
+      "diagnostics": [],
+      "physical_components": 30,
+      "passives": 20,
+      "net_partitions": 21,
+      "connected_pad_endpoints": 70,
+      "placements_mm": {
+        "RcWorkflow::connectors_0": [
+          10,
+          5
+        ],
+        "RcWorkflow::connectors_1": [
+          18,
+          5
+        ],
+        "RcWorkflow::connectors_2": [
+          26,
+          5
+        ],
+        "RcWorkflow::connectors_3": [
+          34,
+          5
+        ],
+        "RcWorkflow::connectors_4": [
+          42,
+          5
+        ],
+        "RcWorkflow::connectors_5": [
+          50,
+          5
+        ],
+        "RcWorkflow::connectors_6": [
+          58,
+          5
+        ],
+        "RcWorkflow::connectors_7": [
+          66,
+          5
+        ],
+        "RcWorkflow::connectors_8": [
+          74,
+          5
+        ],
+        "RcWorkflow::connectors_9": [
+          82,
+          5
+        ],
+        "RcWorkflow::channels_0::c": [
+          13,
+          15
+        ],
+        "RcWorkflow::channels_0::r": [
+          10,
+          15
+        ],
+        "RcWorkflow::channels_1::c": [
+          21,
+          15
+        ],
+        "RcWorkflow::channels_1::r": [
+          18,
+          15
+        ],
+        "RcWorkflow::channels_2::c": [
+          29,
+          15
+        ],
+        "RcWorkflow::channels_2::r": [
+          26,
+          15
+        ],
+        "RcWorkflow::channels_3::c": [
+          37,
+          15
+        ],
+        "RcWorkflow::channels_3::r": [
+          34,
+          15
+        ],
+        "RcWorkflow::channels_4::c": [
+          45,
+          15
+        ],
+        "RcWorkflow::channels_4::r": [
+          42,
+          15
+        ],
+        "RcWorkflow::channels_5::c": [
+          53,
+          15
+        ],
+        "RcWorkflow::channels_5::r": [
+          50,
+          15
+        ],
+        "RcWorkflow::channels_6::c": [
+          61,
+          15
+        ],
+        "RcWorkflow::channels_6::r": [
+          58,
+          15
+        ],
+        "RcWorkflow::channels_7::c": [
+          69,
+          15
+        ],
+        "RcWorkflow::channels_7::r": [
+          66,
+          15
+        ],
+        "RcWorkflow::channels_8::c": [
+          77,
+          15
+        ],
+        "RcWorkflow::channels_8::r": [
+          74,
+          15
+        ],
+        "RcWorkflow::channels_9::c": [
+          85,
+          15
+        ],
+        "RcWorkflow::channels_9::r": [
+          82,
+          15
+        ]
+      },
+      "designators": {
+        "RcWorkflow::channels_0::c": "C1",
+        "RcWorkflow::channels_0::r": "R1",
+        "RcWorkflow::channels_1::c": "C2",
+        "RcWorkflow::channels_1::r": "R2",
+        "RcWorkflow::channels_2::c": "C3",
+        "RcWorkflow::channels_2::r": "R3",
+        "RcWorkflow::channels_3::c": "C4",
+        "RcWorkflow::channels_3::r": "R4",
+        "RcWorkflow::channels_4::c": "C5",
+        "RcWorkflow::channels_4::r": "R5",
+        "RcWorkflow::channels_5::c": "C6",
+        "RcWorkflow::channels_5::r": "R6",
+        "RcWorkflow::channels_6::c": "C7",
+        "RcWorkflow::channels_6::r": "R7",
+        "RcWorkflow::channels_7::c": "C8",
+        "RcWorkflow::channels_7::r": "R8",
+        "RcWorkflow::channels_8::c": "C9",
+        "RcWorkflow::channels_8::r": "R9",
+        "RcWorkflow::channels_9::c": "C10",
+        "RcWorkflow::channels_9::r": "R10",
+        "RcWorkflow::connectors_0": "J1",
+        "RcWorkflow::connectors_1": "J2",
+        "RcWorkflow::connectors_2": "J3",
+        "RcWorkflow::connectors_3": "J4",
+        "RcWorkflow::connectors_4": "J5",
+        "RcWorkflow::connectors_5": "J6",
+        "RcWorkflow::connectors_6": "J7",
+        "RcWorkflow::connectors_7": "J8",
+        "RcWorkflow::connectors_8": "J9",
+        "RcWorkflow::connectors_9": "J10"
+      },
+      "artifact_sha256": {
+        "out/rc-workflow.net": "d5587f6482073dc204bc5f34ef9dc831cca226150711705f5e20f1e803cbe72f",
+        "out/rc-workflow-bom.csv": "e88b737078f38146c6bdb85daf33621b39c559fff0eb24d3fb7a3ad369dd7e19",
+        "out/rc-workflow-layout.json": "39927bea30ae983c31f952df58a36d8a6423e753819db9e6bd64e84c91122559",
+        "out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod": "7a33c107bea08d91394c182ebd6f1a144439d049d32951be516ce54c165f0124",
+        "out/footprints/passive-CHIP_0603.kicad_mod": "ce1396769f311debc63c256db7e7bb499301e6b1467b9d55111f87dcf2c8fe73",
+        "design.lock": "dd78a49af7f4c0f5f2b7552554292aee0fcd23f6d3b2ef8eab017a01309ef7f6",
+        "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b"
+      },
+      "bom_primary_parts_verified": true,
+      "dependency_lock_unchanged": true,
+      "repeat_build_bytes_equal": true,
+      "surviving_designators_and_restricted_connectivity_preserved": false
+    },
+    "current-10-override.cohdl": {
+      "source_sha256": "3aa3cb3e7b76887c4abc700300d99ea79752b29056afed09b4af4644e90fbbb4",
+      "build_exit_code": 0,
+      "diagnostics": [],
+      "physical_components": 30,
+      "passives": 20,
+      "net_partitions": 21,
+      "connected_pad_endpoints": 70,
+      "placements_mm": {
+        "RcWorkflow::connectors_0": [
+          10,
+          5
+        ],
+        "RcWorkflow::connectors_1": [
+          18,
+          5
+        ],
+        "RcWorkflow::connectors_2": [
+          26,
+          5
+        ],
+        "RcWorkflow::connectors_3": [
+          34,
+          5
+        ],
+        "RcWorkflow::connectors_4": [
+          42,
+          5
+        ],
+        "RcWorkflow::connectors_5": [
+          50,
+          5
+        ],
+        "RcWorkflow::connectors_6": [
+          58,
+          5
+        ],
+        "RcWorkflow::connectors_7": [
+          66,
+          5
+        ],
+        "RcWorkflow::connectors_8": [
+          74,
+          5
+        ],
+        "RcWorkflow::connectors_9": [
+          82,
+          5
+        ],
+        "RcWorkflow::channels_6::c": [
+          62,
+          17
+        ],
+        "RcWorkflow::channels_0::c": [
+          13,
+          15
+        ],
+        "RcWorkflow::channels_0::r": [
+          10,
+          15
+        ],
+        "RcWorkflow::channels_1::c": [
+          21,
+          15
+        ],
+        "RcWorkflow::channels_1::r": [
+          18,
+          15
+        ],
+        "RcWorkflow::channels_2::c": [
+          29,
+          15
+        ],
+        "RcWorkflow::channels_2::r": [
+          26,
+          15
+        ],
+        "RcWorkflow::channels_3::c": [
+          37,
+          15
+        ],
+        "RcWorkflow::channels_3::r": [
+          34,
+          15
+        ],
+        "RcWorkflow::channels_4::c": [
+          45,
+          15
+        ],
+        "RcWorkflow::channels_4::r": [
+          42,
+          15
+        ],
+        "RcWorkflow::channels_5::c": [
+          53,
+          15
+        ],
+        "RcWorkflow::channels_5::r": [
+          50,
+          15
+        ],
+        "RcWorkflow::channels_6::r": [
+          58,
+          15
+        ],
+        "RcWorkflow::channels_7::c": [
+          69,
+          15
+        ],
+        "RcWorkflow::channels_7::r": [
+          66,
+          15
+        ],
+        "RcWorkflow::channels_8::c": [
+          77,
+          15
+        ],
+        "RcWorkflow::channels_8::r": [
+          74,
+          15
+        ],
+        "RcWorkflow::channels_9::c": [
+          85,
+          15
+        ],
+        "RcWorkflow::channels_9::r": [
+          82,
+          15
+        ]
+      },
+      "designators": {
+        "RcWorkflow::channels_0::c": "C1",
+        "RcWorkflow::channels_0::r": "R1",
+        "RcWorkflow::channels_1::c": "C2",
+        "RcWorkflow::channels_1::r": "R2",
+        "RcWorkflow::channels_2::c": "C3",
+        "RcWorkflow::channels_2::r": "R3",
+        "RcWorkflow::channels_3::c": "C4",
+        "RcWorkflow::channels_3::r": "R4",
+        "RcWorkflow::channels_4::c": "C5",
+        "RcWorkflow::channels_4::r": "R5",
+        "RcWorkflow::channels_5::c": "C6",
+        "RcWorkflow::channels_5::r": "R6",
+        "RcWorkflow::channels_6::c": "C7",
+        "RcWorkflow::channels_6::r": "R7",
+        "RcWorkflow::channels_7::c": "C8",
+        "RcWorkflow::channels_7::r": "R8",
+        "RcWorkflow::channels_8::c": "C9",
+        "RcWorkflow::channels_8::r": "R9",
+        "RcWorkflow::channels_9::c": "C10",
+        "RcWorkflow::channels_9::r": "R10",
+        "RcWorkflow::connectors_0": "J1",
+        "RcWorkflow::connectors_1": "J2",
+        "RcWorkflow::connectors_2": "J3",
+        "RcWorkflow::connectors_3": "J4",
+        "RcWorkflow::connectors_4": "J5",
+        "RcWorkflow::connectors_5": "J6",
+        "RcWorkflow::connectors_6": "J7",
+        "RcWorkflow::connectors_7": "J8",
+        "RcWorkflow::connectors_8": "J9",
+        "RcWorkflow::connectors_9": "J10"
+      },
+      "artifact_sha256": {
+        "out/rc-workflow.net": "d5587f6482073dc204bc5f34ef9dc831cca226150711705f5e20f1e803cbe72f",
+        "out/rc-workflow-bom.csv": "e88b737078f38146c6bdb85daf33621b39c559fff0eb24d3fb7a3ad369dd7e19",
+        "out/rc-workflow-layout.json": "23071e1d8a144d9438ac2a1b36e822c527070ebd74e175f3540cc1ddf8dec063",
+        "out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod": "7a33c107bea08d91394c182ebd6f1a144439d049d32951be516ce54c165f0124",
+        "out/footprints/passive-CHIP_0603.kicad_mod": "ce1396769f311debc63c256db7e7bb499301e6b1467b9d55111f87dcf2c8fe73",
+        "design.lock": "dd78a49af7f4c0f5f2b7552554292aee0fcd23f6d3b2ef8eab017a01309ef7f6",
+        "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b"
+      },
+      "bom_primary_parts_verified": true,
+      "dependency_lock_unchanged": true,
+      "repeat_build_bytes_equal": true,
+      "surviving_designators_and_restricted_connectivity_preserved": true
+    },
+    "current-12.cohdl": {
+      "source_sha256": "cad46a3391a810a887bd0ef8739ee1f1c21932b2429ea6370561f0844ce78e79",
+      "build_exit_code": 0,
+      "diagnostics": [],
+      "physical_components": 36,
+      "passives": 24,
+      "net_partitions": 25,
+      "connected_pad_endpoints": 84,
+      "placements_mm": {
+        "RcWorkflow::connectors_0": [
+          10,
+          5
+        ],
+        "RcWorkflow::connectors_1": [
+          18,
+          5
+        ],
+        "RcWorkflow::connectors_2": [
+          26,
+          5
+        ],
+        "RcWorkflow::connectors_3": [
+          34,
+          5
+        ],
+        "RcWorkflow::connectors_4": [
+          42,
+          5
+        ],
+        "RcWorkflow::connectors_5": [
+          50,
+          5
+        ],
+        "RcWorkflow::connectors_6": [
+          58,
+          5
+        ],
+        "RcWorkflow::connectors_7": [
+          66,
+          5
+        ],
+        "RcWorkflow::connectors_8": [
+          74,
+          5
+        ],
+        "RcWorkflow::connectors_9": [
+          82,
+          5
+        ],
+        "RcWorkflow::connectors_10": [
+          90,
+          5
+        ],
+        "RcWorkflow::connectors_11": [
+          98,
+          5
+        ],
+        "RcWorkflow::channels_6::c": [
+          62,
+          17
+        ],
+        "RcWorkflow::channels_0::c": [
+          13,
+          15
+        ],
+        "RcWorkflow::channels_0::r": [
+          10,
+          15
+        ],
+        "RcWorkflow::channels_10::c": [
+          93,
+          15
+        ],
+        "RcWorkflow::channels_10::r": [
+          90,
+          15
+        ],
+        "RcWorkflow::channels_11::c": [
+          101,
+          15
+        ],
+        "RcWorkflow::channels_11::r": [
+          98,
+          15
+        ],
+        "RcWorkflow::channels_1::c": [
+          21,
+          15
+        ],
+        "RcWorkflow::channels_1::r": [
+          18,
+          15
+        ],
+        "RcWorkflow::channels_2::c": [
+          29,
+          15
+        ],
+        "RcWorkflow::channels_2::r": [
+          26,
+          15
+        ],
+        "RcWorkflow::channels_3::c": [
+          37,
+          15
+        ],
+        "RcWorkflow::channels_3::r": [
+          34,
+          15
+        ],
+        "RcWorkflow::channels_4::c": [
+          45,
+          15
+        ],
+        "RcWorkflow::channels_4::r": [
+          42,
+          15
+        ],
+        "RcWorkflow::channels_5::c": [
+          53,
+          15
+        ],
+        "RcWorkflow::channels_5::r": [
+          50,
+          15
+        ],
+        "RcWorkflow::channels_6::r": [
+          58,
+          15
+        ],
+        "RcWorkflow::channels_7::c": [
+          69,
+          15
+        ],
+        "RcWorkflow::channels_7::r": [
+          66,
+          15
+        ],
+        "RcWorkflow::channels_8::c": [
+          77,
+          15
+        ],
+        "RcWorkflow::channels_8::r": [
+          74,
+          15
+        ],
+        "RcWorkflow::channels_9::c": [
+          85,
+          15
+        ],
+        "RcWorkflow::channels_9::r": [
+          82,
+          15
+        ]
+      },
+      "designators": {
+        "RcWorkflow::channels_0::c": "C1",
+        "RcWorkflow::channels_0::r": "R1",
+        "RcWorkflow::channels_10::c": "C11",
+        "RcWorkflow::channels_10::r": "R11",
+        "RcWorkflow::channels_11::c": "C12",
+        "RcWorkflow::channels_11::r": "R12",
+        "RcWorkflow::channels_1::c": "C2",
+        "RcWorkflow::channels_1::r": "R2",
+        "RcWorkflow::channels_2::c": "C3",
+        "RcWorkflow::channels_2::r": "R3",
+        "RcWorkflow::channels_3::c": "C4",
+        "RcWorkflow::channels_3::r": "R4",
+        "RcWorkflow::channels_4::c": "C5",
+        "RcWorkflow::channels_4::r": "R5",
+        "RcWorkflow::channels_5::c": "C6",
+        "RcWorkflow::channels_5::r": "R6",
+        "RcWorkflow::channels_6::c": "C7",
+        "RcWorkflow::channels_6::r": "R7",
+        "RcWorkflow::channels_7::c": "C8",
+        "RcWorkflow::channels_7::r": "R8",
+        "RcWorkflow::channels_8::c": "C9",
+        "RcWorkflow::channels_8::r": "R9",
+        "RcWorkflow::channels_9::c": "C10",
+        "RcWorkflow::channels_9::r": "R10",
+        "RcWorkflow::connectors_0": "J1",
+        "RcWorkflow::connectors_1": "J2",
+        "RcWorkflow::connectors_10": "J11",
+        "RcWorkflow::connectors_11": "J12",
+        "RcWorkflow::connectors_2": "J3",
+        "RcWorkflow::connectors_3": "J4",
+        "RcWorkflow::connectors_4": "J5",
+        "RcWorkflow::connectors_5": "J6",
+        "RcWorkflow::connectors_6": "J7",
+        "RcWorkflow::connectors_7": "J8",
+        "RcWorkflow::connectors_8": "J9",
+        "RcWorkflow::connectors_9": "J10"
+      },
+      "artifact_sha256": {
+        "out/rc-workflow.net": "963cfc933e178db5a10957b43bbdbb85040e211984f508ce759cd7b489573ef6",
+        "out/rc-workflow-bom.csv": "0b58166ab8ea468a254802201fc37be227c5d603333258985421b0e32a94103a",
+        "out/rc-workflow-layout.json": "70b843dd4fcbc619183d6dea7e3a7a653b6e8834c19de81161ea33921e696289",
+        "out/footprints/connectors-headers-smd_254-FP_Socket_2x3_254_SMD.kicad_mod": "7a33c107bea08d91394c182ebd6f1a144439d049d32951be516ce54c165f0124",
+        "out/footprints/passive-CHIP_0603.kicad_mod": "ce1396769f311debc63c256db7e7bb499301e6b1467b9d55111f87dcf2c8fe73",
+        "design.lock": "925e7970be53b3dc5a2307284b5e64b6d2c37efb7a972d62f335bc442a296956",
+        "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b"
+      },
+      "bom_primary_parts_verified": true,
+      "dependency_lock_unchanged": true,
+      "repeat_build_bytes_equal": true,
+      "surviving_designators_and_restricted_connectivity_preserved": true
+    }
+  },
+  "compiler_version": "cohdl 0.7.0 (aarch64-apple-darwin)",
+  "compiler_source": {
+    "checkout": "/private/tmp/cohdl-book-setup-odhytbub/cohdl-compiler-0e3d770",
+    "commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+    "tracked_changes": "",
+    "binding": "Caller declares this checkout produced the executable; build it before this command."
+  },
+  "verifier_sha256": "88554fcb90e5b7b1f3eb8378256f3bfa48b704539785f054b28f5eb9afd1795a",
+  "input_sha256": {
+    "cohdl.toml": "c39af85297323774ab7073a86f3dd588556635c8b94ad82e5bf4c5095f81393c",
+    "cohdl.lock": "2924b3c673008e560bc19c2ac145352cd0d359557191cfda384c45eaf73cf87b"
+  },
+  "probes": {
+    "wrong_position_unit": {
+      "source_sha256": "2daf180f6a3958e0fa7947af177a4d9b6593802179c378e2a527e56c184cbb38",
+      "check_exit_code": 1,
+      "codes": [
+        "E1007"
+      ],
+      "diagnostics": [
+        {
+          "code": "E1007",
+          "severity": "error",
+          "message": "placement x is a `Length` (`mm`) literal — `10V` is a `Voltage`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 67,
+            "start_col": 9,
+            "end_line": 67,
+            "end_col": 41,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        }
+      ]
+    },
+    "missing_capacitor_ground": {
+      "source_sha256": "39cfd5ed44fc0f82534a79a7563c51db4aa807418b45f9abc5b62eaa57890716",
+      "check_exit_code": 1,
+      "codes": [
+        "E701"
+      ],
+      "diagnostics": [
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_0::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_1::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_2::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_3::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_4::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_5::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_6::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_7::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_8::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::channels_9::c.B` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 16,
+            "start_col": 5,
+            "end_line": 16,
+            "end_col": 32,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "passive/devices.cohdl",
+              "start_line": 109,
+              "start_col": 9,
+              "end_line": 109,
+              "end_col": 32,
+              "message": "`B` is declared `required` on device `MLCC` here"
+            }
+          ],
+          "help": []
+        }
+      ]
+    },
+    "missing_external_output": {
+      "source_sha256": "18a4c556137df8f7d4c399e378a938622c51980d2d27d38dd80d1310603d945e",
+      "check_exit_code": 1,
+      "codes": [
+        "E1302",
+        "E701"
+      ],
+      "diagnostics": [
+        {
+          "code": "E701",
+          "severity": "error",
+          "message": "required pin `RcWorkflow::connectors_0.P2` is unresolved: add it to a `net` or explicitly mark it `nc`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 29,
+            "start_col": 5,
+            "end_line": 29,
+            "end_col": 46,
+            "message": ""
+          },
+          "secondary": [
+            {
+              "file": "connectors/headers/smd_254.cohdl",
+              "start_line": 7,
+              "start_col": 9,
+              "end_line": 7,
+              "end_col": 33,
+              "message": "`P2` is declared `required` on device `Socket_2x3` here"
+            }
+          ],
+          "help": []
+        },
+        {
+          "code": "E1302",
+          "severity": "error",
+          "message": "required port `OUT` of `channels_0` (subdesign `RcChannel`) is not connected — connect it in the use site's port block or a `net`",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 30,
+            "start_col": 5,
+            "end_line": 30,
+            "end_col": 40,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        }
+      ]
+    },
+    "array_index_out_of_bounds": {
+      "source_sha256": "5a53372f0fc9ebd685d7a5bdef3d2ca12e5b986490d3838be6dbfd8a956bdc07",
+      "check_exit_code": 1,
+      "codes": [
+        "E202"
+      ],
+      "diagnostics": [
+        {
+          "code": "E202",
+          "severity": "error",
+          "message": "index 10 is out of bounds for `channels` — valid indices are 0..=9 (length 10)",
+          "primary": {
+            "file": "src/main.cohdl",
+            "start_line": 67,
+            "start_col": 23,
+            "end_line": 67,
+            "end_col": 27,
+            "message": ""
+          },
+          "secondary": [],
+          "help": []
+        }
+      ]
+    },
+    "short_two_outputs": {
+      "source_sha256": "85d74cfd61d2fc87d22bdc27eaac1d2c63ca9fc3d3c911a912a8bb2ec7814b06",
+      "check_exit_code": 0,
+      "codes": [],
+      "diagnostics": [],
+      "net_partitions": 20,
+      "independent_channel_contract_passed": false,
+      "exact_output_merge_verified": true
+    }
+  },
+  "book_setup_run": {
+    "scope": "Documented setup and lesson blocks executed in a fresh local clone/worktree; dependency caches pre-existed; no initial network install tested",
+    "session_source": "/Users/zhangalex/.claude/projects/-Users-zhangalex-Work-Projects-cohdl/d353a61e-4076-4f7e-a2e8-dc70afcb5b67.jsonl",
+    "review_at": "2026-09-10T07:06:57.473Z",
+    "shell": "zsh -e",
+    "shell_blocks": 7,
+    "exit_code": 0,
+    "docs_sha256": {
+      "book/src/appendix/course-compiler.md": "12e0b7a1b661b9d887b771a4e751303f57492d20200ec957153cfd1b804f4f1e",
+      "book/src/course/03-rc-workflow.md": "8c70e70e292a7771c5ba4626ed50e4a686c89667f9ed7d04d8beb516e37e7f65"
+    },
+    "extracted_script_sha256": "1ff06d9c70f4459ebb84fdb1ec8414d899415e05881c34b1e1666eacc7d45988",
+    "raw_verification_sha256": "6f4ee693d1321d1d4027a342cccf82ac645af6aa654e80cad06f28cad9321131",
+    "manual_layout_comparison": {
+      "10_to_override": {
+        "RcWorkflow::channels_6::c": [
+          [
+            61,
+            15
+          ],
+          [
+            62,
+            17
+          ]
+        ]
+      },
+      "override_to_12": {}
+    }
+  }
+}

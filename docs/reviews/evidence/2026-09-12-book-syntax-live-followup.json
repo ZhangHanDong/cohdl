@@ -1,0 +1,88 @@
+{
+  "compiler_commit": "0e3d7705ab393a5c64c20836540ad1bc2e49898e",
+  "compiler_version": "cohdl 0.7.0 (aarch64-apple-darwin)",
+  "compiler_sha256": "127ceb68f0c486c711b628f256de1de08e52ffe1c48963c16092012b25b11ff3",
+  "results": [
+    {
+      "case": "annulus-outer-inner",
+      "source": "pad P { shape: annulus size: (0.8mm, 0.4mm) layer: top_copper plating: smd }\ndesign D {}\n",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/annulus-outer-inner.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": []\n}\n",
+      "stderr": "",
+      "codes": []
+    },
+    {
+      "case": "annulus-equal-diameters",
+      "source": "pad P { shape: annulus size: (0.8mm, 0.8mm) layer: top_copper plating: smd }\ndesign D {}\n",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/annulus-equal-diameters.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit_code": 1,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"fail\",\n  \"diagnostics\": [\n    {\n      \"code\": \"E805\",\n      \"severity\": \"error\",\n      \"message\": \"annulus pad `P` requires outer diameter > inner diameter > 0\",\n      \"primary\": {\n        \"file\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/annulus-equal-diameters.cohdl\",\n        \"start_line\": 1,\n        \"start_col\": 30,\n        \"end_line\": 1,\n        \"end_col\": 44,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "codes": [
+        "E805"
+      ]
+    },
+    {
+      "case": "annulus-courtyard",
+      "source": "footprint F { courtyard { shape: annulus, at: (0mm, 0mm), size: (0.8mm, 0.4mm) } }\ndesign D {}\n",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/annulus-courtyard.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit_code": 1,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"fail\",\n  \"diagnostics\": [\n    {\n      \"code\": \"E806\",\n      \"severity\": \"error\",\n      \"message\": \"`courtyard` needs `shape`, `at`, and `size`\",\n      \"primary\": {\n        \"file\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/annulus-courtyard.cohdl\",\n        \"start_line\": 1,\n        \"start_col\": 15,\n        \"end_line\": 1,\n        \"end_col\": 81,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    },\n    {\n      \"code\": \"E806\",\n      \"severity\": \"error\",\n      \"message\": \"`annulus` is only valid for electrical pads, not `courtyard`\",\n      \"primary\": {\n        \"file\": \"/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/annulus-courtyard.cohdl\",\n        \"start_line\": 1,\n        \"start_col\": 34,\n        \"end_line\": 1,\n        \"end_col\": 41,\n        \"message\": \"\"\n      },\n      \"secondary\": [],\n      \"help\": []\n    }\n  ]\n}\n",
+      "stderr": "",
+      "codes": [
+        "E806",
+        "E806"
+      ]
+    },
+    {
+      "case": "paste-circle-larger-than-copper",
+      "source": "pad P { shape: circle size: (0.3mm) layer: top_copper plating: smd paste: circle(0.4mm) }\ndesign D {}\n",
+      "argv": [
+        "/private/tmp/cohdl-main-subdesign-ab44257/target/debug/cohdl",
+        "check",
+        "/var/folders/rj/fpdb5j3d71v4h0464cs2xn500000gn/T/cohdl-book-live-followup-ur237bv2/paste-circle-larger-than-copper.cohdl",
+        "--no-std",
+        "--json"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"schema_version\": 1,\n  \"verdict\": \"pass\",\n  \"diagnostics\": []\n}\n",
+      "stderr": "",
+      "codes": []
+    }
+  ],
+  "reviewed_chapters": {
+    "book/src/cohdl/syntax/composition.md": "19a2aba7c1c88bbbcfd544eb9ca363dc6e8a045e8bcec3be7d81bc1715ada7e8",
+    "book/src/cohdl/syntax/design-nets.md": "3e7edab586f5a18227abbfc783edf92f1f5a8f688c9d9aea62bbba8d1eb52dce",
+    "book/src/cohdl/syntax/index.md": "5f1a22c3e8106084eef2597a749f1b6f7fb75290a3d9e40df706157db26be1bf",
+    "book/src/cohdl/syntax/layout-facts.md": "8211ca15d053e8cdd841395cdcebdba5424d8ce42a09c36d9f70f3fd44623137",
+    "book/src/cohdl/syntax/parts-footprints.md": "e59826b1d5bfd0f79b819fad377c92298f0db4b9abc9cd6453c248878397fe4b",
+    "book/src/cohdl/syntax/tour.md": "8fa6cb2aba8a9c977c7e5b4cdc2de47e601eddf05abdbb3f0abaddeff10440ed",
+    "book/src/cohdl/syntax/units-devices.md": "090918efbf31efc4808deadc4bb5e5c028e69dcf982dae53aacf0854064eff41"
+  },
+  "scope": "Four focused checks of newly documented pad semantics. Existing syntax-tour executable source unchanged except full-line comments; prior build evidence retained, no new M2 or validator work.",
+  "live_message": {
+    "source": "/Users/zhangalex/.claude/projects/-Users-zhangalex-Work-Projects-cohdl/d353a61e-4076-4f7e-a2e8-dc70afcb5b67.jsonl",
+    "timestamp": "2026-09-12T06:34:46.785Z",
+    "text": "Codex 这轮做了两件事：审了我的七篇语法章节，另外按你「A 先行、B 延后」的决定重排了 RFC。两件都核完了。\n\n**它对我章节的审查：六条事实错误全部成立，已改。**\n\n每条我都对着源码或编译器复核后才改：\n\n| 我原来写的 | 实际 | 改法 |\n| --- | --- | --- |\n| `fn` 不能跨包发布 | `pub fn` 跨包可调用，`passive::bulk_10u` 就是 | 改为按端口、具名层级、整体摆放区分 `fn` 与 `subdesign` |\n| 布局和属性永远不影响 `check` | 目标不存在是 E1007，`#[high_current(500mV)]` 是 E110，我复现了 | 改为「合法时不改变电气判定；自身语法、引用、单位仍被检查」 |\n| 改源码顺序不会让 R1 变 R2 | `fn` 展开路径含调用序号，交换两次调用位号会变 | 改为「路径不变则位号不变」，并写明 `fn` 例外 |\n| `annulus` 未实现 | parse.rs:623 已支持，`lib/@contrib/mic` 在用 | 加进形状列表，连同 `chamfer`、`paste: circle(...)`、`segmented_annulus(...)` |\n| 焊盘与引脚一一对应 | E807 比的是去重后的编号集合，同一编号可有多块铜（sifli 的 EP 有四个 `pad 69`） | 改为集合相等 |\n| `required` 就是手册上必须接 | 准确含义是必须显式交代，`nc` 也算 | 改为交代状态，并写明 D001 只比 `voltage_rating` |\n\n它另外挑出的一致性问题也改了：九种声明不是八种，四种路径形态不是三种，DRC 的连通图依赖，槽孔只是不能进 `circle`。配套工程两处注释同步改了。改完 `fmt --check`、`check`、`build` 仍通过，11 实例 8 网络不变；书 71 章、3655 链接通过。\n\n**我那条叠层回答里有一处错**：我说当前 IPC-2581 没有 Stackup 段。实际 `emit_stackup` 已经输出一个固定的名义双层叠层。正确的缺口是语言层没有可配置、可引用厂家资料的叠层模型，结论不变，依据要改。\n\n**RFC 重排**\n\n中英文都是 708 行对齐，Decision 写明「Candidate A selected by the user, 2026-09-12」，循环体直接声明 `inst`/`subdesign` 随 B 延后。语法比较（标签、区间）进附录 A，声明验证器和兼容性审计进附录 B，旧计划归档。\n\n它在准备审计时清点出一个值得你知道的数字：60 个库包、162 个源文件里只有 2 个非泛型 `fn`、0 个 `subdesign` 定义。所以「全库审计通过」证明不了泛型和 subdesign 的声明检查，必须补正反例，它已写进附录 B。\n\n**两件待办**\n\n- 数组元素作为 `fn` 实例参数报 E202，Codex 确认是 RFC-024 的实现缺陷，位置在 `expand.rs:2153` 附近的 `resolve_instance_arg` 只按基名查。这应该单独立案修复，不进 M2。\n- 我上轮提的「CoHDL 明确不管的三件事」那页还没写，Codex 建议先保持 M2 优先，我同意。",
+    "sha256": "ff0ba06485266c8f276771f43cac4dca887fb395ae83eb35202948f72d8e1f4c"
+  }
+}
