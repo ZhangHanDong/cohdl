@@ -471,7 +471,7 @@ impl Formatter<'_> {
                 ..
             } => {
                 let target = match index {
-                    Some((i, _)) => format!("{}[{}]", inst.name, i),
+                    Some((e, _)) => format!("{}[{}]", inst.name, crate::ast::expr_text(e)),
                     None => inst.name.clone(),
                 };
                 match pin {
@@ -931,6 +931,9 @@ impl Formatter<'_> {
                     consider(&pa.span());
                 }
             }
+            // RFC-033: const/for spans ride the statement's own span.
+            Stmt::Const(s) => consider(&s.span),
+            Stmt::For(f) => consider(&f.span),
             Stmt::Net(s) => {
                 if let Some((_, sp)) = &s.intent {
                     consider(sp);
@@ -961,6 +964,38 @@ impl Formatter<'_> {
 
     fn stmt(&mut self, stmt: &Stmt, indent: usize) {
         match stmt {
+            // RFC-033: `const`/`for` printing lands with Task 4; they cannot
+            // parse until Task 3, so unreachable in practice (guard below).
+            Stmt::Const(s) => {
+                self.push(
+                    indent,
+                    format!(
+                        "const {}: {} = {}",
+                        s.name.name,
+                        match s.ty {
+                            ConstTy::Int => "Int",
+                            ConstTy::Length => "Length",
+                        },
+                        expr_text(&s.value)
+                    ),
+                );
+            }
+            Stmt::For(f) => {
+                self.push(
+                    indent,
+                    format!(
+                        "for {}: {} in {}..{} {{",
+                        f.label.name,
+                        f.binder.name,
+                        expr_text(&f.start),
+                        expr_text(&f.end)
+                    ),
+                );
+                for s in &f.body {
+                    self.stmt(s, indent + 1);
+                }
+                self.push(indent, "}".to_string());
+            }
             Stmt::Inst(s) => {
                 // All attributes in SOURCE order (never a fixed canonical
                 // order — reordering would drag comments with it), with the
@@ -1002,8 +1037,10 @@ impl Formatter<'_> {
                 // RFC-024: `[Device; N]` in type position — dropping the array
                 // length here would silently turn an N-element array into a
                 // single instance on reformat.
-                let ty = match s.array_len {
-                    Some((n, _)) => format!("[{}; {}]", type_ref_text(&s.ty), n),
+                let ty = match &s.array_len {
+                    Some((e, _)) => {
+                        format!("[{}; {}]", type_ref_text(&s.ty), crate::ast::expr_text(e))
+                    }
                     None => type_ref_text(&s.ty),
                 };
                 self.push(indent, format!("inst {}: {}", s.name.name, ty));
@@ -1054,10 +1091,12 @@ impl Formatter<'_> {
                 }
                 for p in &s.placements {
                     self.flush_leading(self.line_start(p.span), indent + 1);
-                    let rot = if p.rotate == 0 {
-                        String::new()
-                    } else {
-                        format!(" rotate {}", p.rotate)
+                    // RFC-033: `rotate 0` is never printed; the expression
+                    // prints in its canonical spelling (`expr_text`).
+                    let rot = match &p.rotate {
+                        None => String::new(),
+                        Some(e) if matches!(e.as_int_literal(), Some(0)) => String::new(),
+                        Some(e) => format!(" rotate {}", crate::ast::expr_text(e)),
                     };
                     // RFC-026: canonical clause order is `rotate` THEN
                     // `side`; the default `top` is never spelled out.
@@ -1073,8 +1112,8 @@ impl Formatter<'_> {
                         format!(
                             "place {} at ({}, {}){}{}",
                             p.path_text(),
-                            p.at.0.text,
-                            p.at.1.text,
+                            crate::ast::expr_text(&p.at.0),
+                            crate::ast::expr_text(&p.at.1),
                             rot,
                             side
                         ),
@@ -1110,8 +1149,10 @@ impl Formatter<'_> {
                 // RFC-024: dropping the array length would silently turn an
                 // N-node array into a single node on reformat (same rule as
                 // `inst`).
-                let ty = match s.array_len {
-                    Some((n, _)) => format!("[{}; {}]", type_ref_text(&s.ty), n),
+                let ty = match &s.array_len {
+                    Some((e, _)) => {
+                        format!("[{}; {}]", type_ref_text(&s.ty), crate::ast::expr_text(e))
+                    }
                     None => type_ref_text(&s.ty),
                 };
                 if s.conns.is_empty() {
@@ -1580,6 +1621,7 @@ fn generic_arg_text(arg: &GenericArg) -> String {
         GenericArg::Unit(v, _) => v.text.clone(),
         GenericArg::Name(id) => id.name.clone(),
         GenericArg::Number(n, _) => n.clone(),
+        GenericArg::Expr(e) => crate::ast::expr_text(e),
     }
 }
 
@@ -1589,9 +1631,11 @@ fn generic_params(params: &[GenericParam]) -> String {
             let bound = match &p.bound {
                 GenericBound::Unit(u) => u.unit.type_name().to_string(),
                 GenericBound::Traits(ts) => join(ts.iter().map(|t| t.name.clone()), " + "),
+                GenericBound::Int(_) => "Int".to_string(),
             };
             let default = match &p.default {
-                Some((v, _)) => format!(" = {}", v.text),
+                Some(GenericDefault::Unit(v, _)) => format!(" = {}", v.text),
+                Some(GenericDefault::Int(n, _)) => format!(" = {}", n),
                 None => String::new(),
             };
             format!("{}: {}{}", p.name.name, bound, default)

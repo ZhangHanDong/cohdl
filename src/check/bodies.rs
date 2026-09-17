@@ -136,6 +136,9 @@ fn check_one(world: &World, f: &FnDef, allow_sub_use: bool, diags: &mut Diagnost
                 }
             }
             Stmt::Layout(_) => {} // RFC-013 arity/nets still checked at expansion
+            // RFC-033: uniform static validation of consts/loops lands with
+            // Task 9; they cannot parse until Task 3.
+            Stmt::Const(_) | Stmt::For(_) => {}
             // RFC-032: legal in a subdesign body; rejected in a fn so an
             // UNCALLED fn cannot hide one (expansion re-checks called fns).
             Stmt::SubdesignUse(sub) => {

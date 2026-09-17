@@ -246,7 +246,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 self.handle_subdesign_use(sub, scope);
             }
             if let Stmt::Inst(inst) = stmt {
-                match inst.array_len {
+                match &inst.array_len {
                     None => self.handle_inst(inst, scope),
                     // RFC-024: `inst NAME: [Device; N]` is ONE array-typed
                     // instance whose N elements are each fully real. Each
@@ -254,7 +254,22 @@ impl<'w, 'd> Expander<'w, 'd> {
                     // written `inst` does, so designator allocation (RFC-005),
                     // pin obligations (RFC-002) and trait satisfaction
                     // (RFC-003) apply to it completely unchanged.
-                    Some((n, span)) => {
+                    Some((len_expr, span)) => {
+                        // RFC-033: literal lengths only until Task 7's
+                        // evaluator lands — a computed length is a clean
+                        // E1401, never a panic or a silent fallthrough.
+                        let Some(n) = len_expr.as_int_literal() else {
+                            self.diags.push(Diagnostic::error(
+                                "E1401",
+                                len_expr.span(),
+                                format!(
+                                    "expression not supported here yet — `{}` is not a bare integer (computed array lengths arrive with RFC-033)",
+                                    crate::ast::expr_text(len_expr)
+                                ),
+                            ));
+                            let _ = span;
+                            continue;
+                        };
                         if scope.arrays.contains_key(&inst.name.name)
                             || scope.local_insts.contains_key(&inst.name.name)
                             || scope.local_subs.contains_key(&inst.name.name)
@@ -267,7 +282,9 @@ impl<'w, 'd> Expander<'w, 'd> {
                             ));
                             continue;
                         }
-                        scope.arrays.insert(inst.name.name.clone(), (n, span));
+                        scope
+                            .arrays
+                            .insert(inst.name.name.clone(), (n, len_expr.span()));
                         for i in 0..n {
                             let mut elem = inst.clone();
                             elem.name = Ident {
@@ -302,6 +319,10 @@ impl<'w, 'd> Expander<'w, 'd> {
                 Stmt::Call(call) => self.handle_call(call, scope),
                 Stmt::Layout(block) => self.handle_layout(block, scope),
                 Stmt::SubdesignUse(sub) => self.handle_subdesign_conns(sub, scope),
+                // RFC-033: const/loop expansion lands with Tasks 7/8; the
+                // statements cannot parse until Task 3, so no behavior to
+                // preserve yet — the arms exist so the match stays total.
+                Stmt::Const(_) | Stmt::For(_) => {}
             }
         }
     }
@@ -372,10 +393,29 @@ impl<'w, 'd> Expander<'w, 'd> {
     fn indexed_local(
         &mut self,
         id: &Ident,
-        index: Option<(i64, Span)>,
+        index: Option<&(Expr, Span)>,
         scope: &Scope,
         unindexed_help: &str,
     ) -> Option<String> {
+        // RFC-033: unwrap the expression index; a computed index is a clean
+        // E1401 until Task 7 evaluates them.
+        let index: Option<(i64, Span)> = match index {
+            None => None,
+            Some((e, sp)) => match e.as_int_literal() {
+                Some(i) => Some((i, *sp)),
+                None => {
+                    self.diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "expression not supported here yet — `{}` is not a bare integer (computed indexes arrive with RFC-033)",
+                            crate::ast::expr_text(e)
+                        ),
+                    ));
+                    return None;
+                }
+            },
+        };
         match (index, scope.arrays.get(&id.name).copied()) {
             (None, None) => Some(id.name.clone()),
             (None, Some(_)) => {
@@ -439,7 +479,7 @@ impl<'w, 'd> Expander<'w, 'd> {
         let first = &placement.path[0];
         let Some(local) = self.indexed_local(
             &first.name,
-            first.index,
+            first.index.as_ref(),
             scope,
             &format!(
                 "`{}` is array-typed — place one element, e.g. `place {}[0] at (…)`",
@@ -487,7 +527,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                     node.fq.clone(),
                 )
             };
-            let child = match (seg.index, arrays_entry) {
+            let child = match (&seg.index, arrays_entry) {
                 (None, None) => seg.name.name.clone(),
                 (None, Some(_)) => {
                     self.diags.push(Diagnostic::error(
@@ -503,7 +543,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 (Some((_, sp)), None) => {
                     self.diags.push(Diagnostic::error(
                         "E211",
-                        sp,
+                        *sp,
                         format!(
                             "`{}` is not an array-typed instance — only `inst NAME: [Device; N]` can be indexed",
                             seg.name.name
@@ -511,11 +551,23 @@ impl<'w, 'd> Expander<'w, 'd> {
                     ));
                     return;
                 }
-                (Some((i, sp)), Some((n, _))) => {
+                (Some((e, sp)), Some((n, _))) => {
+                    // RFC-033: computed path indexes are E1401 until Task 7.
+                    let Some(i) = e.as_int_literal() else {
+                        self.diags.push(Diagnostic::error(
+                            "E1401",
+                            e.span(),
+                            format!(
+                                "expression not supported here yet — `{}` is not a bare integer (computed placement indexes arrive with RFC-033)",
+                                crate::ast::expr_text(e)
+                            ),
+                        ));
+                        return;
+                    };
                     if i < 0 || i >= n {
                         self.diags.push(Diagnostic::error(
                             "E202",
-                            sp,
+                            *sp,
                             format!(
                                 "index {} is out of bounds for `{}` — valid indices are 0..={} (length {})",
                                 i, seg.name.name, n - 1, n
@@ -557,42 +609,88 @@ impl<'w, 'd> Expander<'w, 'd> {
                 return;
             };
         }
-        for (v, what) in [(&placement.at.0, "x"), (&placement.at.1, "y")] {
-            if v.unit != UnitType::Length {
-                self.diags.push(Diagnostic::error(
-                    "E1007",
-                    placement.span,
-                    format!(
-                        "placement {} is a `Length` (`mm`) literal — `{}` is a `{}`",
-                        what,
-                        v.text,
-                        v.unit.type_name()
-                    ),
-                ));
-                return;
+        // RFC-033: coordinates/rotation are expression nodes. Literal-only
+        // until Task 7 evaluates them; a computed value is a clean E1401.
+        let at: (UnitValue, UnitValue) = {
+            let mut out: Option<(UnitValue, UnitValue)> = None;
+            for (e, what) in [(&placement.at.0, "x"), (&placement.at.1, "y")] {
+                let Some(v) = e.as_length_literal() else {
+                    self.diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "expression not supported here yet — `{}` is not a plain `Length` literal (computed coordinates arrive with RFC-033)",
+                            crate::ast::expr_text(e)
+                        ),
+                    ));
+                    return;
+                };
+                let _ = what;
+                if v.unit != UnitType::Length {
+                    self.diags.push(Diagnostic::error(
+                        "E1007",
+                        placement.span,
+                        format!(
+                            "placement {} is a `Length` (`mm`) literal — `{}` is a `{}`",
+                            what,
+                            v.text,
+                            v.unit.type_name()
+                        ),
+                    ));
+                    return;
+                }
+                if !v.length_in_geom_range() {
+                    self.diags.push(Diagnostic::error(
+                        "E1007",
+                        placement.span,
+                        format!(
+                            "placement {} `{}` is too large to project (review R5-5)",
+                            what, v.text
+                        ),
+                    ));
+                    return;
+                }
+                out = match out {
+                    None => Some((v.clone(), v.clone())),
+                    Some((x, _)) => Some((x, v.clone())),
+                };
             }
-            if !v.length_in_geom_range() {
-                self.diags.push(Diagnostic::error(
-                    "E1007",
-                    placement.span,
-                    format!(
-                        "placement {} `{}` is too large to project (review R5-5)",
-                        what, v.text
-                    ),
-                ));
-                return;
+            match out {
+                Some((x, y)) => (x, y),
+                None => return,
             }
-        }
+        };
         // Rotation is any whole degree in 0..=359 (deviation from RFC-020's
         // closed {0, 90, 180, 270}, at the board author's direction — ledgered
         // in docs/compliance-report.md). A full turn is 0, so 360 and beyond is
         // rejected rather than silently reduced: `rotate 450` is far more likely
         // a mistake than a deliberate 90.
-        if placement.rotate > 359 {
-            let shown = if placement.rotate == u16::MAX {
+        let rotate: u16 = match &placement.rotate {
+            None => 0,
+            Some(e) => {
+                let Some(n) = e.as_int_literal() else {
+                    self.diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "expression not supported here yet — `{}` is not a bare integer (computed rotation arrives with RFC-033)",
+                            crate::ast::expr_text(e)
+                        ),
+                    ));
+                    return;
+                };
+                // A literal that does not fit u16 was mapped to u16::MAX by
+                // the parser (the pre-RFC sentinel) so the range check below
+                // still owns the report.
+                u16::try_from(n.unsigned_abs().min(u32::from(u16::MAX) as u64) as u64)
+                    .unwrap_or(u16::MAX)
+            }
+        };
+        if rotate > 359 {
+            let shown = if rotate == u16::MAX {
                 "that value".to_string()
             } else {
-                placement.rotate.to_string()
+                rotate.to_string()
             };
             self.diags.push(Diagnostic::error(
                 "E1007",
@@ -605,8 +703,8 @@ impl<'w, 'd> Expander<'w, 'd> {
             return;
         }
         let data = PlaceData {
-            at: (placement.at.0.clone(), placement.at.1.clone()),
-            rotate: placement.rotate,
+            at: (at.0.clone(), at.1.clone()),
+            rotate,
             side: placement.side,
             span: placement.span,
         };
@@ -738,7 +836,7 @@ impl<'w, 'd> Expander<'w, 'd> {
         // reference already resolves through.
         let resolve_inst = |ex: &mut Self,
                             id: &Ident,
-                            index: Option<(i64, Span)>|
+                            index: Option<&(Expr, Span)>|
          -> Option<String> {
             // RFC-024: `NAME[i]` resolves through the SAME element resolver
             // `place` uses, so the two can never disagree about which element
@@ -846,7 +944,8 @@ impl<'w, 'd> Expander<'w, 'd> {
                     // the same Binding::Pin every net member already uses.
                     let (target_path, pads) = match pin {
                         Some(pin) => {
-                            let Some(target_path) = resolve_inst(self, target, *index) else {
+                            let Some(target_path) = resolve_inst(self, target, index.as_ref())
+                            else {
                                 continue;
                             };
                             let Some(pads) = pin_pads(self, &target_path, pin) else {
@@ -1221,7 +1320,22 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// author had hand-written `NAME_0: Device`, `NAME_1: Device`, … The
     /// source-facing spelling stays `NAME[i]`.
     fn array_bounds(&mut self, base: &Ident, sel: &IndexSel, n: i64) -> Option<Vec<i64>> {
-        let idx = sel.indices();
+        // RFC-033: computed selectors are E1401 until Task 7 evaluates them;
+        // literal selectors keep the pre-RFC bounds checks byte-identical.
+        let idx = match sel.literal_indices() {
+            Some(idx) => idx,
+            None => {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    sel.span(),
+                    format!(
+                        "expression not supported here yet — `{}` is not a bare integer index (computed selectors arrive with RFC-033)",
+                        sel
+                    ),
+                ));
+                return None;
+            }
+        };
         if idx.is_empty() {
             self.diags.push(Diagnostic::error(
                 "E211",
@@ -1278,7 +1392,7 @@ impl<'w, 'd> Expander<'w, 'd> {
         idx.into_iter()
             .map(|i| PinRef {
                 base: m.base.clone(),
-                index: Some(IndexSel::Single(i, sel.span())),
+                index: Some(IndexSel::Single(Expr::int(i, sel.span()), sel.span())),
                 pin: m.pin.clone(),
                 span: m.span,
             })
@@ -1316,7 +1430,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 None
             }
             (Some(sel), Some((n, _))) => {
-                let IndexSel::Single(i, _) = sel else {
+                let IndexSel::Single(e, _) = sel else {
                     self.diags.push(Diagnostic::error(
                         "E211",
                         sel.span(),
@@ -1327,10 +1441,22 @@ impl<'w, 'd> Expander<'w, 'd> {
                     ));
                     return None;
                 };
+                // RFC-033: computed single indexes are E1401 until Task 7.
+                let Some(i) = e.as_int_literal() else {
+                    self.diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "expression not supported here yet — `{}` is not a bare integer (computed indexes arrive with RFC-033)",
+                            crate::ast::expr_text(e)
+                        ),
+                    ));
+                    return None;
+                };
                 self.array_bounds(&r.base, sel, n)?;
                 Some(Cow::Owned(PinRef {
                     base: Ident {
-                        name: element_name(&r.base.name, *i),
+                        name: element_name(&r.base.name, i),
                         span: r.base.span,
                     },
                     index: None,
@@ -1979,10 +2105,24 @@ impl<'w, 'd> Expander<'w, 'd> {
             .iter()
             .map(|p| (p.name.name.clone(), (p.obligation, p.span)))
             .collect();
-        let element_names: Vec<String> = match stmt.array_len {
+        let element_names: Vec<String> = match &stmt.array_len {
             None => vec![stmt.name.name.clone()],
-            Some((n, span)) => {
-                scope.arrays.insert(stmt.name.name.clone(), (n, span));
+            Some((len_expr, _)) => {
+                // RFC-033: computed lengths are E1401 until Task 7.
+                let Some(n) = len_expr.as_int_literal() else {
+                    self.diags.push(Diagnostic::error(
+                        "E1401",
+                        len_expr.span(),
+                        format!(
+                            "expression not supported here yet — `{}` is not a bare integer (computed array lengths arrive with RFC-033)",
+                            crate::ast::expr_text(len_expr)
+                        ),
+                    ));
+                    return;
+                };
+                scope
+                    .arrays
+                    .insert(stmt.name.name.clone(), (n, len_expr.span()));
                 (0..n).map(|i| element_name(&stmt.name.name, i)).collect()
             }
         };

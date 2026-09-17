@@ -1164,14 +1164,21 @@ impl<'a> Parser<'a> {
 
     /// `(x, y)` — exactly two unit literals (unit TYPE checked later).
     fn length_pair(&mut self) -> Option<(UnitValue, UnitValue)> {
+        let (x, y) = self.length_pair_spans()?;
+        Some((x.0, y.0))
+    }
+
+    /// `length_pair` keeping each literal's own span (RFC-033: placement
+    /// coordinates ride as `Expr::Length` nodes).
+    fn length_pair_spans(&mut self) -> Option<((UnitValue, Span), (UnitValue, Span))> {
         if !self.expect(&TokenKind::LParen, "to open the coordinate pair") {
             // One defect, one diagnostic — a missing `(` already implies the
             // offsets are absent; don't also report each of them.
             return None;
         }
-        let x = self.unit_literal("as the x offset")?;
+        let x = self.unit_literal_with_span("as the x offset")?;
         self.expect(&TokenKind::Comma, "between the coordinates");
-        let y = self.unit_literal("as the y offset")?;
+        let y = self.unit_literal_with_span("as the y offset")?;
         self.expect(&TokenKind::RParen, "to close the coordinate pair");
         Some((x, y))
     }
@@ -1191,6 +1198,12 @@ impl<'a> Parser<'a> {
     }
 
     fn unit_literal(&mut self, ctx: &str) -> Option<UnitValue> {
+        self.unit_literal_with_span(ctx).map(|(v, _)| v)
+    }
+
+    /// `unit_literal` keeping the literal's own span (RFC-033 expression
+    /// nodes need it).
+    fn unit_literal_with_span(&mut self, ctx: &str) -> Option<(UnitValue, Span)> {
         // RFC-033: `-` lexes as its own token; a `-` byte-adjacent to a unit
         // literal here is still a signed literal (`-1.5mm`, `-40C`).
         if self.at(&TokenKind::Minus) && matches!(self.peek_ahead(1), TokenKind::Unit(_)) {
@@ -1206,14 +1219,14 @@ impl<'a> Parser<'a> {
                 let TokenKind::Unit(v) = t.kind else {
                     unreachable!()
                 };
-                match v.negate_for_literal() {
-                    Ok(v) => return Some(v),
+                return match v.negate_for_literal() {
+                    Ok(v) => Some((v, minus_span.to(t.span))),
                     Err(msg) => {
                         self.diags
                             .push(Diagnostic::error("E105", minus_span.to(t.span), msg));
-                        return None;
+                        None
                     }
-                }
+                };
             }
         }
         match self.peek() {
@@ -1222,7 +1235,7 @@ impl<'a> Parser<'a> {
                 let TokenKind::Unit(v) = t.kind else {
                     unreachable!()
                 };
-                Some(v)
+                Some((v, t.span))
             }
             other => {
                 self.error_here(format!(
@@ -1959,7 +1972,7 @@ impl<'a> Parser<'a> {
                 // index — a range would name several targets for one cap.
                 let index = if self.at(&TokenKind::LBracket) {
                     match self.index_sel()? {
-                        IndexSel::Single(i, sp) => Some((i, sp)),
+                        IndexSel::Single(e, sp) => Some((e, sp)),
                         other => {
                             self.diags.push(Diagnostic::error(
                                 "E211",
@@ -2568,7 +2581,7 @@ impl<'a> Parser<'a> {
                         let TokenKind::Unit(v) = t.kind else {
                             unreachable!()
                         };
-                        default = Some((v, t.span));
+                        default = Some(GenericDefault::Unit(v, t.span));
                     }
                     TokenKind::Number(_) => {
                         let t = self.bump();
@@ -3087,7 +3100,8 @@ impl<'a> Parser<'a> {
                 ));
                 return None;
             }
-            (ty, Some((n, span)))
+            // RFC-033: the length rides as an expression node.
+            (ty, Some((Expr::int(n, span), span)))
         } else {
             (self.type_ref()?, None)
         };
@@ -3357,7 +3371,9 @@ impl<'a> Parser<'a> {
                         ));
                         return None;
                     }
-                    (ty, Some((n, span)))
+                    // RFC-033: the length rides as an expression node;
+                    // literal-only until Task 3's expression parser feeds it.
+                    (ty, Some((Expr::int(n, span), span)))
                 } else {
                     (self.type_ref()?, None)
                 };
@@ -3646,6 +3662,9 @@ impl<'a> Parser<'a> {
             constraints,
             board_outline,
             placements,
+            // RFC-033: const/loop layout members parse in Task 3.
+            consts: Vec::new(),
+            loops: Vec::new(),
             span: start.to(self.prev_span()),
         }))
     }
@@ -3699,7 +3718,7 @@ impl<'a> Parser<'a> {
             // coordinates).
             let index = if self.at(&TokenKind::LBracket) {
                 match self.index_sel()? {
-                    IndexSel::Single(i, sp) => Some((i, sp)),
+                    IndexSel::Single(e, sp) => Some((e, sp)),
                     other => {
                         self.diags.push(Diagnostic::error(
                             "E211",
@@ -3722,11 +3741,14 @@ impl<'a> Parser<'a> {
             return None;
         }
         self.bump(); // `at`
-        let at = self.length_pair()?;
+        let (x, y) = self.length_pair_spans()?;
+        // RFC-033: coordinates are expression nodes (`Expr::Length` literals
+        // until Task 3's expression parser feeds computed positions).
+        let at = (Expr::Length(x.0, x.1), Expr::Length(y.0, y.1));
         // Optional `rotate ANGLE` (E1007) and `side SIDE` (RFC-026, E1008) —
         // independent clauses, accepted in either order per the accepted text;
         // `fmt` canonicalizes to rotate-then-side.
-        let mut rotate = 0u16;
+        let mut rotate = None;
         let mut saw_rotate = false;
         let mut side = crate::ast::PlacementSide::Top;
         let mut side_span = None;
@@ -3741,7 +3763,8 @@ impl<'a> Parser<'a> {
                             // Out-of-range / non-integer values are reported
                             // at assembly (E1007); an unparseable value maps to
                             // a sentinel that fails that range check.
-                            rotate = n.parse::<u16>().unwrap_or(u16::MAX);
+                            let v = n.parse::<u16>().unwrap_or(u16::MAX);
+                            rotate = Some(Expr::int(v as i64, t.span));
                         }
                     }
                     _ => {
@@ -4015,21 +4038,27 @@ impl<'a> Parser<'a> {
 
     /// RFC-024 `[…]` after a name: `[S..=E]`, `[S..=E step N]`, or `[i, j, k]`.
     /// Assumes the caller has confirmed the next token is `[`.
+    /// RFC-033: every position is expression-valued (Task 3 parses real
+    /// expressions here; until then only bare literals parse, wrapped as
+    /// `Expr::Int`).
     fn index_sel(&mut self) -> Option<IndexSel> {
         let open = self.span();
         self.bump(); // `[`
         let first = self.index_number("in the index")?;
+        let first_expr = Expr::int(first, open.to(self.prev_span()));
         // `..=` lexes as DotDot Eq — the range form; anything else is a list.
         if self.at(&TokenKind::DotDot) {
             self.bump();
             self.expect(&TokenKind::Eq, "in the range `..=` (ranges are inclusive)");
+            let end_span = self.span();
             let end = self.index_number("as the range end")?;
-            let mut step = 1;
-            let mut explicit_step = false;
+            let end_expr = Expr::int(end, end_span);
+            let mut step = None;
             if self.at_ident("step") {
                 self.bump();
-                step = self.index_number("as the stride")?;
-                explicit_step = true;
+                let step_span = self.span();
+                let s = self.index_number("as the stride")?;
+                step = Some(Expr::int(s, step_span));
             }
             self.expect(&TokenKind::RBracket, "to close the index bracket");
             let span = open.to(self.prev_span());
@@ -4044,36 +4073,38 @@ impl<'a> Parser<'a> {
                 ));
                 return None;
             }
-            if step < 1 {
-                self.diags.push(Diagnostic::error(
-                    "E211",
-                    span,
-                    format!("stride `{}` must be 1 or more", step),
-                ));
-                return None;
+            if let Some(Expr::Int(s, _)) = &step {
+                if *s < 1 {
+                    self.diags.push(Diagnostic::error(
+                        "E211",
+                        span,
+                        format!("stride `{}` must be 1 or more", s),
+                    ));
+                    return None;
+                }
             }
             Some(IndexSel::Range {
-                start: first,
-                end,
+                start: first_expr,
+                end: end_expr,
                 step,
-                explicit_step,
                 span,
             })
         } else {
-            let mut items = vec![first];
-            let mut had_comma = false;
+            let first_span = open.to(self.prev_span());
+            let mut items = vec![Expr::int(first, first_span)];
             while self.eat(&TokenKind::Comma) {
-                had_comma = true;
-                items.push(self.index_number("in the index list")?);
+                let item_span = self.span();
+                let n = self.index_number("in the index list")?;
+                items.push(Expr::int(n, item_span));
             }
             self.expect(&TokenKind::RBracket, "to close the index bracket");
             let span = open.to(self.prev_span());
             // `[i]` is the REAL reference form (valid everywhere); only a
             // comma-separated set is the net-member-only list sugar.
-            if had_comma {
+            if items.len() > 1 {
                 Some(IndexSel::List(items, span))
             } else {
-                Some(IndexSel::Single(first, span))
+                Some(IndexSel::Single(items.pop().expect("one item"), span))
             }
         }
     }

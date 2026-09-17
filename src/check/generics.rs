@@ -60,9 +60,12 @@ pub fn resolve_generic_args(
                 }
             }
             None => match (&param.default, &param.bound) {
-                (Some((val, _)), _) => {
+                (Some(GenericDefault::Unit(val, _)), _) => {
                     subst.insert(param.name.name.clone(), GenericValue::Unit(val.clone()));
                 }
+                // RFC-033: an `Int` default resolves with Task 7; a literal
+                // default is admitted structurally here and judged later.
+                (Some(GenericDefault::Int(_, _)), _) => {}
                 (None, _) => {
                     diags.push(
                         Diagnostic::error(
@@ -89,6 +92,12 @@ pub(crate) fn describe_param(param: &GenericParam) -> String {
             param.name.name,
             u.unit.type_name(),
             example_literal(u.unit)
+        ),
+        // RFC-033: `const N: Int` parameters (resolved by Task 7's
+        // evaluator; descriptive text only until then).
+        GenericBound::Int(_) => format!(
+            "`{}` expects an `Int` expression (e.g. `{}`)",
+            param.name.name, param.name.name
         ),
         GenericBound::Traits(ts) => format!(
             "`{}` expects a device type implementing {}",
@@ -283,6 +292,37 @@ pub(crate) fn resolve_one(
                     "`{}` expects a device type, found bare number `{}`",
                     param.name.name, n
                 ),
+            ));
+            None
+        }
+        // RFC-033: an expression argument against a legacy unit/trait bound.
+        // Task 7's evaluator judges the VALUE; until then the same temporary
+        // E1401 as `const N: Int` (no silent fallthrough).
+        (bound, GenericArg::Expr(e)) => {
+            let code = match bound {
+                GenericBound::Unit(_) | GenericBound::Traits(_) => "E1401",
+                GenericBound::Int(_) => "E1401",
+            };
+            diags.push(Diagnostic::error(
+                code,
+                e.span(),
+                format!(
+                    "expression not supported here yet — `{}` (expression generic arguments resolve with RFC-033, Task 7)",
+                    crate::ast::expr_text(e)
+                ),
+            ));
+            None
+        }
+        // ---- RFC-033 `const N: Int` parameter ----
+        // Task 7's evaluator resolves Int parameters; until then every
+        // concrete shape is the same temporary E1401 (never a panic, never a
+        // silent fallthrough).
+        (GenericBound::Int(span), _) => {
+            diags.push(Diagnostic::error(
+                "E1401",
+                *span,
+                "expression not supported here yet — `const` `Int` generic parameters resolve with RFC-033 (Task 7)"
+                    .to_string(),
             ));
             None
         }
@@ -609,7 +649,10 @@ fn check_avl_identity_consistency(world: &World, diags: &mut Diagnostics) {
                     .map(|(i, param)| match part.device.generic_args.get(i) {
                         Some(arg) => normalize_generic_arg(arg),
                         None => match &param.default {
-                            Some((v, _)) => format!("{}{}", v.femto, v.unit.type_name()),
+                            Some(GenericDefault::Unit(v, _)) => {
+                                format!("{}{}", v.femto, v.unit.type_name())
+                            }
+                            Some(GenericDefault::Int(n, _)) => n.to_string(),
                             None => String::new(),
                         },
                     })
@@ -677,6 +720,9 @@ fn normalize_generic_arg(a: &crate::ast::GenericArg) -> String {
         crate::ast::GenericArg::Unit(v, _) => format!("{}{}", v.femto, v.unit.type_name()),
         crate::ast::GenericArg::Name(i) => i.name.clone(),
         crate::ast::GenericArg::Number(n, _) => n.clone(),
+        // RFC-033: an expression argument prints in its canonical spelling;
+        // Task 7 replaces this with the evaluated value's identity.
+        crate::ast::GenericArg::Expr(e) => crate::ast::expr_text(e),
     }
 }
 

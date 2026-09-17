@@ -14,8 +14,8 @@
 //! designator, or any existing artifact's bytes (pinned in tests/apidocs.rs).
 
 use crate::ast::{
-    self, FnParamTy, GenericBound, MountHoleGeom, PadDrill, PadPaste, SilkFill, SilkGraphic,
-    SilkItem, SpecValue, Stmt,
+    self, FnParamTy, GenericBound, GenericDefault, MountHoleGeom, PadDrill, PadPaste, SilkFill,
+    SilkGraphic, SilkItem, SpecValue, Stmt,
 };
 use crate::emit::geom;
 use crate::emit::json::json_str;
@@ -163,10 +163,16 @@ fn generics_val(generics: &[ast::GenericParam]) -> Val {
                     GenericBound::Traits(ts) => {
                         Val::Obj(vec![("traits", strs(ts.iter().map(|t| t.name.clone())))])
                     }
+                    // RFC-033: `{"const": "Int"}` (schema finalized in Task 14).
+                    GenericBound::Int(_) => Val::Obj(vec![("const", s("Int"))]),
                 };
                 fields.push(("bound", bound));
-                if let Some((default, _)) = &g.default {
-                    fields.push(("default", s(&default.text)));
+                match &g.default {
+                    Some(GenericDefault::Unit(default, _)) => {
+                        fields.push(("default", s(&default.text)))
+                    }
+                    Some(GenericDefault::Int(n, _)) => fields.push(("default", raw(n.to_string()))),
+                    None => {}
                 }
                 Val::Obj(fields)
             })
@@ -177,8 +183,10 @@ fn generics_val(generics: &[ast::GenericParam]) -> Val {
 fn generic_arg_text(arg: &ast::GenericArg) -> String {
     match arg {
         ast::GenericArg::Unit(v, _) => v.text.clone(),
-        ast::GenericArg::Name(i) => i.name.clone(),
+        ast::GenericArg::Name(id) => id.name.clone(),
         ast::GenericArg::Number(n, _) => n.clone(),
+        // RFC-033: canonical spelling (the VALUE once Task 7 evaluates).
+        ast::GenericArg::Expr(e) => ast::expr_text(e),
     }
 }
 
@@ -193,7 +201,7 @@ fn body_summary(body: &[Stmt]) -> Vec<(&'static str, Val)> {
                 let mut fields: Vec<(&'static str, Val)> =
                     vec![("name", s(&i.name.name)), ("type", s(&i.ty.name.name))];
                 if let Some((len, _)) = &i.array_len {
-                    fields.push(("array", raw(len.to_string())));
+                    fields.push(("array", raw(ast::expr_text(len))));
                 }
                 if !i.ty.generic_args.is_empty() {
                     fields.push(("args", strs(i.ty.generic_args.iter().map(generic_arg_text))));
@@ -215,7 +223,7 @@ fn body_summary(body: &[Stmt]) -> Vec<(&'static str, Val)> {
                     ("kind", s("subdesign")),
                 ];
                 if let Some((len, _)) = &u.array_len {
-                    fields.push(("array", raw(len.to_string())));
+                    fields.push(("array", raw(ast::expr_text(len))));
                 }
                 if !u.ty.generic_args.is_empty() {
                     fields.push(("args", strs(u.ty.generic_args.iter().map(generic_arg_text))));
@@ -224,6 +232,8 @@ fn body_summary(body: &[Stmt]) -> Vec<(&'static str, Val)> {
             }
             Stmt::Net(_) => nets += 1,
             Stmt::Nc(_) | Stmt::Layout(_) => {}
+            // RFC-033: const/for bodies ride body_source (Task 14).
+            Stmt::Const(_) | Stmt::For(_) => {}
         }
     }
     let mut out: Vec<(&'static str, Val)> = Vec::new();

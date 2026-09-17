@@ -257,6 +257,18 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 | E1306 | `nc` on a subdesign port — a port is a connection surface, not a device pin; an optional port is simply left unconnected |
 | E1307 | a `subdesign` use site inside a `fn` body — a fn expands inline and retains no hierarchy path for the node to live under |
 
+## E14xx — parameterized circuit construction (RFC-033)
+
+| Code | Meaning |
+|---|---|
+| E1401 | expression kind/type mistake: an expression where an `Int`/`Length` is expected has the wrong kind, or (until the RFC-033 evaluator lands in Task 7) a computed expression sits in a position only literals reach |
+| E1402 | `[RESERVED, not yet implemented]` overflow or non-exact `Length` division (`1mm / 3` is never rounded) — evaluator lands with RFC-033 Task 5 |
+| E1403 | `[RESERVED, not yet implemented]` division or remainder by zero — evaluator lands with RFC-033 Task 5 |
+| E1404 | `[RESERVED, not yet implemented]` reversed `for` range (start above the exclusive end) — loop expansion lands with RFC-033 Task 8 |
+| E1405 | `[RESERVED, not yet implemented]` expansion budget exceeded (iterations / work items / active frames, RFC §9) — metering lands with RFC-033 Task 10 |
+| E1406 | `[RESERVED, not yet implemented]` declaration or operation not admitted in this context (loop bodies, layout loops) — static validation lands with RFC-033 Task 9 |
+| E1407 | `[RESERVED, not yet implemented]` const / array-length dependency cycle — dependency evaluation lands with RFC-033 Task 7 |
+
 ## D00x — residual DRC (RFC-004; exactly four, never more)
 
 | Code | Severity | Rule |

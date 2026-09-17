@@ -1556,9 +1556,13 @@ fn unit_literal_hover(analysis: &Analysis, fid: FileId, offset: u32) -> Option<l
                     SpecValue::GenericRef(_) => None,
                 })
                 .or_else(|| {
-                    dev.generics
-                        .iter()
-                        .find_map(|g| g.default.as_ref().and_then(|(v, s)| check(v, *s)))
+                    dev.generics.iter().find_map(|g| {
+                        g.default.as_ref().and_then(|d| match d {
+                            crate::ast::GenericDefault::Unit(v, s) => check(v, *s),
+                            // RFC-033: an `Int` default is not a unit literal.
+                            crate::ast::GenericDefault::Int(_, _) => None,
+                        })
+                    })
                 })
         })
         .or_else(|| {
@@ -1574,9 +1578,13 @@ fn unit_literal_hover(analysis: &Analysis, fid: FileId, offset: u32) -> Option<l
         // fn path never scanned `f.generics` (review F11).
         .or_else(|| {
             world.fns.values().find_map(|f| {
-                f.generics
-                    .iter()
-                    .find_map(|g| g.default.as_ref().and_then(|(v, s)| check(v, *s)))
+                f.generics.iter().find_map(|g| {
+                    g.default.as_ref().and_then(|d| match d {
+                        crate::ast::GenericDefault::Unit(v, s) => check(v, *s),
+                        // RFC-033: an `Int` default is not a unit literal.
+                        crate::ast::GenericDefault::Int(_, _) => None,
+                    })
+                })
             })
         })?;
     Some(hover_markdown(text, span_to_range(analysis, span)))
@@ -1776,6 +1784,8 @@ fn param_trait_names(f: &FnDef, base: &str) -> Vec<String> {
                         Some(ts.iter().map(|t| t.name.clone()).collect::<Vec<_>>())
                     }
                     GenericBound::Unit(_) => None,
+                    // RFC-033: an `Int` parameter has no trait bounds.
+                    GenericBound::Int(_) => None,
                 }),
             FnParamTy::ImplTrait(ts, _) => Some(ts.iter().map(|t| t.name.clone()).collect()),
             FnParamTy::Pin(_) => None,
@@ -2000,9 +2010,12 @@ fn placement_text(pl: &Placement) -> String {
     format!(
         "**place** `{}` at ({}, {}) rotate {} side {}",
         pl.path_text(),
-        pl.at.0.text,
-        pl.at.1.text,
-        pl.rotate,
+        crate::ast::expr_text(&pl.at.0),
+        crate::ast::expr_text(&pl.at.1),
+        match &pl.rotate {
+            None => "0".to_string(),
+            Some(e) => crate::ast::expr_text(e),
+        },
         pl.side.name()
     )
 }
@@ -2052,7 +2065,7 @@ fn phys_attr_text(pa: &PhysAttr) -> String {
             ..
         } => {
             let base = match index {
-                Some((i, _)) => format!("{}[{}]", inst.name, i),
+                Some((e, _)) => format!("{}[{}]", inst.name, crate::ast::expr_text(e)),
                 None => inst.name.clone(),
             };
             let target = match pin {
