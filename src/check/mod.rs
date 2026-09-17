@@ -1,6 +1,7 @@
 //! The type checker: the "resolves + type-checks" rungs of the verdict ladder.
 
 pub mod bodies;
+pub mod eval;
 pub mod expand;
 pub mod footprints;
 pub mod generics;

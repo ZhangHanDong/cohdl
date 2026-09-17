@@ -262,8 +262,8 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 | Code | Meaning |
 |---|---|
 | E1401 | expression kind/type mistake: an expression where an `Int`/`Length` is expected has the wrong kind, or (until the RFC-033 evaluator lands in Task 7) a computed expression sits in a position only literals reach |
-| E1402 | `[RESERVED, not yet implemented]` overflow or non-exact `Length` division (`1mm / 3` is never rounded) — evaluator lands with RFC-033 Task 5 |
-| E1403 | `[RESERVED, not yet implemented]` division or remainder by zero — evaluator lands with RFC-033 Task 5 |
+| E1402 | overflow or non-exact `Length` division (`1mm / 3` is never rounded) — Int/Length overflow, `i64::MIN / -1`, and unary negation of `i64::MIN` |
+| E1403 | division or remainder by zero (Int and Length operands alike) |
 | E1404 | `[RESERVED, not yet implemented]` reversed `for` range (start above the exclusive end) — loop expansion lands with RFC-033 Task 8 |
 | E1405 | `[RESERVED, not yet implemented]` expansion budget exceeded (iterations / work items / active frames, RFC §9) — metering lands with RFC-033 Task 10 |
 | E1406 | `[RESERVED, not yet implemented]` declaration or operation not admitted in this context (loop bodies, layout loops) — static validation lands with RFC-033 Task 9 |
