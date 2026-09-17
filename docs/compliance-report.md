@@ -4177,10 +4177,15 @@ registered. Notes and honest narrowings:
   local declarations now fail at declaration time in uncalled `fn`s and
   design bodies too (E201, formerly caught only when a design activated
   the code); the same pass rejects known-kind const/bound mismatches and
-  known-zero divisors inside loops that never run. Corpus audit: zero new
-  errors across the 63 `lib/` packages and 3 `examples/` (Task 14
-  re-audits after the remaining tooling tasks; numbers to be pinned
-  there).
+  known-zero divisors inside loops that never run. Corpus audit (Task 14,
+  against an origin/main baseline worktree): **66 package directories** —
+  63 under `lib/` (incl. `@scope/*`) and 3 under `examples/` — totalling
+  **174 `.cohdl` files**, compared verdict+diagnostic-codes with the
+  baseline compiler: **0 DIFF** (no package changed verdict or code set;
+  the E201 correction fired on nothing in the corpus). All three example
+  builds (`joint-motor-controller`, `sf32-miniboard`, `rpi-pico2`)
+  produced **byte-identical** `out/` artifacts (netlist, BOM, layout.json,
+  footprints, CSVs) against the baseline.
 - **`rotate` keeps the RFC-020 deviation:** any whole degree 0..=359 (not
   the closed {0,90,180,270} set) — now expression-valued, evaluated
   before the range check.
