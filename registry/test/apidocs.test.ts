@@ -79,8 +79,8 @@ describe("validateApidocs", () => {
     }
   });
 
-  it("refuses every schema_version except the number 1", () => {
-    for (const schema_version of [2, 0, "1", 1.5, null, undefined, [1]]) {
+  it("refuses every schema_version except 1 or 2", () => {
+    for (const schema_version of [0, "1", 1.5, null, undefined, [1], [1, 2]]) {
       const body = new TextEncoder().encode(
         JSON.stringify({ schema_version, package: { name: "p", version: "1.0.0" } }),
       );
@@ -88,8 +88,26 @@ describe("validateApidocs", () => {
       expect(verdict).toEqual({
         ok: false,
         status: 400,
-        error: "api docs must declare `schema_version` 1",
+        error: "api docs must declare `schema_version` 1 or 2",
       });
+    }
+    // Schema 2 (RFC-033) is accepted; its items may carry body_source text.
+    for (const schema_version of [1, 2]) {
+      const body = new TextEncoder().encode(
+        JSON.stringify({
+          schema_version,
+          package: { name: "p", version: "1.0.0" },
+          items: [
+            {
+              name: "bank",
+              kind: "fn",
+              body_source: "for x: i in 0..N {\n  net _: p\n}",
+            },
+          ],
+        }),
+      );
+      const verdict = validateApidocs(body, "p", "1.0.0");
+      expect(verdict.ok).toBe(true);
     }
   });
 

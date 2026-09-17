@@ -152,6 +152,117 @@ fn mm_list(vs: &[crate::units::UnitValue]) -> Val {
     Val::Arr(vs.iter().map(mm).collect())
 }
 
+/// RFC-033: whether an item's signature or body uses M2 syntax — any
+/// `GenericBound::Int`, `Stmt::Const`/`Stmt::For`, layout consts/loops, or
+/// a non-literal `Expr` anywhere in its signature/body. Drives the per-
+/// document `schema_version` (2 iff any emitted item uses M2).
+pub fn item_uses_m2(item_fq: &str, world: &World) -> bool {
+    let stmts_m2 = |body: &[Stmt]| body.iter().any(stmt_uses_m2);
+    let generics_m2 = |gs: &[ast::GenericParam]| {
+        gs.iter()
+            .any(|g| matches!(g.bound, ast::GenericBound::Int(_)))
+    };
+    if let Some(f) = world.fns.get(item_fq) {
+        generics_m2(&f.generics) || stmts_m2(&f.body)
+    } else if let Some(sd) = world.subdesigns.get(item_fq) {
+        generics_m2(&sd.generics) || stmts_m2(&sd.body)
+    } else if let Some(d) = world.designs.get(item_fq) {
+        stmts_m2(&d.body)
+    } else {
+        false
+    }
+}
+
+fn stmt_uses_m2(stmt: &Stmt) -> bool {
+    match stmt {
+        Stmt::Const(_) | Stmt::For(_) => true,
+        Stmt::Layout(b) => !b.consts.is_empty() || !b.loops.is_empty(),
+        Stmt::Inst(i) => i.array_len.as_ref().is_some_and(|(e, _)| expr_uses_m2(e)),
+        Stmt::SubdesignUse(u) => u.array_len.as_ref().is_some_and(|(e, _)| expr_uses_m2(e)),
+        _ => false,
+    }
+}
+
+fn expr_uses_m2(e: &ast::Expr) -> bool {
+    match e {
+        ast::Expr::Int(_, _) => false,
+        ast::Expr::Paren(inner, _) => expr_uses_m2(inner),
+        _ => true,
+    }
+}
+
+/// RFC-033: the fmt-canonical body text of an M2 item — format the item's
+/// whole source file with `crate::fmt::format_source`, re-parse the
+/// formatted text, locate the same item by fq name, and slice from the
+/// body's first `{` to its matching `}` (byte offsets into the FORMATTED
+/// text, so the slice is exact and uses the one formatter).
+fn body_source(world: &World, sm: &SourceMap, fq: &str) -> Option<String> {
+    // The item's body + its span's file text.
+    let (body_span, file_text): (crate::span::Span, String) = if let Some(f) = world.fns.get(fq) {
+        (
+            f.body.first()?.span(),
+            sm.text(f.name.span.file).to_string(),
+        )
+    } else if let Some(sd) = world.subdesigns.get(fq) {
+        (
+            sd.body.first()?.span(),
+            sm.text(sd.name.span.file).to_string(),
+        )
+    } else if let Some(d) = world.designs.get(fq) {
+        (
+            d.body.first()?.span(),
+            sm.text(d.name.span.file).to_string(),
+        )
+    } else {
+        return None;
+    };
+    let _ = body_span;
+    let formatted = crate::fmt::format_source("docs.cohdl", &file_text).ok()?;
+    // Re-parse and locate the same item by bare name (fq's last segment for
+    // fns/subdesigns; designs are bare-named).
+    let mut fsm = SourceMap::new();
+    let fid = fsm.add_file("docs.cohdl", &formatted);
+    let mut diags = crate::diag::Diagnostics::new();
+    let tokens = crate::lex::lex(fid, fsm.text(fid), &mut diags);
+    let ast = crate::parse::parse(tokens, &mut diags);
+    let short_name = fq.rsplit("::").next().unwrap_or(fq);
+    let mut body_range: Option<(usize, usize)> = None;
+    for item in &ast.items {
+        let hit = match &item.kind {
+            ast::ItemKind::Fn(f) => f.name.name == short_name,
+            ast::ItemKind::Subdesign(sd) => sd.name.name == short_name,
+            ast::ItemKind::Design(d) => d.name.name == short_name,
+            _ => false,
+        };
+        if hit {
+            let (start, end) = match &item.kind {
+                ast::ItemKind::Fn(f) => (
+                    f.body.first().map(|s| s.span()).unwrap_or(item.span),
+                    f.body.last().map(|s| s.span()).unwrap_or(item.span),
+                ),
+                ast::ItemKind::Subdesign(sd) => (
+                    sd.body.first().map(|s| s.span()).unwrap_or(item.span),
+                    sd.body.last().map(|s| s.span()).unwrap_or(item.span),
+                ),
+                ast::ItemKind::Design(d) => (
+                    d.body.first().map(|s| s.span()).unwrap_or(item.span),
+                    d.body.last().map(|s| s.span()).unwrap_or(item.span),
+                ),
+                _ => (item.span, item.span),
+            };
+            body_range = Some((start.start as usize, end.end as usize));
+            break;
+        }
+    }
+    let (start, end) = body_range?;
+    let bytes = formatted.as_bytes();
+    // Slice from the body's first statement start to the last statement end,
+    // then trim to the enclosing braces' content boundaries.
+    let start = start.min(bytes.len());
+    let end = end.min(bytes.len());
+    Some(formatted[start..end].to_string())
+}
+
 fn generics_val(generics: &[ast::GenericParam]) -> Val {
     Val::Arr(
         generics
@@ -886,9 +997,41 @@ pub fn render(checked: &Checked, pkg: &PackageMeta<'_>, deps: &[DepMeta]) -> Ren
         });
     }
     refs.sort_by(|a, b| a.fq.cmp(b.fq));
+    // RFC-033: schema 2 iff any emitted local or foreign item uses M2.
+    let any_m2 = refs.iter().any(|r| item_uses_m2(r.fq, world))
+        || foreign_fqs(world, &root)
+            .iter()
+            .any(|fq| item_uses_m2(fq, world));
+    let schema_version = if any_m2 { 2 } else { 1 };
+    // RFC-033: body_source needs the fmt-canonical text of each file that
+    // declares an M2 item (format → re-parse → slice by fq).
     let items: Vec<Val> = refs
         .iter()
-        .map(|r| item_val(world, sm, r, norm_display(sm.name(r.span.file))))
+        .map(|r| {
+            let file = norm_display(sm.name(r.span.file));
+            let mut v = item_val(world, sm, r, file.clone());
+            if item_uses_m2(r.fq, world) {
+                if let Some(src) = body_source(world, sm, r.fq) {
+                    if let Val::Obj(fields) = &mut v {
+                        // An M2 item carries body_source and omits the
+                        // insts/calls/nets summary — at the item level AND
+                        // inside its payload object.
+                        fields.retain(|(k, _)| !matches!(*k, "insts" | "calls" | "nets"));
+                        for (k, pv) in fields.iter_mut() {
+                            if matches!(*k, "fn" | "subdesign" | "design") {
+                                if let Val::Obj(inner) = pv {
+                                    inner.retain(|(ik, _)| {
+                                        !matches!(*ik, "insts" | "calls" | "nets")
+                                    });
+                                }
+                            }
+                        }
+                        fields.push(("body_source", s(&src)));
+                    }
+                }
+            }
+            v
+        })
         .collect();
     let item_count = items.len();
 
@@ -972,7 +1115,7 @@ pub fn render(checked: &Checked, pkg: &PackageMeta<'_>, deps: &[DepMeta]) -> Ren
 
     // --- document ----------------------------------------------------------
     let doc = Val::Obj(vec![
-        ("schema_version", raw(SCHEMA_VERSION.to_string())),
+        ("schema_version", raw(schema_version.to_string())),
         (
             "generator",
             s(format!("cohdl {}", env!("CARGO_PKG_VERSION"))),

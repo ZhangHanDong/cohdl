@@ -156,13 +156,26 @@ api_docs_size INTEGER` (NULL = no docs uploaded). Search adds migration
 `part_search` FTS5 table with its trigram tokenizer. `schema.sql` mirrors both
 migrations.
 
-## The document (schema_version 1)
+## The document (schema_version 1 and 2)
 
 Produced only by the Rust emitter. Deterministic: same source + same exact
 dependency set → same bytes. Hand-rolled JSON following `src/emit/json.rs`
 conventions — `json_str` escaping, fixed key order, 2-space indent, optional
 keys present only when they have content, one trailing newline, inputs
 pre-sorted (the emitter never sorts at print time).
+
+**Schema 2 (RFC-033).** A document declares `schema_version: 2` iff any
+emitted item — local or foreign — uses RFC-033 syntax (`const N: Int`
+generics, `const`/`for` statements, layout consts/loops, or a non-literal
+expression in a signature/body position); a package without any such item
+stays `schema_version: 1`, byte-identical to before. In a v2 document an
+M2 item carries `"body_source": "<canonical body text>"` — the item's body
+formatted through `cohdl fmt` and sliced from the formatted source — and
+omits the `insts`/`calls`/`nets` summary (the full source text replaces the
+lossy summary). An `Int` generic renders `"bound": {"const": "Int"}` with a
+numeric `"default"`. Consumers treat `body_source` as opaque escaped text:
+render it preformatted, never evaluate it. The registry worker accepts
+`schema_version` 1 or 2.
 
 Value conventions:
 
