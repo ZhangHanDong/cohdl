@@ -1007,6 +1007,12 @@ impl Server {
                 return Some(hover_markdown(text, span_to_range(&analysis, u.span)));
             }
         }
+        // RFC-033: hover on consts, loop binders and `.len`. The bodies are
+        // walked with a visibility stack so the const table at a use site
+        // includes every enclosing body's consts.
+        if let Some(h) = rfc033_hover(world, fid, offset, &analysis) {
+            return Some(h);
+        }
         // Pin USE-SITE hover (RFC-002: any pin reference reveals its
         // obligation/role, not only the declaration): `d.A` in net/nc/call
         // statements resolves through the inst's type (part → device) or a
@@ -1311,6 +1317,65 @@ impl Server {
                 "detail": "declaration",
             }));
         }
+        // RFC-033: in-scope body-local symbols at the cursor — consts (kind
+        // Constant), loop labels and loop binders. The visible set is the
+        // enclosing design/fn body's consts plus, per enclosing loop, its
+        // label and binder.
+        if let Ok(analysis) = self.analyze(&path) {
+            let world = &analysis.checked.world;
+            let fid = analysis.fid_for(&path);
+            let offset =
+                fid.and_then(|f| position_to_offset(&analysis, f, line as u32, character as u32));
+            if let (Some(fid), Some(offset)) = (fid, offset) {
+                let mut locals: Vec<(String, u8)> = Vec::new();
+                let walk = |body: &[crate::ast::Stmt], locals: &mut Vec<(String, u8)>| {
+                    fn rec(
+                        body: &[crate::ast::Stmt],
+                        fid: crate::span::FileId,
+                        offset: u32,
+                        locals: &mut Vec<(String, u8)>,
+                    ) {
+                        for stmt in body {
+                            match stmt {
+                                crate::ast::Stmt::Const(c) => {
+                                    if contains(c.span, fid, offset) || c.span.start > offset {
+                                        // declared at or after the cursor:
+                                        // still list it (a body is small)
+                                    }
+                                    locals.push((c.name.name.clone(), 14 + 8)); // Constant=14? use 14
+                                }
+                                crate::ast::Stmt::For(f) => {
+                                    // Inside the loop's span, the label and
+                                    // binder are in scope.
+                                    if contains(f.span, fid, offset) {
+                                        locals.push((f.label.name.clone(), 14));
+                                        locals.push((f.binder.name.clone(), 6));
+                                    }
+                                    rec(&f.body, fid, offset, locals);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    rec(body, fid, offset, locals);
+                };
+                for design in world.designs.values() {
+                    walk(&design.body, &mut locals);
+                }
+                for f in world.fns.values() {
+                    walk(&f.body, &mut locals);
+                }
+                for (label, kind) in locals {
+                    if label.starts_with(&prefix) || prefix.is_empty() {
+                        items.push(json!({
+                            "label": label,
+                            "kind": kind,
+                            "detail": "local",
+                        }));
+                    }
+                }
+            }
+        }
         json!({ "isIncomplete": false, "items": items })
     }
 
@@ -1467,6 +1532,207 @@ fn body_pin_refs(body: &[Stmt]) -> Vec<&PinRef> {
 /// Pin USE-SITE hover (review R10 / RFC-002): `d.A` resolves through the
 /// inst's type (part → device) to the pin declaration; `target.A` on a
 /// trait-typed fn parameter resolves to the trait pin role.
+/// The identifier (or `Ident.len` base) under a byte offset, if any.
+fn token_at(src: &[u8], offset: u32) -> String {
+    let mut start = (offset as usize).min(src.len());
+    while start > 0 && (src[start - 1].is_ascii_alphanumeric() || src[start - 1] == b'_') {
+        start -= 1;
+    }
+    let mut end = (offset as usize).min(src.len());
+    while end < src.len() && (src[end].is_ascii_alphanumeric() || src[end] == b'_') {
+        end += 1;
+    }
+    String::from_utf8_lossy(&src[start..end]).to_string()
+}
+
+/// RFC-033: hover for `const` names, loop binders and `ARRAY.len`. Walks
+/// every body with a visibility stack; a design-body const that evaluates
+/// with no unknowns also shows its value.
+fn rfc033_hover(
+    world: &crate::resolve::World,
+    fid: FileId,
+    offset: u32,
+    analysis: &Analysis,
+) -> Option<lt::Hover> {
+    use crate::ast::Stmt;
+
+    fn walk(
+        body: &[Stmt],
+        is_design_body: bool,
+        consts: &mut Vec<(
+            String,
+            crate::span::Span,
+            crate::ast::ConstTy,
+            Option<crate::check::eval::Value>,
+        )>,
+        fid: FileId,
+        offset: u32,
+        analysis: &Analysis,
+    ) -> Option<lt::Hover> {
+        for stmt in body {
+            match stmt {
+                Stmt::Const(c) => {
+                    if contains(c.name.span, fid, offset) {
+                        let ty = match c.ty {
+                            crate::ast::ConstTy::Int => "Int",
+                            crate::ast::ConstTy::Length => "Length",
+                        };
+                        let mut text = format!("**const {}: {}**", c.name.name, ty);
+                        // A design-body const shows its value when it
+                        // evaluates with no unknowns (eval against the
+                        // design's own consts).
+                        if is_design_body {
+                            let mut names = std::collections::BTreeMap::new();
+                            for (n, _, _, v) in consts.iter() {
+                                if let Some(v) = v {
+                                    names
+                                        .insert(n.clone(), crate::check::eval::NameKind::Const(*v));
+                                }
+                            }
+                            let lens = std::collections::BTreeMap::new();
+                            let unknown = std::collections::BTreeSet::new();
+                            let env = crate::check::eval::Env {
+                                names: &names,
+                                array_lens: &lens,
+                                unknown_arrays: &unknown,
+                            };
+                            let mut diags = crate::diag::Diagnostics::new();
+                            if let Some(v) = crate::check::eval::eval(&c.value, &env, &mut diags) {
+                                let shown = match v {
+                                    crate::check::eval::Value::Int(i) => {
+                                        format!("value: {i}")
+                                    }
+                                    crate::check::eval::Value::Length(f) => {
+                                        format!("value: {}", crate::check::eval::length_text(f))
+                                    }
+                                };
+                                text.push_str(&format!("\n\n- {shown}"));
+                            }
+                        }
+                        return Some(hover_markdown(text, span_to_range(analysis, c.name.span)));
+                    }
+                    // Record for later use-site hovers (value lazily, only
+                    // when this same body is a design body).
+                    let mut val = None;
+                    if is_design_body {
+                        let mut names = std::collections::BTreeMap::new();
+                        for (n, _, _, v) in consts.iter() {
+                            if let Some(v) = v {
+                                names.insert(n.clone(), crate::check::eval::NameKind::Const(*v));
+                            }
+                        }
+                        let lens = std::collections::BTreeMap::new();
+                        let unknown = std::collections::BTreeSet::new();
+                        let env = crate::check::eval::Env {
+                            names: &names,
+                            array_lens: &lens,
+                            unknown_arrays: &unknown,
+                        };
+                        let mut diags = crate::diag::Diagnostics::new();
+                        val = crate::check::eval::eval(&c.value, &env, &mut diags);
+                    }
+                    consts.push((c.name.name.clone(), c.span, c.ty, val));
+                }
+                Stmt::For(f) => {
+                    // The label and binder hover with the loop's shape.
+                    for id in [&f.label, &f.binder] {
+                        if contains(id.span, fid, offset) {
+                            let text = format!(
+                                "**loop variable** `{}` of `for {}` — `{}..{}` (Int)",
+                                f.binder.name,
+                                f.label.name,
+                                crate::ast::expr_text(&f.start),
+                                crate::ast::expr_text(&f.end)
+                            );
+                            return Some(hover_markdown(text, span_to_range(analysis, id.span)));
+                        }
+                    }
+                    // A use of a visible const inside the loop's bounds or
+                    // body resolves by name.
+                    let header_span = f.start.span().to(f.end.span());
+                    if contains(header_span, fid, offset) {
+                        let src = analysis.checked.sm.text(fid).as_bytes();
+                        let tok = token_at(src, offset);
+                        if let Some((name, _, ty, val)) =
+                            consts.iter().rev().find(|(n, _, _, _)| *n == tok)
+                        {
+                            let text = format!(
+                                "**const {}: {}**{}",
+                                name,
+                                match ty {
+                                    crate::ast::ConstTy::Int => "Int",
+                                    crate::ast::ConstTy::Length => "Length",
+                                },
+                                val.map_or(String::new(), |v| match v {
+                                    crate::check::eval::Value::Int(i) => {
+                                        format!("\n\n- value: {i}")
+                                    }
+                                    crate::check::eval::Value::Length(fl) => {
+                                        format!(
+                                            "\n\n- value: {}",
+                                            crate::check::eval::length_text(fl)
+                                        )
+                                    }
+                                })
+                            );
+                            return Some(hover_markdown(text, span_to_range(analysis, f.span)));
+                        }
+                    }
+                    // Uses of the binder inside the body resolve by token.
+                    let body_hits_binder = {
+                        let src = analysis.checked.sm.text(fid).as_bytes();
+                        let tok = token_at(src, offset);
+                        !tok.is_empty() && tok == f.binder.name
+                    };
+                    if body_hits_binder && contains(f.span, fid, offset) {
+                        let text = format!(
+                            "**loop variable** `{}` of `for {}` — `{}..{}` (Int)",
+                            f.binder.name,
+                            f.label.name,
+                            crate::ast::expr_text(&f.start),
+                            crate::ast::expr_text(&f.end)
+                        );
+                        return Some(hover_markdown(text, span_to_range(analysis, f.span)));
+                    }
+                    let inner = walk(&f.body, is_design_body, consts, fid, offset, analysis);
+                    if inner.is_some() {
+                        return inner;
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    let mut consts: Vec<(
+        String,
+        crate::span::Span,
+        crate::ast::ConstTy,
+        Option<crate::check::eval::Value>,
+    )> = Vec::new();
+    for design in world.designs.values() {
+        if let Some(h) = walk(&design.body, true, &mut consts, fid, offset, analysis) {
+            return Some(h);
+        }
+        consts.clear();
+    }
+    let mut consts2: Vec<(
+        String,
+        crate::span::Span,
+        crate::ast::ConstTy,
+        Option<crate::check::eval::Value>,
+    )> = Vec::new();
+    for f in world.fns.values() {
+        if let Some(h) = walk(&f.body, false, &mut consts2, fid, offset, analysis) {
+            return Some(h);
+        }
+        consts2.clear();
+    }
+    let _ = world;
+    None
+}
+
 fn pin_ref_hover(analysis: &Analysis, fid: FileId, offset: u32) -> Option<lt::Hover> {
     let world = &analysis.checked.world;
     let bodies: Vec<(&[Stmt], Option<&FnDef>)> = world

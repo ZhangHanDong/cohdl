@@ -2306,3 +2306,102 @@ design ZzB {
 
     lsp.shutdown();
 }
+
+// ---------------------------------------------------------------------------
+// RFC-033: hover and completion for consts, loop binders and `.len`.
+
+#[test]
+fn rfc033_hover_const_binder_and_len() {
+    let src = "\
+pub device Led { pins { A: 1 [passive], B: 2 [passive] } }
+design Chain {
+    const N: Int = 4
+    inst leds: [Led; N]
+    net P: leds[0..=3].A
+    for links: n in 0..N - 1 {
+        net _: leds[n].A, leds[n + 1].B
+    }
+    nc: leds[0..=3].B
+}
+";
+    let (_path, uri, text) = fixture("rfc033hover.cohdl", src);
+    let mut lsp = Lsp::start();
+    did_open(&mut lsp, &uri, &text);
+    let _ = lsp.await_diagnostics(&uri);
+
+    // Hover on the const declaration name `N` (line 2).
+    let col = src.lines().nth(2).unwrap().find("N:").unwrap() as u64;
+    let hover = lsp.request(
+        "textDocument/hover",
+        json!({ "textDocument": { "uri": uri }, "position": { "line": 2, "character": col } }),
+    );
+    let hv = hover["contents"]["value"].as_str().unwrap_or_default();
+    assert!(hv.contains("const N: Int"), "const hover:\n{hover}");
+    assert!(
+        hv.contains("value: 4"),
+        "design-body const shows its value:\n{hover}"
+    );
+
+    // Hover on a USE of `N` inside the loop bound (line 5, `0..N - 1`).
+    let line5 = src.lines().nth(5).unwrap();
+    let col = line5.find("N -").unwrap() as u64;
+    let hover = lsp.request(
+        "textDocument/hover",
+        json!({ "textDocument": { "uri": uri }, "position": { "line": 5, "character": col } }),
+    );
+    let hv = hover["contents"]["value"].as_str().unwrap_or_default();
+    assert!(
+        hv.contains("const N: Int"),
+        "const use-site hover:\n{hover}"
+    );
+
+    // Hover on the loop binder `n` inside the loop body (line 6).
+    let line6 = src.lines().nth(6).unwrap();
+    let col = line6.find("n]").unwrap() as u64;
+    let hover = lsp.request(
+        "textDocument/hover",
+        json!({ "textDocument": { "uri": uri }, "position": { "line": 6, "character": col } }),
+    );
+    let hv = hover["contents"]["value"].as_str().unwrap_or_default();
+    assert!(hv.contains("loop variable"), "binder hover:\n{hover}");
+    assert!(hv.contains("links"), "names the loop label:\n{hover}");
+
+    lsp.shutdown();
+}
+
+#[test]
+fn rfc033_completion_lists_const_and_loop_symbols() {
+    let src = "\
+pub device Led { pins { A: 1 [passive], B: 2 [passive] } }
+design Chain {
+    const N: Int = 4
+    inst leds: [Led; N]
+    net P: leds[0..=3].A
+    for links: n in 0..N - 1 {
+        net _: leds[n].A, leds[n + 1].B
+    }
+    nc: leds[0..=3].B
+}
+";
+    let (_path, uri, text) = fixture("rfc033comp.cohdl", src);
+    let mut lsp = Lsp::start();
+    did_open(&mut lsp, &uri, &text);
+    let _ = lsp.await_diagnostics(&uri);
+
+    // Completion on the closing `}` line of the loop (line 7): the loop's
+    // span still contains the cursor, so the label, the binder and the
+    // body's consts are all in-scope with an empty prefix.
+    let comp = lsp.request(
+        "textDocument/completion",
+        json!({ "textDocument": { "uri": uri }, "position": { "line": 7, "character": 0 } }),
+    );
+    let items = comp["items"].as_array().cloned().unwrap_or_default();
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+    assert!(labels.contains(&"N"), "const N in symbols: {labels:?}");
+    assert!(
+        labels.contains(&"links"),
+        "loop label in symbols: {labels:?}"
+    );
+    assert!(labels.contains(&"n"), "binder in symbols: {labels:?}");
+    lsp.shutdown();
+}
