@@ -20,8 +20,10 @@
 - 每个任务先写失败的测试再实现(计划里给了测试代码),测试文件名按计划。
 - 验证命令(逐字,每条 ACK 必附结果):
   `CARGO_INCREMENTAL=0 cargo test --all-targets`
-  `cargo run -- fmt lib examples book/examples --check`
+  `cargo run -- fmt lib --check` 与 `cargo run -- fmt examples --check`(fmt 只接受单个 PATH,逐目录跑)
   `cargo build --manifest-path explorer/extractor/Cargo.toml`
+  `cargo fmt --check`(仓库 CI 门)
+  `CARGO_INCREMENTAL=0 cargo clippy --all-targets -- -D warnings`(仓库 CI 门,零警告)
   任务涉及 docs/error-codes.md 时:`cargo test --test error_registry`。
 - 编译一律 `CARGO_INCREMENTAL=0`;并发编译全机 ≤2;测试可加 `--test-threads=8`。
 - 只 `git add` 自己改的文件,禁止 `git add -A`。不要碰 `book/`、`.superpowers/`、
