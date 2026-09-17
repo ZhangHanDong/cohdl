@@ -255,19 +255,10 @@ impl<'w, 'd> Expander<'w, 'd> {
                     // pin obligations (RFC-002) and trait satisfaction
                     // (RFC-003) apply to it completely unchanged.
                     Some((len_expr, span)) => {
-                        // RFC-033: literal lengths only until Task 7's
-                        // evaluator lands — a computed length is a clean
-                        // E1401, never a panic or a silent fallthrough.
-                        let Some(n) = len_expr.as_int_literal() else {
-                            self.diags.push(Diagnostic::error(
-                                "E1401",
-                                len_expr.span(),
-                                format!(
-                                    "expression not supported here yet — `{}` is not a bare integer (computed array lengths arrive with RFC-033)",
-                                    crate::ast::expr_text(len_expr)
-                                ),
-                            ));
-                            let _ = span;
+                        // RFC-033: the length evaluates against the visible
+                        // names (consts are Task 7; generic Int parameters
+                        // arrive through the substitution).
+                        let Some(n) = self.eval_len(len_expr, scope) else {
                             continue;
                         };
                         if scope.arrays.contains_key(&inst.name.name)
@@ -285,6 +276,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                         scope
                             .arrays
                             .insert(inst.name.name.clone(), (n, len_expr.span()));
+                        let _ = span;
                         for i in 0..n {
                             let mut elem = inst.clone();
                             elem.name = Ident {
@@ -390,6 +382,34 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// guaranteed to agree by sharing the code. `unindexed_help` is the one
     /// thing that legitimately differs — the advice for naming a bare array
     /// reads differently in a `place` than in an attribute.
+    /// RFC-033: evaluate an Int-valued expression in this scope — the
+    /// substitution's Int/Length generics are the visible names. A Length
+    /// (or any eval failure, already diagnosed) is E1401.
+    fn eval_len(&mut self, e: &Expr, scope: &Scope) -> Option<i64> {
+        let names = crate::check::generics::subst_names(&scope.subst);
+        let lens = std::collections::BTreeMap::new();
+        let unknown = std::collections::BTreeSet::new();
+        let env = crate::check::eval::Env {
+            names: &names,
+            array_lens: &lens,
+            unknown_arrays: &unknown,
+        };
+        match crate::check::eval::eval(e, &env, self.diags)? {
+            crate::check::eval::Value::Int(i) => Some(i),
+            crate::check::eval::Value::Length(_) => {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    e.span(),
+                    format!(
+                        "`{}` is a Length, but an array length is an Int (a count)",
+                        crate::ast::expr_text(e)
+                    ),
+                ));
+                None
+            }
+        }
+    }
+
     fn indexed_local(
         &mut self,
         id: &Ident,
@@ -1319,22 +1339,53 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// RFC-024: an array element's internal identity — exactly as if the
     /// author had hand-written `NAME_0: Device`, `NAME_1: Device`, … The
     /// source-facing spelling stays `NAME[i]`.
-    fn array_bounds(&mut self, base: &Ident, sel: &IndexSel, n: i64) -> Option<Vec<i64>> {
-        // RFC-033: computed selectors are E1401 until Task 7 evaluates them;
-        // literal selectors keep the pre-RFC bounds checks byte-identical.
+    /// RFC-033: evaluate a selector's expressions to concrete indices
+    /// (Range inclusive semantics: start..=end with optional step).
+    fn eval_indices(&mut self, sel: &IndexSel, scope: &Scope) -> Option<Vec<i64>> {
+        let (start, end, step) = match sel {
+            IndexSel::Single(e, _) => (self.eval_len(e, scope)?, self.eval_len(e, scope)?, 1),
+            IndexSel::Range {
+                start, end, step, ..
+            } => {
+                let s = self.eval_len(start, scope)?;
+                let e = self.eval_len(end, scope)?;
+                let st = match step {
+                    None => 1,
+                    Some(e) => self.eval_len(e, scope)?,
+                };
+                (s, e, st)
+            }
+            IndexSel::List(items, _) => {
+                let mut out = Vec::with_capacity(items.len());
+                for e in items {
+                    out.push(self.eval_len(e, scope)?);
+                }
+                return Some(out);
+            }
+        };
+        let step = step.max(1);
+        let mut out = Vec::new();
+        let mut i = start;
+        while i <= end {
+            out.push(i);
+            i += step;
+        }
+        Some(out)
+    }
+
+    fn array_bounds(
+        &mut self,
+        base: &Ident,
+        sel: &IndexSel,
+        n: i64,
+        scope: &Scope,
+    ) -> Option<Vec<i64>> {
+        // RFC-033: selectors evaluate against the visible names (generic Int
+        // parameters via the substitution); a bare-literal fast path keeps
+        // the pre-RFC diagnostics identical.
         let idx = match sel.literal_indices() {
             Some(idx) => idx,
-            None => {
-                self.diags.push(Diagnostic::error(
-                    "E1401",
-                    sel.span(),
-                    format!(
-                        "expression not supported here yet — `{}` is not a bare integer index (computed selectors arrive with RFC-033)",
-                        sel
-                    ),
-                ));
-                return None;
-            }
+            None => self.eval_indices(sel, scope)?,
         };
         if idx.is_empty() {
             self.diags.push(Diagnostic::error(
@@ -1386,7 +1437,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             ));
             return Vec::new();
         };
-        let Some(idx) = self.array_bounds(&m.base, sel, n) else {
+        let Some(idx) = self.array_bounds(&m.base, sel, n, scope) else {
             return Vec::new();
         };
         idx.into_iter()
@@ -1441,19 +1492,9 @@ impl<'w, 'd> Expander<'w, 'd> {
                     ));
                     return None;
                 };
-                // RFC-033: computed single indexes are E1401 until Task 7.
-                let Some(i) = e.as_int_literal() else {
-                    self.diags.push(Diagnostic::error(
-                        "E1401",
-                        e.span(),
-                        format!(
-                            "expression not supported here yet — `{}` is not a bare integer (computed indexes arrive with RFC-033)",
-                            crate::ast::expr_text(e)
-                        ),
-                    ));
-                    return None;
-                };
-                self.array_bounds(&r.base, sel, n)?;
+                // RFC-033: a computed single index evaluates in this scope.
+                let i = self.eval_len(e, scope)?;
+                self.array_bounds(&r.base, sel, n, scope)?;
                 Some(Cow::Owned(PinRef {
                     base: Ident {
                         name: element_name(&r.base.name, i),
@@ -1784,6 +1825,8 @@ impl<'w, 'd> Expander<'w, 'd> {
 
     fn handle_nc(&mut self, nc: &NcStmt, scope: &mut Scope) {
         for m in &nc.members {
+            // Fan-out sugar stays scoped to NET member lists (E211 contract,
+            // tests/inst_array.rs) — `nc` takes single elements only.
             if let Some(resolved) = self.resolve_pin_ref(m, scope) {
                 // RFC-032: a port is a connection surface, not a device pin —
                 // `nc` has no meaning for it (an optional port is simply left

@@ -2600,11 +2600,21 @@ impl<'a> Parser<'a> {
                             }
                         }
                         other => {
-                            let msg = format!(
-                                "expected an integer literal as the const default, found {}",
-                                other.describe()
-                            );
-                            self.error_here(msg);
+                            // An Int default must be an integer literal — a
+                            // unit literal (`2mm`) is a kind error (E406).
+                            self.diags.push(Diagnostic::error(
+                                "E406",
+                                self.span(),
+                                format!(
+                                    "an Int default must be an integer literal — `{}` is {}",
+                                    other.describe(),
+                                    if matches!(other, TokenKind::Unit(_)) {
+                                        "a unit value"
+                                    } else {
+                                        "not an integer"
+                                    }
+                                ),
+                            ));
                         }
                     }
                 }

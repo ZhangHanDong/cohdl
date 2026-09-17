@@ -17,9 +17,34 @@ pub enum GenericValue {
     Unit(UnitValue),
     /// A concrete device name (for trait-bound parameters).
     Device(String),
+    /// RFC-033: a resolved `const N: Int` value.
+    Int(i64),
 }
 
 pub type Substitution = BTreeMap<String, GenericValue>;
+
+/// RFC-033: the `NameKind` view of a substitution — the single source every
+/// expander `Env` construction goes through. Int → `GenericInt`; a Length
+/// unit value → `GenericLength`; other units and device bindings carry no
+/// expression meaning and are omitted.
+pub fn subst_names(subst: &Substitution) -> BTreeMap<String, crate::check::eval::NameKind> {
+    let mut out = BTreeMap::new();
+    for (name, value) in subst {
+        match value {
+            GenericValue::Int(i) => {
+                out.insert(name.clone(), crate::check::eval::NameKind::GenericInt(*i));
+            }
+            GenericValue::Unit(v) if v.unit == crate::units::UnitType::Length => {
+                out.insert(
+                    name.clone(),
+                    crate::check::eval::NameKind::GenericLength(v.clone()),
+                );
+            }
+            GenericValue::Unit(_) | GenericValue::Device(_) => {}
+        }
+    }
+    out
+}
 
 /// Resolve `args` against `params`, checking bounds (RFC-007).
 ///
@@ -63,9 +88,11 @@ pub fn resolve_generic_args(
                 (Some(GenericDefault::Unit(val, _)), _) => {
                     subst.insert(param.name.name.clone(), GenericValue::Unit(val.clone()));
                 }
-                // RFC-033: an `Int` default resolves with Task 7; a literal
-                // default is admitted structurally here and judged later.
-                (Some(GenericDefault::Int(_, _)), _) => {}
+                // RFC-033: an `Int` parameter's default is an integer
+                // literal (the parser already enforces that shape).
+                (Some(GenericDefault::Int(n, _)), _) => {
+                    subst.insert(param.name.name.clone(), GenericValue::Int(*n));
+                }
                 (None, _) => {
                     diags.push(
                         Diagnostic::error(
@@ -192,6 +219,21 @@ pub(crate) fn resolve_one(
                     None
                 }
             }
+            // RFC-033: an Int-count binding named where a unit value is
+            // expected.
+            Some(GenericValue::Int(_)) => {
+                diags.push(Diagnostic::error(
+                    "E112",
+                    name.span,
+                    format!(
+                        "`{}` resolves to an Int count, but `{}` expects a `{}`",
+                        name.name,
+                        param.name.name,
+                        u.unit.type_name()
+                    ),
+                ));
+                None
+            }
             Some(GenericValue::Device(d)) => {
                 diags.push(Diagnostic::error(
                     "E112",
@@ -250,6 +292,19 @@ pub(crate) fn resolve_one(
                     ));
                     return None;
                 }
+                // RFC-033: an Int-count binding named where a device type is
+                // expected.
+                Some(GenericValue::Int(_)) => {
+                    diags.push(Diagnostic::error(
+                        "E403",
+                        name.span,
+                        format!(
+                            "`{}` resolves to an Int count, but `{}` expects a device type",
+                            name.name, param.name.name
+                        ),
+                    ));
+                    return None;
+                }
                 None => {
                     if world.devices.contains_key(&name.name) {
                         name.name.clone()
@@ -295,37 +350,131 @@ pub(crate) fn resolve_one(
             ));
             None
         }
-        // RFC-033: an expression argument against a legacy unit/trait bound.
-        // Task 7's evaluator judges the VALUE; until then the same temporary
-        // E1401 as `const N: Int` (no silent fallthrough).
-        (bound, GenericArg::Expr(e)) => {
-            let code = match bound {
-                GenericBound::Unit(_) | GenericBound::Traits(_) => "E1401",
-                GenericBound::Int(_) => "E1401",
+        // ---- RFC-033 expression arguments against legacy bounds ----
+        // A `Length`-bound parameter accepts a computed Length; any other
+        // unit-typed parameter rejects expressions outright.
+        (GenericBound::Unit(u), GenericArg::Expr(e))
+            if u.unit == crate::units::UnitType::Length =>
+        {
+            let names = subst_names(env);
+            let empty_lens = BTreeMap::new();
+            let empty_unknown = std::collections::BTreeSet::new();
+            let env_ref = crate::check::eval::Env {
+                names: &names,
+                array_lens: &empty_lens,
+                unknown_arrays: &empty_unknown,
             };
+            match crate::check::eval::eval(e, &env_ref, diags)? {
+                crate::check::eval::Value::Length(f) => {
+                    Some(GenericValue::Unit(crate::check::eval::length_value(f)))
+                }
+                crate::check::eval::Value::Int(_) => {
+                    diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "`{}` is an Int, but `{}` expects a `Length`",
+                            expr_text(e),
+                            param.name.name
+                        ),
+                    ));
+                    None
+                }
+            }
+        }
+        (GenericBound::Unit(u), GenericArg::Expr(e)) => {
             diags.push(Diagnostic::error(
-                code,
+                "E1401",
                 e.span(),
                 format!(
-                    "expression not supported here yet — `{}` (expression generic arguments resolve with RFC-033, Task 7)",
-                    crate::ast::expr_text(e)
+                    "`{}` is an expression — only Int and Length arguments may be computed; `{}` expects a `{}` literal",
+                    expr_text(e),
+                    param.name.name,
+                    u.unit.type_name()
+                ),
+            ));
+            None
+        }
+        (GenericBound::Traits(_), GenericArg::Expr(e)) => {
+            diags.push(Diagnostic::error(
+                "E403",
+                e.span(),
+                format!(
+                    "`{}` expects a device type, found the expression `{}`",
+                    param.name.name,
+                    expr_text(e)
                 ),
             ));
             None
         }
         // ---- RFC-033 `const N: Int` parameter ----
-        // Task 7's evaluator resolves Int parameters; until then every
-        // concrete shape is the same temporary E1401 (never a panic, never a
-        // silent fallthrough).
-        (GenericBound::Int(span), _) => {
+        // An expression (or a bare number, syntactically admitted) evaluates
+        // through the Task 5 evaluator against the ENCLOSING substitution.
+        (GenericBound::Int(_), arg @ (GenericArg::Expr(_) | GenericArg::Number(..))) => {
+            let e = match arg {
+                GenericArg::Expr(e) => e.clone(),
+                GenericArg::Number(n, sp) => Expr::Int(n.parse().unwrap_or(0), *sp),
+                _ => unreachable!(),
+            };
+            let names = subst_names(env);
+            let empty_lens = BTreeMap::new();
+            let empty_unknown = std::collections::BTreeSet::new();
+            let env_ref = crate::check::eval::Env {
+                names: &names,
+                array_lens: &empty_lens,
+                unknown_arrays: &empty_unknown,
+            };
+            match crate::check::eval::eval(&e, &env_ref, diags)? {
+                crate::check::eval::Value::Int(i) => Some(GenericValue::Int(i)),
+                crate::check::eval::Value::Length(_) => {
+                    diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "`{}` is a Length, but `const {}: Int` expects an Int",
+                            expr_text(&e),
+                            param.name.name
+                        ),
+                    ));
+                    None
+                }
+            }
+        }
+        (GenericBound::Int(_), GenericArg::Unit(v, span)) => {
             diags.push(Diagnostic::error(
                 "E1401",
                 *span,
-                "expression not supported here yet — `const` `Int` generic parameters resolve with RFC-033 (Task 7)"
-                    .to_string(),
+                format!(
+                    "`{}` is a `{}`, but `const {}: Int` expects an Int (a count, not a unit value)",
+                    v.text,
+                    v.unit.type_name(),
+                    param.name.name
+                ),
             ));
             None
         }
+        (GenericBound::Int(_), GenericArg::Name(name)) => match env.get(&name.name) {
+            Some(GenericValue::Int(i)) => Some(GenericValue::Int(*i)),
+            Some(_) => {
+                diags.push(Diagnostic::error(
+                    "E1401",
+                    name.span,
+                    format!(
+                        "`{}` is not an Int here, but `const {}: Int` expects one",
+                        name.name, param.name.name
+                    ),
+                ));
+                None
+            }
+            None => {
+                diags.push(Diagnostic::error(
+                    "E405",
+                    name.span,
+                    format!("`{}` is not a generic parameter in scope here", name.name),
+                ));
+                None
+            }
+        },
     }
 }
 
