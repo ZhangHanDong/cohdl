@@ -54,6 +54,9 @@ pub fn expand_design(world: &World, design: &DesignDef, diags: &mut Diagnostics)
         local_insts: BTreeMap::new(),
         local_subs: BTreeMap::new(),
         arrays: BTreeMap::new(),
+        consts: BTreeMap::new(),
+        binders: BTreeMap::new(),
+        frame: Vec::new(),
     };
     ex.walk_body(&design.body, &mut scope);
     ex.assemble(design)
@@ -101,6 +104,36 @@ struct Scope {
     /// An array's NAME is never itself in `local_insts` — only its elements
     /// (`NAME_0`…`NAME_{N-1}`), so a bare unindexed reference cannot resolve.
     arrays: BTreeMap<String, (i64, crate::span::Span)>,
+    /// RFC-033 §3: this body's evaluated consts (name → value).
+    consts: BTreeMap<String, crate::check::eval::Value>,
+    /// RFC-033 §6: visible loop binders (name → current value). Empty until
+    /// Task 8's frames; the field exists so `names()` has one shape.
+    binders: BTreeMap<String, i64>,
+    /// RFC-033 §6: active loop frames (label, value, binder) — innermost
+    /// last. Empty until Task 8.
+    frame: Vec<(String, i64, String)>,
+}
+
+impl Scope {
+    /// RFC-033: the expression-visible names — consts, loop binders and
+    /// Int/Length generics from the substitution.
+    fn names(&self) -> BTreeMap<String, crate::check::eval::NameKind> {
+        let mut m = crate::check::generics::subst_names(&self.subst);
+        for (k, v) in &self.consts {
+            m.insert(k.clone(), crate::check::eval::NameKind::Const(*v));
+        }
+        for (k, v) in &self.binders {
+            m.insert(k.clone(), crate::check::eval::NameKind::Binder(*v));
+        }
+        m
+    }
+    /// RFC-033: visible array lengths (`.len`).
+    fn array_lens(&self) -> BTreeMap<String, i64> {
+        self.arrays
+            .iter()
+            .map(|(k, (n, _))| (k.clone(), *n))
+            .collect()
+    }
 }
 
 /// One `net` declaration with resolved members, pre-merge.
@@ -239,6 +272,50 @@ fn element_name(base: &str, i: i64) -> String {
 
 impl<'w, 'd> Expander<'w, 'd> {
     fn walk_body(&mut self, body: &[Stmt], scope: &mut Scope) {
+        // Pass 0 (RFC-033 §3): constants and array lengths, dependency-
+        // ordered. Collect this body's consts and array declarations, then
+        // evaluate each on demand — a name on the recursion stack again is
+        // E1407 naming the full cycle.
+        let mut pending: BTreeMap<String, (Expr, Option<ConstTy>, Span)> = BTreeMap::new();
+        for stmt in body {
+            match stmt {
+                Stmt::Const(c) => {
+                    let taken = scope.arrays.contains_key(&c.name.name)
+                        || scope.local_insts.contains_key(&c.name.name)
+                        || scope.local_subs.contains_key(&c.name.name)
+                        || scope.bindings.contains_key(&c.name.name)
+                        || scope.consts.contains_key(&c.name.name)
+                        || pending.contains_key(&c.name.name);
+                    if taken {
+                        self.diags.push(Diagnostic::error(
+                            "E201",
+                            c.name.span,
+                            format!("`{}` is already defined in this scope", c.name.name),
+                        ));
+                        continue;
+                    }
+                    pending.insert(c.name.name.clone(), (c.value.clone(), Some(c.ty), c.span));
+                }
+                Stmt::Inst(i) => {
+                    if let Some((e, sp)) = &i.array_len {
+                        pending.insert(i.name.name.clone(), (e.clone(), None, *sp));
+                    }
+                }
+                Stmt::SubdesignUse(u) => {
+                    if let Some((e, sp)) = &u.array_len {
+                        pending.insert(u.name.name.clone(), (e.clone(), None, *sp));
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut lens: BTreeMap<String, i64> = BTreeMap::new();
+        let mut stack: Vec<String> = Vec::new();
+        let keys: Vec<String> = pending.keys().cloned().collect();
+        for k in keys {
+            self.eval_pending(&k, &pending, scope, &mut lens, &mut stack);
+        }
+
         // Pass 1: instances AND subdesign use sites (declarative bodies —
         // nets may reference later insts and later use sites' ports).
         for stmt in body {
@@ -255,11 +332,12 @@ impl<'w, 'd> Expander<'w, 'd> {
                     // pin obligations (RFC-002) and trait satisfaction
                     // (RFC-003) apply to it completely unchanged.
                     Some((len_expr, span)) => {
-                        // RFC-033: the length evaluates against the visible
-                        // names (consts are Task 7; generic Int parameters
-                        // arrive through the substitution).
-                        let Some(n) = self.eval_len(len_expr, scope) else {
-                            continue;
+                        // RFC-033 pass 0 already evaluated the length
+                        // dependency-ordered (consts, .len, cycles); read
+                        // the memoized result here.
+                        let _ = span;
+                        let Some(n) = lens.get(&inst.name.name).copied() else {
+                            continue; // already diagnosed in pass 0
                         };
                         if scope.arrays.contains_key(&inst.name.name)
                             || scope.local_insts.contains_key(&inst.name.name)
@@ -276,7 +354,6 @@ impl<'w, 'd> Expander<'w, 'd> {
                         scope
                             .arrays
                             .insert(inst.name.name.clone(), (n, len_expr.span()));
-                        let _ = span;
                         for i in 0..n {
                             let mut elem = inst.clone();
                             elem.name = Ident {
@@ -382,31 +459,257 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// guaranteed to agree by sharing the code. `unindexed_help` is the one
     /// thing that legitimately differs — the advice for naming a bare array
     /// reads differently in a `place` than in an attribute.
-    /// RFC-033: evaluate an Int-valued expression in this scope — the
-    /// substitution's Int/Length generics are the visible names. A Length
-    /// (or any eval failure, already diagnosed) is E1401.
-    fn eval_len(&mut self, e: &Expr, scope: &Scope) -> Option<i64> {
-        let names = crate::check::generics::subst_names(&scope.subst);
-        let lens = std::collections::BTreeMap::new();
-        let unknown = std::collections::BTreeSet::new();
+    /// RFC-033 pass 0: memoized dependency evaluation of one pending name (a
+    /// const or an array length). A name on the recursion stack again is
+    /// E1407 naming the full cycle, reported once at the first participant.
+    fn eval_pending(
+        &mut self,
+        k: &str,
+        pending: &BTreeMap<String, (Expr, Option<ConstTy>, Span)>,
+        scope: &mut Scope,
+        lens: &mut BTreeMap<String, i64>,
+        stack: &mut Vec<String>,
+    ) {
+        if scope.consts.contains_key(k) || lens.contains_key(k) {
+            return; // memoized
+        }
+        if let Some(pos) = stack.iter().position(|s| s == k) {
+            // Cyclic dependency — report once, naming the full cycle.
+            let mut cycle: Vec<String> = stack[pos..].iter().cloned().collect();
+            cycle.push(k.to_string());
+            let shown: Vec<String> = cycle
+                .iter()
+                .map(|name| {
+                    // An array participant renders as `NAME.len` (the only
+                    // way a length participates in a cycle).
+                    match pending.get(name) {
+                        Some((_, Some(_), _)) => format!("`{}`", name),
+                        _ => format!("`{}.len`", name),
+                    }
+                })
+                .collect();
+            self.diags.push(Diagnostic::error(
+                "E1407",
+                pending[k].2,
+                format!("cyclic dependency: {}", shown.join(" → ")),
+            ));
+            // Poison every participant so each reports exactly once.
+            for name in &cycle {
+                let sp = pending.get(name).map(|(_, _, sp)| *sp);
+                if let Some((_, Some(_), _)) = pending.get(name) {
+                    scope.consts.insert(
+                        name.clone(),
+                        crate::check::eval::Value::Int(0), // poisoned
+                    );
+                } else if let Some(sp) = sp {
+                    let _ = sp;
+                    lens.insert(name.clone(), 0); // poisoned
+                }
+            }
+            return;
+        }
+        let Some((expr, ty, span)) = pending.get(k).cloned() else {
+            return;
+        };
+        stack.push(k.to_string());
+        // Pre-scan: forward references to other pending names evaluate first.
+        let mut refs: Vec<String> = Vec::new();
+        collect_expr_refs(&expr, &mut refs);
+        for r in refs {
+            if pending.contains_key(&r) && !scope.consts.contains_key(&r) && !lens.contains_key(&r)
+            {
+                self.eval_pending(&r, pending, scope, lens, stack);
+            }
+        }
+        // Evaluate. Pending consts not yet evaluated are typed Unknown so a
+        // residual (non-cyclic) forward use still type-checks without a value.
+        let names = {
+            let mut m = scope.names();
+            for (name, (_, ty, _)) in pending {
+                if !m.contains_key(name) {
+                    let t = match ty {
+                        Some(ConstTy::Int) | None => crate::check::eval::Ty::Int,
+                        Some(ConstTy::Length) => crate::check::eval::Ty::Length,
+                    };
+                    m.insert(name.clone(), crate::check::eval::NameKind::Unknown(t));
+                }
+            }
+            m
+        };
+        // Array lengths of still-pending arrays read as unknown arrays (their
+        // length is exactly what is being computed).
+        let known_lens: std::collections::BTreeMap<String, i64> = scope
+            .arrays
+            .iter()
+            .map(|(n, (v, _))| (n.clone(), *v))
+            .collect();
+        let pending_arrays: std::collections::BTreeSet<String> = pending
+            .iter()
+            .filter(|(_, (_, ty, _))| ty.is_none())
+            .map(|(n, _)| n.clone())
+            .collect();
+        let env = crate::check::eval::Env {
+            names: &names,
+            array_lens: &known_lens,
+            unknown_arrays: &pending_arrays,
+        };
+        let mut local = Diagnostics::new();
+        let v = crate::check::eval::eval(&expr, &env, &mut local);
+        self.push_with_suffix(local, scope);
+        let _ = span;
+        match (ty, v) {
+            (Some(ConstTy::Int), Some(crate::check::eval::Value::Int(i))) => {
+                scope
+                    .consts
+                    .insert(k.to_string(), crate::check::eval::Value::Int(i));
+            }
+            (Some(ConstTy::Int), Some(crate::check::eval::Value::Length(_))) => {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    expr.span(),
+                    format!(
+                        "const `{k}: Int` cannot be assigned the Length `{}`",
+                        crate::ast::expr_text(&expr)
+                    ),
+                ));
+            }
+            (Some(ConstTy::Length), Some(crate::check::eval::Value::Length(f))) => {
+                scope
+                    .consts
+                    .insert(k.to_string(), crate::check::eval::Value::Length(f));
+            }
+            (Some(ConstTy::Length), Some(crate::check::eval::Value::Int(_))) => {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    expr.span(),
+                    format!(
+                        "const `{k}: Length` cannot be assigned the Int `{}`",
+                        crate::ast::expr_text(&expr)
+                    ),
+                ));
+            }
+            // An array length.
+            (None, Some(crate::check::eval::Value::Int(i))) => {
+                if i < 1 {
+                    self.diags.push(Diagnostic::error(
+                        "E211",
+                        expr.span(),
+                        format!(
+                            "array length `{i}` must be 1 or more (computed from `{}`)",
+                            crate::ast::expr_text(&expr)
+                        ),
+                    ));
+                }
+                lens.insert(k.to_string(), i);
+            }
+            (None, Some(crate::check::eval::Value::Length(_))) => {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    expr.span(),
+                    format!(
+                        "an array length must be an Int, but `{}` is a Length",
+                        crate::ast::expr_text(&expr)
+                    ),
+                ));
+            }
+            (_, None) => {} // already diagnosed by eval
+        }
+        stack.pop();
+    }
+
+    /// RFC-033 §6: the frame suffix appended to diagnostics raised inside a
+    /// loop frame (" — in <path>, <binder> = <value>"); empty at top level.
+    fn frame_suffix(&self, scope: &Scope) -> String {
+        match scope.frame.last() {
+            None => String::new(),
+            Some((_, v, binder)) => {
+                format!(
+                    " — in {}, {} = {}",
+                    crate::resolve::short(&scope.path),
+                    binder,
+                    v
+                )
+            }
+        }
+    }
+
+    /// Re-push diagnostics from a local batch with the frame suffix appended
+    /// to each main message.
+    fn push_with_suffix(&mut self, local: Diagnostics, scope: &Scope) {
+        for mut d in local.into_iter() {
+            d.message.push_str(&self.frame_suffix(scope));
+            self.diags.push(d);
+        }
+    }
+
+    /// RFC-033: evaluate an Int-valued expression against the scope's
+    /// visible names/arrays. A Length result is E1401.
+    fn eval_int(&mut self, e: &Expr, scope: &Scope, what: &str) -> Option<i64> {
+        let names = scope.names();
+        let lens = scope.array_lens();
+        let none = std::collections::BTreeSet::new();
         let env = crate::check::eval::Env {
             names: &names,
             array_lens: &lens,
-            unknown_arrays: &unknown,
+            unknown_arrays: &none,
         };
-        match crate::check::eval::eval(e, &env, self.diags)? {
-            crate::check::eval::Value::Int(i) => Some(i),
-            crate::check::eval::Value::Length(_) => {
+        let mut local = Diagnostics::new();
+        let v = crate::check::eval::eval(e, &env, &mut local);
+        self.push_with_suffix(local, scope);
+        match v {
+            Some(crate::check::eval::Value::Int(i)) => Some(i),
+            Some(crate::check::eval::Value::Length(_)) => {
                 self.diags.push(Diagnostic::error(
                     "E1401",
                     e.span(),
                     format!(
-                        "`{}` is a Length, but an array length is an Int (a count)",
-                        crate::ast::expr_text(e)
+                        "{} must be an Int, but `{}` is a Length{}",
+                        what,
+                        crate::ast::expr_text(e),
+                        self.frame_suffix(scope)
                     ),
                 ));
                 None
             }
+            None => None,
+        }
+    }
+
+    /// RFC-033: evaluate a Length-valued expression. A literal keeps its own
+    /// spelling; a computed value gets the canonical text. An Int result is
+    /// E1401.
+    fn eval_length(&mut self, e: &Expr, scope: &Scope, what: &str) -> Option<UnitValue> {
+        // A literal (possibly parenthesized) keeps its written spelling.
+        if let Some(v) = e.as_length_literal() {
+            return Some(v.clone());
+        }
+        let names = scope.names();
+        let lens = scope.array_lens();
+        let none = std::collections::BTreeSet::new();
+        let env = crate::check::eval::Env {
+            names: &names,
+            array_lens: &lens,
+            unknown_arrays: &none,
+        };
+        let mut local = Diagnostics::new();
+        let v = crate::check::eval::eval(e, &env, &mut local);
+        self.push_with_suffix(local, scope);
+        match v {
+            Some(crate::check::eval::Value::Length(f)) => Some(crate::check::eval::length_value(f)),
+            Some(crate::check::eval::Value::Int(_)) => {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    e.span(),
+                    format!(
+                        "{} is a `Length` (`mm`) value — `{}` is an Int{}",
+                        what,
+                        crate::ast::expr_text(e),
+                        self.frame_suffix(scope)
+                    ),
+                ));
+                None
+            }
+            None => None,
         }
     }
 
@@ -417,24 +720,11 @@ impl<'w, 'd> Expander<'w, 'd> {
         scope: &Scope,
         unindexed_help: &str,
     ) -> Option<String> {
-        // RFC-033: unwrap the expression index; a computed index is a clean
-        // E1401 until Task 7 evaluates them.
+        // RFC-033: the index evaluates through the scope (consts, generics,
+        // and — from Task 8 — loop binders); a Length result is E1401.
         let index: Option<(i64, Span)> = match index {
             None => None,
-            Some((e, sp)) => match e.as_int_literal() {
-                Some(i) => Some((i, *sp)),
-                None => {
-                    self.diags.push(Diagnostic::error(
-                        "E1401",
-                        e.span(),
-                        format!(
-                            "expression not supported here yet — `{}` is not a bare integer (computed indexes arrive with RFC-033)",
-                            crate::ast::expr_text(e)
-                        ),
-                    ));
-                    return None;
-                }
-            },
+            Some((e, sp)) => Some((self.eval_int(e, scope, "an index")?, *sp)),
         };
         match (index, scope.arrays.get(&id.name).copied()) {
             (None, None) => Some(id.name.clone()),
@@ -572,18 +862,11 @@ impl<'w, 'd> Expander<'w, 'd> {
                     return;
                 }
                 (Some((e, sp)), Some((n, _))) => {
-                    // RFC-033: computed path indexes are E1401 until Task 7.
-                    let Some(i) = e.as_int_literal() else {
-                        self.diags.push(Diagnostic::error(
-                            "E1401",
-                            e.span(),
-                            format!(
-                                "expression not supported here yet — `{}` is not a bare integer (computed placement indexes arrive with RFC-033)",
-                                crate::ast::expr_text(e)
-                            ),
-                        ));
+                    // RFC-033: the path-segment index evaluates in this scope.
+                    let Some(i) = self.eval_int(e, scope, "a placement index") else {
                         return;
                     };
+                    let _ = sp;
                     if i < 0 || i >= n {
                         self.diags.push(Diagnostic::error(
                             "E202",
@@ -629,23 +912,17 @@ impl<'w, 'd> Expander<'w, 'd> {
                 return;
             };
         }
-        // RFC-033: coordinates/rotation are expression nodes. Literal-only
-        // until Task 7 evaluates them; a computed value is a clean E1401.
+        // RFC-033: coordinates evaluate through `eval_length` (a literal keeps
+        // its spelling; a computed value gets canonical text), then the
+        // existing unit-type and geometry-range checks run unchanged.
         let at: (UnitValue, UnitValue) = {
-            let mut out: Option<(UnitValue, UnitValue)> = None;
-            for (e, what) in [(&placement.at.0, "x"), (&placement.at.1, "y")] {
-                let Some(v) = e.as_length_literal() else {
-                    self.diags.push(Diagnostic::error(
-                        "E1401",
-                        e.span(),
-                        format!(
-                            "expression not supported here yet — `{}` is not a plain `Length` literal (computed coordinates arrive with RFC-033)",
-                            crate::ast::expr_text(e)
-                        ),
-                    ));
-                    return;
-                };
-                let _ = what;
+            let Some(x) = self.eval_length(&placement.at.0, scope, "placement x") else {
+                return;
+            };
+            let Some(y) = self.eval_length(&placement.at.1, scope, "placement y") else {
+                return;
+            };
+            for (v, what) in [(&x, "x"), (&y, "y")] {
                 if v.unit != UnitType::Length {
                     self.diags.push(Diagnostic::error(
                         "E1007",
@@ -670,15 +947,8 @@ impl<'w, 'd> Expander<'w, 'd> {
                     ));
                     return;
                 }
-                out = match out {
-                    None => Some((v.clone(), v.clone())),
-                    Some((x, _)) => Some((x, v.clone())),
-                };
             }
-            match out {
-                Some((x, y)) => (x, y),
-                None => return,
-            }
+            (x, y)
         };
         // Rotation is any whole degree in 0..=359 (deviation from RFC-020's
         // closed {0, 90, 180, 270}, at the board author's direction — ledgered
@@ -688,40 +958,23 @@ impl<'w, 'd> Expander<'w, 'd> {
         let rotate: u16 = match &placement.rotate {
             None => 0,
             Some(e) => {
-                let Some(n) = e.as_int_literal() else {
+                let Some(n) = self.eval_int(e, scope, "a rotation") else {
+                    return;
+                };
+                if n < 0 || n > 359 {
                     self.diags.push(Diagnostic::error(
-                        "E1401",
+                        "E1007",
                         e.span(),
                         format!(
-                            "expression not supported here yet — `{}` is not a bare integer (computed rotation arrives with RFC-033)",
-                            crate::ast::expr_text(e)
+                            "`rotate {}` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise)",
+                            n
                         ),
                     ));
                     return;
-                };
-                // A literal that does not fit u16 was mapped to u16::MAX by
-                // the parser (the pre-RFC sentinel) so the range check below
-                // still owns the report.
-                u16::try_from(n.unsigned_abs().min(u32::from(u16::MAX) as u64) as u64)
-                    .unwrap_or(u16::MAX)
+                }
+                n as u16
             }
         };
-        if rotate > 359 {
-            let shown = if rotate == u16::MAX {
-                "that value".to_string()
-            } else {
-                rotate.to_string()
-            };
-            self.diags.push(Diagnostic::error(
-                "E1007",
-                placement.span,
-                format!(
-                    "`rotate {}` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise)",
-                    shown
-                ),
-            ));
-            return;
-        }
         let data = PlaceData {
             at: (at.0.clone(), at.1.clone()),
             rotate,
@@ -1343,22 +1596,26 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// (Range inclusive semantics: start..=end with optional step).
     fn eval_indices(&mut self, sel: &IndexSel, scope: &Scope) -> Option<Vec<i64>> {
         let (start, end, step) = match sel {
-            IndexSel::Single(e, _) => (self.eval_len(e, scope)?, self.eval_len(e, scope)?, 1),
+            IndexSel::Single(e, _) => (
+                self.eval_int(e, scope, "an index")?,
+                self.eval_int(e, scope, "an index")?,
+                1,
+            ),
             IndexSel::Range {
                 start, end, step, ..
             } => {
-                let s = self.eval_len(start, scope)?;
-                let e = self.eval_len(end, scope)?;
+                let s = self.eval_int(start, scope, "a range start")?;
+                let e = self.eval_int(end, scope, "a range end")?;
                 let st = match step {
                     None => 1,
-                    Some(e) => self.eval_len(e, scope)?,
+                    Some(e) => self.eval_int(e, scope, "a stride")?,
                 };
                 (s, e, st)
             }
             IndexSel::List(items, _) => {
                 let mut out = Vec::with_capacity(items.len());
                 for e in items {
-                    out.push(self.eval_len(e, scope)?);
+                    out.push(self.eval_int(e, scope, "an index")?);
                 }
                 return Some(out);
             }
@@ -1493,7 +1750,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                     return None;
                 };
                 // RFC-033: a computed single index evaluates in this scope.
-                let i = self.eval_len(e, scope)?;
+                let i = self.eval_int(e, scope, "an index")?;
                 self.array_bounds(&r.base, sel, n, scope)?;
                 Some(Cow::Owned(PinRef {
                     base: Ident {
@@ -2044,6 +2301,9 @@ impl<'w, 'd> Expander<'w, 'd> {
             local_insts: BTreeMap::new(),
             local_subs: BTreeMap::new(),
             arrays: BTreeMap::new(),
+            consts: BTreeMap::new(),
+            binders: BTreeMap::new(),
+            frame: Vec::new(),
         };
         self.active_calls.push(call.callee.name.clone());
         // Clone the body to release the borrow on `self.world`.
@@ -2151,18 +2411,20 @@ impl<'w, 'd> Expander<'w, 'd> {
         let element_names: Vec<String> = match &stmt.array_len {
             None => vec![stmt.name.name.clone()],
             Some((len_expr, _)) => {
-                // RFC-033: computed lengths are E1401 until Task 7.
-                let Some(n) = len_expr.as_int_literal() else {
-                    self.diags.push(Diagnostic::error(
-                        "E1401",
-                        len_expr.span(),
-                        format!(
-                            "expression not supported here yet — `{}` is not a bare integer (computed array lengths arrive with RFC-033)",
-                            crate::ast::expr_text(len_expr)
-                        ),
-                    ));
+                // RFC-033: the subdesign array length evaluates against the
+                // scope (consts/generics; pass 0 handles dependency order for
+                // design bodies — subdesign use sites evaluate directly).
+                let Some(n) = self.eval_int(len_expr, scope, "a subdesign array length") else {
                     return;
                 };
+                if n < 1 {
+                    self.diags.push(Diagnostic::error(
+                        "E211",
+                        len_expr.span(),
+                        format!("array length `{n}` must be 1 or more"),
+                    ));
+                    return;
+                }
                 scope
                     .arrays
                     .insert(stmt.name.name.clone(), (n, len_expr.span()));
@@ -2209,6 +2471,9 @@ impl<'w, 'd> Expander<'w, 'd> {
                 local_insts: BTreeMap::new(),
                 local_subs: BTreeMap::new(),
                 arrays: BTreeMap::new(),
+                consts: BTreeMap::new(),
+                binders: BTreeMap::new(),
+                frame: Vec::new(),
             };
             self.active_subs.push(fq.clone());
             // The node exists BEFORE its body walks: an in-body reference
@@ -3044,6 +3309,25 @@ fn map_layout_nets(
 
 /// Deduplicate, preserving first-occurrence order (never sort — the artifact's
 /// determinism comes from source order).
+/// RFC-033 pass 0: the `Name`/`Len` identifiers an expression references
+/// (dependency pre-scan).
+fn collect_expr_refs(e: &Expr, out: &mut Vec<String>) {
+    match e {
+        Expr::Name(id) | Expr::Len(id, _) => {
+            if !out.contains(&id.name) {
+                out.push(id.name.clone());
+            }
+        }
+        Expr::Paren(inner, _) => collect_expr_refs(inner, out),
+        Expr::Unary { rhs, .. } => collect_expr_refs(rhs, out),
+        Expr::Binary { lhs, rhs, .. } => {
+            collect_expr_refs(lhs, out);
+            collect_expr_refs(rhs, out);
+        }
+        Expr::Int(_, _) | Expr::Length(_, _) => {}
+    }
+}
+
 fn dedup_in_order(nets: Vec<String>) -> Vec<String> {
     let mut seen = BTreeSet::new();
     nets.into_iter()

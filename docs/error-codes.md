@@ -267,7 +267,7 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 | E1404 | `[RESERVED, not yet implemented]` reversed `for` range (start above the exclusive end) — loop expansion lands with RFC-033 Task 8 |
 | E1405 | `[RESERVED, not yet implemented]` expansion budget exceeded (iterations / work items / active frames, RFC §9) — metering lands with RFC-033 Task 10 |
 | E1406 | `[RESERVED, not yet implemented]` declaration or operation not admitted in this context (loop bodies, layout loops) — static validation lands with RFC-033 Task 9 |
-| E1407 | `[RESERVED, not yet implemented]` const / array-length dependency cycle — dependency evaluation lands with RFC-033 Task 7 |
+| E1407 | const / array-length dependency cycle — the full cycle is named (`a` → `b` → … → `a`) |
 
 ## D00x — residual DRC (RFC-004; exactly four, never more)
 
