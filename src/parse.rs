@@ -1191,6 +1191,31 @@ impl<'a> Parser<'a> {
     }
 
     fn unit_literal(&mut self, ctx: &str) -> Option<UnitValue> {
+        // RFC-033: `-` lexes as its own token; a `-` byte-adjacent to a unit
+        // literal here is still a signed literal (`-1.5mm`, `-40C`).
+        if self.at(&TokenKind::Minus) && matches!(self.peek_ahead(1), TokenKind::Unit(_)) {
+            let minus_span = self.span();
+            let adjacent = {
+                let idx = self.pos;
+                idx + 1 < self.tokens.len()
+                    && self.tokens[idx].span.end == self.tokens[idx + 1].span.start
+            };
+            if adjacent {
+                self.bump(); // -
+                let t = self.bump();
+                let TokenKind::Unit(v) = t.kind else {
+                    unreachable!()
+                };
+                match v.negate_for_literal() {
+                    Ok(v) => return Some(v),
+                    Err(msg) => {
+                        self.diags
+                            .push(Diagnostic::error("E105", minus_span.to(t.span), msg));
+                        return None;
+                    }
+                }
+            }
+        }
         match self.peek() {
             TokenKind::Unit(_) => {
                 let t = self.bump();
@@ -2431,6 +2456,38 @@ impl<'a> Parser<'a> {
         let start = self.span();
         let name = self.ident("as the spec field name")?;
         self.expect(&TokenKind::Colon, "after the spec field name");
+        // RFC-033: `-` is its own token; a `-` byte-adjacent to a unit
+        // literal is a signed literal, handled by the shared path below
+        // (E105 for unsigned types, e.g. `spec { v: -5V }`).
+        if self.at(&TokenKind::Minus) && matches!(self.peek_ahead(1), TokenKind::Unit(_)) {
+            let minus_span = self.span();
+            let adjacent = {
+                let idx = self.pos;
+                idx + 1 < self.tokens.len()
+                    && self.tokens[idx].span.end == self.tokens[idx + 1].span.start
+            };
+            if adjacent {
+                self.bump(); // -
+                let t = self.bump();
+                let TokenKind::Unit(v) = t.kind else {
+                    unreachable!()
+                };
+                match v.negate_for_literal() {
+                    Ok(v) => {
+                        return Some(DeviceSpecField {
+                            name,
+                            value: SpecValue::Lit(v, minus_span.to(t.span)),
+                            span: start.to(self.prev_span()),
+                        })
+                    }
+                    Err(msg) => {
+                        self.diags
+                            .push(Diagnostic::error("E105", minus_span.to(t.span), msg));
+                        return None;
+                    }
+                }
+            }
+        }
         let value = match self.peek() {
             TokenKind::Unit(_) => {
                 let t = self.bump();
@@ -3962,10 +4019,9 @@ impl<'a> Parser<'a> {
         let open = self.span();
         self.bump(); // `[`
         let first = self.index_number("in the index")?;
-        // `..=` lexes as Dot Dot Eq — the range form; anything else is a list.
-        if self.at(&TokenKind::Dot) {
+        // `..=` lexes as DotDot Eq — the range form; anything else is a list.
+        if self.at(&TokenKind::DotDot) {
             self.bump();
-            self.expect(&TokenKind::Dot, "in the range `..=`");
             self.expect(&TokenKind::Eq, "in the range `..=` (ranges are inclusive)");
             let end = self.index_number("as the range end")?;
             let mut step = 1;

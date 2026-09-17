@@ -56,7 +56,7 @@ CLI-only has at least one real call site in `src/`.
 | Code | Meaning |
 |---|---|
 | E101 | non-ASCII unit spelling (`Ω`, `°C`) directly after a number |
-| E102 | negative bare number (only `Temperature` and `Length` literals may be negative) |
+| E102 | negative bare number (only `Temperature` and `Length` literals may be negative) — temporarily without a call site while RFC-033 Task 3 moves the check to the parser's `legacy_number`; the code stays reserved for that landing `[RESERVED, RFC-033 Task 3]` |
 | E103 | unknown unit suffix |
 | E104 | SI prefix not allowed for this unit (incl. any prefix on `Temperature`/`Tolerance`) |
 | E105 | leading `-` on a unit literal whose type is not signed (only `Temperature` and `Length` may carry a sign) |
