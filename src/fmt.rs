@@ -964,23 +964,21 @@ impl Formatter<'_> {
 
     fn stmt(&mut self, stmt: &Stmt, indent: usize) {
         match stmt {
-            // RFC-033: `const`/`for` printing lands with Task 4; they cannot
-            // parse until Task 3, so unreachable in practice (guard below).
-            Stmt::Const(s) => {
+            Stmt::Const(c) => {
+                self.flush_leading(self.line_start(c.span), indent);
+                let ty = match c.ty {
+                    ConstTy::Int => "Int",
+                    ConstTy::Length => "Length",
+                };
                 self.push(
                     indent,
-                    format!(
-                        "const {}: {} = {}",
-                        s.name.name,
-                        match s.ty {
-                            ConstTy::Int => "Int",
-                            ConstTy::Length => "Length",
-                        },
-                        expr_text(&s.value)
-                    ),
+                    format!("const {}: {} = {}", c.name.name, ty, expr_text(&c.value)),
                 );
+                self.finish_construct(self.line_start(c.span), self.line_end(c.span), indent);
             }
             Stmt::For(f) => {
+                let held = self.hold_line_comment(self.line_start(f.span), self.line_end(f.span));
+                self.flush_leading(self.line_start(f.span), indent);
                 self.push(
                     indent,
                     format!(
@@ -991,10 +989,14 @@ impl Formatter<'_> {
                         expr_text(&f.end)
                     ),
                 );
+                self.attach_trailing(self.line_start(f.span));
                 for s in &f.body {
                     self.stmt(s, indent + 1);
                 }
-                self.push(indent, "}".to_string());
+                self.flush_leading(self.line_end(f.span), indent + 1);
+                self.push(indent, "}");
+                self.append_held(held);
+                self.cursor = self.cursor.max(self.line_end(f.span) + 1);
             }
             Stmt::Inst(s) => {
                 // All attributes in SOURCE order (never a fixed canonical
@@ -1071,6 +1073,24 @@ impl Formatter<'_> {
                 let held = self.hold_line_comment(self.line_start(s.span), self.line_end(s.span));
                 self.push(indent, "layout {");
                 self.attach_trailing(self.line_start(s.span));
+                // RFC-033: consts first — they may feed every later member's
+                // expressions, so reading order mirrors evaluation order.
+                for c in &s.consts {
+                    self.flush_leading(self.line_start(c.span), indent + 1);
+                    let ty = match c.ty {
+                        ConstTy::Int => "Int",
+                        ConstTy::Length => "Length",
+                    };
+                    self.push(
+                        indent + 1,
+                        format!("const {}: {} = {}", c.name.name, ty, expr_text(&c.value)),
+                    );
+                    self.finish_construct(
+                        self.line_start(c.span),
+                        self.line_end(c.span),
+                        indent + 1,
+                    );
+                }
                 for c in &s.constraints {
                     self.flush_leading(self.line_start(c.span()), indent + 1);
                     self.layout_constraint(c, indent + 1);
@@ -1123,6 +1143,10 @@ impl Formatter<'_> {
                         self.line_end(p.span),
                         indent + 1,
                     );
+                }
+                // RFC-033: labelled placement loops, after the placements.
+                for l in &s.loops {
+                    self.layout_for(l, indent + 1);
                 }
                 self.flush_leading(self.line_end(s.span), indent + 1);
                 self.push(indent, "}");
@@ -1177,6 +1201,67 @@ impl Formatter<'_> {
 
     /// One layout constraint, wrapping long net lists (RFC-009's 100-column
     /// soft target applies inside `layout {}` too).
+    /// RFC-033: a labelled layout loop — header, consts, placements, nested
+    /// loops (source order within each group), `}`.
+    fn layout_for(&mut self, f: &LayoutFor, indent: usize) {
+        let held = self.hold_line_comment(self.line_start(f.span), self.line_end(f.span));
+        self.flush_leading(self.line_start(f.span), indent);
+        self.push(
+            indent,
+            format!(
+                "for {}: {} in {}..{} {{",
+                f.label.name,
+                f.binder.name,
+                expr_text(&f.start),
+                expr_text(&f.end)
+            ),
+        );
+        self.attach_trailing(self.line_start(f.span));
+        for c in &f.consts {
+            self.flush_leading(self.line_start(c.span), indent + 1);
+            let ty = match c.ty {
+                ConstTy::Int => "Int",
+                ConstTy::Length => "Length",
+            };
+            self.push(
+                indent + 1,
+                format!("const {}: {} = {}", c.name.name, ty, expr_text(&c.value)),
+            );
+            self.finish_construct(self.line_start(c.span), self.line_end(c.span), indent + 1);
+        }
+        for p in &f.placements {
+            self.flush_leading(self.line_start(p.span), indent + 1);
+            let rot = match &p.rotate {
+                None => String::new(),
+                Some(e) if matches!(e.as_int_literal(), Some(0)) => String::new(),
+                Some(e) => format!(" rotate {}", expr_text(e)),
+            };
+            let side = match p.side {
+                crate::ast::PlacementSide::Top => String::new(),
+                crate::ast::PlacementSide::Bottom => " side bottom".to_string(),
+            };
+            self.push(
+                indent + 1,
+                format!(
+                    "place {} at ({}, {}){}{}",
+                    p.path_text(),
+                    expr_text(&p.at.0),
+                    expr_text(&p.at.1),
+                    rot,
+                    side
+                ),
+            );
+            self.finish_construct(self.line_start(p.span), self.line_end(p.span), indent + 1);
+        }
+        for l in &f.loops {
+            self.layout_for(l, indent + 1);
+        }
+        self.flush_leading(self.line_end(f.span), indent + 1);
+        self.push(indent, "}");
+        self.append_held(held);
+        self.cursor = self.cursor.max(self.line_end(f.span) + 1);
+    }
+
     fn layout_constraint(&mut self, c: &LayoutConstraint, indent: usize) {
         match c {
             LayoutConstraint::NetClass { name, nets, .. } => {
@@ -1631,14 +1716,22 @@ fn generic_params(params: &[GenericParam]) -> String {
             let bound = match &p.bound {
                 GenericBound::Unit(u) => u.unit.type_name().to_string(),
                 GenericBound::Traits(ts) => join(ts.iter().map(|t| t.name.clone()), " + "),
-                GenericBound::Int(_) => "Int".to_string(),
+                // RFC-033: `const N: Int` — the `const` is part of the
+                // canonical spelling (round-trips byte-identically).
+                GenericBound::Int(_) => format!("const {}: Int", p.name.name),
             };
             let default = match &p.default {
                 Some(GenericDefault::Unit(v, _)) => format!(" = {}", v.text),
                 Some(GenericDefault::Int(n, _)) => format!(" = {}", n),
                 None => String::new(),
             };
-            format!("{}: {}{}", p.name.name, bound, default)
+            // An Int param's `bound` already carries the full
+            // `const NAME: Int` spelling; the legacy `{name}: {bound}`
+            // shape would double the name.
+            match &p.bound {
+                GenericBound::Int(_) => format!("{}{}", bound, default),
+                _ => format!("{}: {}{}", p.name.name, bound, default),
+            }
         }),
         ", ",
     );
