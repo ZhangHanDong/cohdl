@@ -2329,6 +2329,31 @@ design Chain {
     did_open(&mut lsp, &uri, &text);
     let _ = lsp.await_diagnostics(&uri);
 
+    // Hover on `.len` inside a const that reads the array's length
+    // (`const LEN: Int = leds.len` on line 2 of THIS variant).
+    {
+        let src2 = src.replace(
+            "    const N: Int = 4\n",
+            "    const LEN: Int = leds.len\n    const N: Int = 4\n",
+        );
+        let (_p2, uri2, text2) = fixture("rfc033len.cohdl", &src2);
+        let mut lsp2 = Lsp::start();
+        did_open(&mut lsp2, &uri2, &text2);
+        let _ = lsp2.await_diagnostics(&uri2);
+        let line = src2.lines().nth(2).unwrap();
+        let col = line.find(".len").map(|c| c + 2).unwrap() as u64;
+        let hover = lsp2.request(
+            "textDocument/hover",
+            json!({ "textDocument": { "uri": uri2 }, "position": { "line": 2, "character": col } }),
+        );
+        let hv = hover["contents"]["value"].as_str().unwrap_or_default();
+        assert!(
+            hv.contains("leds.len") && hv.contains("4"),
+            ".len hover shows the array length:\n{hover}"
+        );
+        lsp2.shutdown();
+    }
+
     // Hover on the const declaration name `N` (line 2).
     let col = src.lines().nth(2).unwrap().find("N:").unwrap() as u64;
     let hover = lsp.request(

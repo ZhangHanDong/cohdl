@@ -1548,6 +1548,103 @@ fn token_at(src: &[u8], offset: u32) -> String {
 /// RFC-033: hover for `const` names, loop binders and `ARRAY.len`. Walks
 /// every body with a visibility stack; a design-body const that evaluates
 /// with no unknowns also shows its value.
+/// RFC-033: hover on an `ARRAY.len` node inside an expression — resolves the
+/// array's declared length from the same body's `inst` declarations and
+/// evaluates it with the consts collected so far (design bodies only).
+#[allow(clippy::too_many_arguments)]
+/// An empty name map for the literal-only evaluation pass.
+fn literal_empty() -> std::collections::BTreeMap<String, crate::check::eval::NameKind> {
+    std::collections::BTreeMap::new()
+}
+
+fn len_hover_in_expr(
+    e: &crate::ast::Expr,
+    body: &[Stmt],
+    consts: &[(
+        String,
+        crate::span::Span,
+        crate::ast::ConstTy,
+        Option<crate::check::eval::Value>,
+    )],
+    is_design_body: bool,
+    fid: FileId,
+    offset: u32,
+    analysis: &Analysis,
+) -> Option<lt::Hover> {
+    fn find_len(e: &crate::ast::Expr) -> Option<&crate::ast::Expr> {
+        match e {
+            crate::ast::Expr::Len(_, _) => Some(e),
+            crate::ast::Expr::Paren(inner, _) | crate::ast::Expr::Unary { rhs: inner, .. } => {
+                find_len(inner)
+            }
+            crate::ast::Expr::Binary { lhs, rhs, .. } => find_len(lhs).or_else(|| find_len(rhs)),
+            crate::ast::Expr::Int(_, _)
+            | crate::ast::Expr::Name(_)
+            | crate::ast::Expr::Length(_, _) => None,
+        }
+    }
+    let len_node = find_len(e)?;
+    if !contains(len_node.span(), fid, offset) {
+        return None;
+    }
+    let crate::ast::Expr::Len(id, _) = len_node else {
+        return None;
+    };
+    // The array's declared length expression, from this body's insts.
+    let arr_len_expr = body.iter().find_map(|stmt| match stmt {
+        Stmt::Inst(i) if i.name.name == id.name => i.array_len.as_ref().map(|(e, _)| e),
+        _ => None,
+    })?;
+    let mut names = std::collections::BTreeMap::new();
+    if is_design_body {
+        // Include EVERY const of this body, evaluated against the literal
+        // consts first — `leds.len` where `inst leds: [Led; N]` and
+        // `const N: Int = 4` works regardless of declaration order.
+        let literal_only: std::collections::BTreeMap<String, crate::check::eval::NameKind> = body
+            .iter()
+            .filter_map(|s| match s {
+                Stmt::Const(c) => {
+                    let lens = std::collections::BTreeMap::new();
+                    let unknown = std::collections::BTreeSet::new();
+                    let env = crate::check::eval::Env {
+                        names: &literal_empty(),
+                        array_lens: &lens,
+                        unknown_arrays: &unknown,
+                    };
+                    let mut diags = crate::diag::Diagnostics::new();
+                    crate::check::eval::eval(&c.value, &env, &mut diags)
+                        .map(|v| (c.name.name.clone(), crate::check::eval::NameKind::Const(v)))
+                }
+                _ => None,
+            })
+            .collect();
+        for (n, _, _, v) in consts.iter() {
+            if let Some(v) = v {
+                names.insert(n.clone(), crate::check::eval::NameKind::Const(*v));
+            }
+        }
+        for (n, k) in literal_only {
+            names.entry(n).or_insert(k);
+        }
+    }
+    let lens = std::collections::BTreeMap::new();
+    let unknown = std::collections::BTreeSet::new();
+    let env = crate::check::eval::Env {
+        names: &names,
+        array_lens: &lens,
+        unknown_arrays: &unknown,
+    };
+    let mut diags = crate::diag::Diagnostics::new();
+    let n = match crate::check::eval::eval(arr_len_expr, &env, &mut diags) {
+        Some(crate::check::eval::Value::Int(n)) => n,
+        _ => return None,
+    };
+    Some(hover_markdown(
+        format!("**`{}.len` = {}**", id.name, n),
+        span_to_range(analysis, len_node.span()),
+    ))
+}
+
 fn rfc033_hover(
     world: &crate::resolve::World,
     fid: FileId,
@@ -1572,6 +1669,20 @@ fn rfc033_hover(
         for stmt in body {
             match stmt {
                 Stmt::Const(c) => {
+                    // RFC-033: a `.len` inside a const's value hovers with
+                    // the array's length (resolved against this body's inst
+                    // array lengths, evaluated with the consts so far).
+                    if let Some(h) = len_hover_in_expr(
+                        &c.value,
+                        body,
+                        consts,
+                        is_design_body,
+                        fid,
+                        offset,
+                        analysis,
+                    ) {
+                        return Some(h);
+                    }
                     if contains(c.name.span, fid, offset) {
                         let ty = match c.ty {
                             crate::ast::ConstTy::Int => "Int",
@@ -1632,6 +1743,77 @@ fn rfc033_hover(
                         val = crate::check::eval::eval(&c.value, &env, &mut diags);
                     }
                     consts.push((c.name.name.clone(), c.span, c.ty, val));
+                }
+                Stmt::Inst(inst) => {
+                    // RFC-033: hover on `ARRAY.len` inside the array's length
+                    // expression (or anywhere the cursor is on a `.len`
+                    // within this statement's array_len) shows the array's
+                    // length when it evaluates.
+                    if let Some((len_expr, _)) = &inst.array_len {
+                        let mut hit: Option<&crate::ast::Expr> = None;
+                        fn find_len<'a>(
+                            e: &'a crate::ast::Expr,
+                            hit: &mut Option<&'a crate::ast::Expr>,
+                        ) {
+                            match e {
+                                crate::ast::Expr::Len(_, _) => {
+                                    if hit.is_none() {
+                                        *hit = Some(e);
+                                    }
+                                }
+                                crate::ast::Expr::Paren(inner, _)
+                                | crate::ast::Expr::Unary { rhs: inner, .. } => {
+                                    find_len(inner, hit)
+                                }
+                                crate::ast::Expr::Binary { lhs, rhs, .. } => {
+                                    find_len(lhs, hit);
+                                    find_len(rhs, hit);
+                                }
+                                crate::ast::Expr::Int(_, _) | crate::ast::Expr::Name(_) => {}
+                                crate::ast::Expr::Length(_, _) => {}
+                            }
+                        }
+                        find_len(len_expr, &mut hit);
+                        if let Some(e) = hit {
+                            if contains(e.span(), fid, offset) {
+                                if let crate::ast::Expr::Len(id, _) = e {
+                                    if id.name == inst.name.name {
+                                        // Evaluate the length with the body's
+                                        // consts so far (design bodies only —
+                                        // that is where values exist).
+                                        let mut names = std::collections::BTreeMap::new();
+                                        if is_design_body {
+                                            for (n, _, _, v) in consts.iter() {
+                                                if let Some(v) = v {
+                                                    names.insert(
+                                                        n.clone(),
+                                                        crate::check::eval::NameKind::Const(*v),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        let lens = std::collections::BTreeMap::new();
+                                        let unknown = std::collections::BTreeSet::new();
+                                        let env = crate::check::eval::Env {
+                                            names: &names,
+                                            array_lens: &lens,
+                                            unknown_arrays: &unknown,
+                                        };
+                                        let mut diags = crate::diag::Diagnostics::new();
+                                        if let Some(crate::check::eval::Value::Int(n)) =
+                                            crate::check::eval::eval(len_expr, &env, &mut diags)
+                                        {
+                                            let text = format!("**`{}.len` = {}**", id.name, n);
+                                            return Some(hover_markdown(
+                                                text,
+                                                span_to_range(analysis, e.span()),
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 Stmt::For(f) => {
                     // The label and binder hover with the loop's shape.
