@@ -88,6 +88,7 @@ enum PlaceCtx {
     Fn,
 }
 
+#[derive(Clone)]
 struct Scope {
     design_name: String,
     path: String,
@@ -391,7 +392,10 @@ impl<'w, 'd> Expander<'w, 'd> {
                 // RFC-033: const/loop expansion lands with Tasks 7/8; the
                 // statements cannot parse until Task 3, so no behavior to
                 // preserve yet — the arms exist so the match stays total.
-                Stmt::Const(_) | Stmt::For(_) => {}
+                // RFC-033: loop frames expand here (pass 2); consts inside a
+                // loop body are collected by that frame's own walk_body.
+                Stmt::Const(_) => {}
+                Stmt::For(f) => self.handle_for(f, scope),
             }
         }
     }
@@ -402,6 +406,220 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// to its candidate IR net name within the current scope. Validation
     /// against the final net set happens in `assemble` (net existence is only
     /// knowable once every declaration in the design is processed).
+    /// RFC-033 §5-§7: a labelled `for` loop expands as one FRAME per
+    /// iteration — hygienic (each frame's path names the label and value),
+    /// re-entrant through `walk_body` for nested loops.
+    fn handle_for(&mut self, f: &ForStmt, scope: &mut Scope) {
+        // Static admission first: a loop body may not declare.
+        for s in &f.body {
+            match s {
+                Stmt::Inst(i) => self.diags.push(Diagnostic::error(
+                    "E1406",
+                    i.span,
+                    "`inst` is not admitted inside a `for` body — declare the array outside the loop and repeat only connections, calls and placements here (RFC-033 Candidate A)".to_string(),
+                )),
+                Stmt::SubdesignUse(u) => {
+                    if scope.place_ctx == PlaceCtx::Fn {
+                        // E1307 wins (the fn-body restriction is stricter and
+                        // pre-existing).
+                        self.diags.push(Diagnostic::error(
+                            "E1307",
+                            u.span,
+                            "a `subdesign` use site needs a retained hierarchy path — a `fn` expands inline and cannot contain one (RFC-032); move it into the design or a subdesign".to_string(),
+                        ));
+                    } else {
+                        self.diags.push(Diagnostic::error(
+                            "E1406",
+                            u.span,
+                            "a `subdesign` use site is not admitted inside a `for` body — declare it outside the loop".to_string(),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+        if !self.check_not_reserved(&f.label, "loop label")
+            || !self.check_not_reserved(&f.binder, "loop variable")
+        {
+            return;
+        }
+        // Label/binder collisions with anything visible.
+        for id in [&f.label, &f.binder] {
+            if scope.local_insts.contains_key(&id.name)
+                || scope.local_subs.contains_key(&id.name)
+                || scope.arrays.contains_key(&id.name)
+                || scope.bindings.contains_key(&id.name)
+                || scope.consts.contains_key(&id.name)
+                || scope.binders.contains_key(&id.name)
+                || scope.frame.iter().any(|(l, _, _)| l == &id.name)
+            {
+                self.diags.push(Diagnostic::error(
+                    "E201",
+                    id.span,
+                    format!("`{}` is already defined in this scope", id.name),
+                ));
+                return;
+            }
+        }
+        let Some(lo) = self.eval_int(&f.start, scope, "a loop bound") else {
+            return;
+        };
+        let Some(hi) = self.eval_int(&f.end, scope, "a loop bound") else {
+            return;
+        };
+        if lo > hi {
+            self.diags.push(Diagnostic::error(
+                "E1404",
+                f.start.span().to(f.end.span()),
+                format!(
+                    "loop `{}` has a reversed range {}..{} — the end must not be below the start (a half-open range with equal bounds is empty){}",
+                    f.label.name,
+                    lo,
+                    hi,
+                    self.frame_suffix(scope)
+                ),
+            ));
+            return;
+        }
+        // Frame depth is part of the budget (Task 10); iterations charged there too.
+        for v in lo..hi {
+            let mut inner = self.enter_frame(&f.label, &f.binder, v, scope);
+            let saved = (self.anon_net_counter, self.call_counter);
+            self.anon_net_counter = 0;
+            self.call_counter = 0;
+            self.walk_body(&f.body, &mut inner);
+            self.anon_net_counter = saved.0;
+            self.call_counter = saved.1;
+        }
+    }
+
+    /// RFC-033 §6: one iteration's frame — path gains `__for_{label}_{value}`
+    /// (negative values as `neg{abs}`), the binder becomes visible, and the
+    /// parent's declarations ride as cloned read-only views.
+    fn enter_frame(&mut self, label: &Ident, binder: &Ident, value: i64, scope: &Scope) -> Scope {
+        let mut inner = Scope {
+            design_name: scope.design_name.clone(),
+            path: format!(
+                "{}::__for_{}_{}",
+                scope.path,
+                label.name,
+                frame_value_text(value)
+            ),
+            is_design_body: false,
+            place_ctx: scope.place_ctx,
+            subst: scope.subst.clone(),
+            bindings: scope.bindings.clone(),
+            local_insts: scope.local_insts.clone(),
+            local_subs: scope.local_subs.clone(),
+            arrays: scope.arrays.clone(),
+            consts: scope.consts.clone(),
+            binders: scope.binders.clone(),
+            frame: scope.frame.clone(),
+        };
+        inner.binders.insert(binder.name.clone(), value);
+        inner
+            .frame
+            .push((label.name.clone(), value, binder.name.clone()));
+        inner
+    }
+
+    /// RFC-033 §6 layout loops: consts → placements → nested loops, one frame
+    /// per iteration (E1404 for reversed ranges, E1406 handled at parse).
+    fn handle_layout_for(&mut self, f: &LayoutFor, scope: &mut Scope) {
+        if !self.check_not_reserved(&f.label, "loop label")
+            || !self.check_not_reserved(&f.binder, "loop variable")
+        {
+            return;
+        }
+        for id in [&f.label, &f.binder] {
+            if scope.local_insts.contains_key(&id.name)
+                || scope.local_subs.contains_key(&id.name)
+                || scope.arrays.contains_key(&id.name)
+                || scope.bindings.contains_key(&id.name)
+                || scope.consts.contains_key(&id.name)
+                || scope.binders.contains_key(&id.name)
+            {
+                self.diags.push(Diagnostic::error(
+                    "E201",
+                    id.span,
+                    format!("`{}` is already defined in this scope", id.name),
+                ));
+                return;
+            }
+        }
+        let Some(lo) = self.eval_int(&f.start, scope, "a loop bound") else {
+            return;
+        };
+        let Some(hi) = self.eval_int(&f.end, scope, "a loop bound") else {
+            return;
+        };
+        if lo > hi {
+            self.diags.push(Diagnostic::error(
+                "E1404",
+                f.start.span().to(f.end.span()),
+                format!(
+                    "loop `{}` has a reversed range {}..{} — the end must not be below the start (a half-open range with equal bounds is empty){}",
+                    f.label.name,
+                    lo,
+                    hi,
+                    self.frame_suffix(scope)
+                ),
+            ));
+            return;
+        }
+        for v in lo..hi {
+            let mut inner = self.enter_frame(&f.label, &f.binder, v, scope);
+            // Layout consts are visible only in this layout and its loops.
+            for c in &f.consts {
+                let names = inner.names();
+                let lens = inner.array_lens();
+                let none = std::collections::BTreeSet::new();
+                let env = crate::check::eval::Env {
+                    names: &names,
+                    array_lens: &lens,
+                    unknown_arrays: &none,
+                };
+                let mut local = Diagnostics::new();
+                let val = crate::check::eval::eval(&c.value, &env, &mut local);
+                self.push_with_suffix(local, &inner);
+                match (c.ty, val) {
+                    (ConstTy::Int, Some(crate::check::eval::Value::Int(i))) => {
+                        inner
+                            .consts
+                            .insert(c.name.name.clone(), crate::check::eval::Value::Int(i));
+                    }
+                    (ConstTy::Length, Some(crate::check::eval::Value::Length(fv))) => {
+                        inner
+                            .consts
+                            .insert(c.name.name.clone(), crate::check::eval::Value::Length(fv));
+                    }
+                    (_, None) => {}
+                    _ => {
+                        self.diags.push(Diagnostic::error(
+                            "E1401",
+                            c.span,
+                            format!(
+                                "const `{}` cannot be assigned that value — it is declared `{}`",
+                                c.name.name,
+                                match c.ty {
+                                    ConstTy::Int => "Int",
+                                    ConstTy::Length => "Length",
+                                }
+                            ),
+                        ));
+                    }
+                }
+            }
+            for p in &f.placements {
+                self.handle_placement(p, &inner);
+            }
+            for nested in &f.loops {
+                let mut inner_mut = inner.clone();
+                self.handle_layout_for(nested, &mut inner_mut);
+            }
+        }
+    }
+
     fn handle_layout(&mut self, block: &LayoutBlock, scope: &Scope) {
         let resolve = |nets: &[Ident]| -> Vec<(String, Ident)> {
             nets.iter()
@@ -445,8 +663,56 @@ impl<'w, 'd> Expander<'w, 'd> {
         if let Some(outline) = &block.board_outline {
             self.handle_board_outline(outline, scope);
         }
+        // RFC-033: layout consts are visible only in this layout and its
+        // loops — evaluate into a local scope clone.
+        let mut layout_scope = scope.clone();
+        for c in &block.consts {
+            let names = layout_scope.names();
+            let lens = layout_scope.array_lens();
+            let none = std::collections::BTreeSet::new();
+            let env = crate::check::eval::Env {
+                names: &names,
+                array_lens: &lens,
+                unknown_arrays: &none,
+            };
+            let mut local = Diagnostics::new();
+            let val = crate::check::eval::eval(&c.value, &env, &mut local);
+            self.push_with_suffix(local, &layout_scope);
+            match (c.ty, val) {
+                (ConstTy::Int, Some(crate::check::eval::Value::Int(i))) => {
+                    layout_scope
+                        .consts
+                        .insert(c.name.name.clone(), crate::check::eval::Value::Int(i));
+                }
+                (ConstTy::Length, Some(crate::check::eval::Value::Length(f))) => {
+                    layout_scope
+                        .consts
+                        .insert(c.name.name.clone(), crate::check::eval::Value::Length(f));
+                }
+                (_, None) => {}
+                _ => {
+                    self.diags.push(Diagnostic::error(
+                        "E1401",
+                        c.span,
+                        format!(
+                            "const `{}` cannot be assigned that value — it is declared `{}`",
+                            c.name.name,
+                            match c.ty {
+                                ConstTy::Int => "Int",
+                                ConstTy::Length => "Length",
+                            }
+                        ),
+                    ));
+                }
+            }
+        }
         for placement in &block.placements {
-            self.handle_placement(placement, scope);
+            self.handle_placement(placement, &layout_scope);
+        }
+        // RFC-033: labelled placement loops.
+        for lf in &block.loops {
+            let mut s = layout_scope.clone();
+            self.handle_layout_for(lf, &mut s);
         }
     }
 
@@ -753,11 +1019,12 @@ impl<'w, 'd> Expander<'w, 'd> {
                         "E202",
                         sp,
                         format!(
-                            "index {} is out of bounds for `{}` — valid indices are 0..={} (length {})",
+                            "index {} is out of bounds for `{}` — valid indices are 0..={} (length {}){}",
                             i,
                             id.name,
                             n - 1,
-                            n
+                            n,
+                            self.frame_suffix(scope)
                         ),
                     ));
                     return None;
@@ -872,8 +1139,9 @@ impl<'w, 'd> Expander<'w, 'd> {
                             "E202",
                             *sp,
                             format!(
-                                "index {} is out of bounds for `{}` — valid indices are 0..={} (length {})",
-                                i, seg.name.name, n - 1, n
+                                "index {} is out of bounds for `{}` — valid indices are 0..={} (length {}){}",
+                                i, seg.name.name, n - 1, n,
+                                self.frame_suffix(scope)
                             ),
                         ));
                         return;
@@ -1658,11 +1926,12 @@ impl<'w, 'd> Expander<'w, 'd> {
                     "E202",
                     sel.span(),
                     format!(
-                        "index {} is out of bounds for `{}` — valid indices are 0..={} (length {})",
+                        "index {} is out of bounds for `{}` — valid indices are 0..={} (length {}){}",
                         i,
                         base.name,
                         n - 1,
-                        n
+                        n,
+                        self.frame_suffix(scope)
                     ),
                 ));
                 return None;
@@ -3309,6 +3578,16 @@ fn map_layout_nets(
 
 /// Deduplicate, preserving first-occurrence order (never sort — the artifact's
 /// determinism comes from source order).
+/// RFC-033 §6: a frame value's path spelling — non-negative in decimal,
+/// negative as `neg{abs}` (`__` names stay reserved).
+fn frame_value_text(v: i64) -> String {
+    if v >= 0 {
+        v.to_string()
+    } else {
+        format!("neg{}", v.unsigned_abs())
+    }
+}
+
 /// RFC-033 pass 0: the `Name`/`Len` identifiers an expression references
 /// (dependency pre-scan).
 fn collect_expr_refs(e: &Expr, out: &mut Vec<String>) {
