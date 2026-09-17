@@ -467,6 +467,25 @@ impl<'w, 'd> Expander<'w, 'd> {
         let Some(hi) = self.eval_int(&f.end, scope, "a loop bound") else {
             return;
         };
+        // RFC-033 §8: static validation of the loop body ONCE per loop entry,
+        // under the bound substitution (before the range decision — even an
+        // empty or skipped loop hides nothing decidable).
+        {
+            let names = scope.names();
+            let mut bases: std::collections::BTreeSet<String> =
+                scope.bindings.keys().cloned().collect();
+            for k in scope
+                .local_insts
+                .keys()
+                .chain(scope.local_subs.keys())
+                .chain(scope.arrays.keys())
+            {
+                bases.insert(k.clone());
+            }
+            crate::check::bodies::check_loop_body_bound(
+                self.world, &f.body, &names, &bases, self.diags,
+            );
+        }
         if lo > hi {
             self.diags.push(Diagnostic::error(
                 "E1404",

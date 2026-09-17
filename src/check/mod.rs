@@ -42,6 +42,9 @@ fn run_declaration_checks(world: &mut World, diags: &mut Diagnostics) {
     }
     // Semantically validate every function body, called or not (R6-3).
     bodies::check_fn_bodies(world, diags);
+    // RFC-033 §8: every design body gets the same uniform static validation
+    // (duplicate locals, const kinds, loop bounds and admission).
+    bodies::check_design_bodies(world, diags);
     // RFC-032: every subdesign body, used or not, plus containment cycles.
     subdesigns::check_subdesigns(world, diags);
 }

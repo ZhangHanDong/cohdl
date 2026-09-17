@@ -224,6 +224,34 @@ fn length_literal(v: &UnitValue, span: Span, diags: &mut Diagnostics) -> Option<
     }
 }
 
+/// Evaluate ONLY when the expression is fully concrete (no unknown names or
+/// arrays); `None` otherwise, with no diagnostics. The static type-checker
+/// uses this per-binary-node so a known-zero divisor surfaces even under an
+/// unknown sibling operand.
+fn eval_if_concrete(e: &Expr, env: &Env) -> Option<Value> {
+    fn concrete(e: &Expr, env: &Env) -> bool {
+        match e {
+            Expr::Int(_, _) | Expr::Length(_, _) => true,
+            Expr::Paren(inner, _) => concrete(inner, env),
+            Expr::Name(id) => match env.names.get(&id.name) {
+                Some(NameKind::Const(_))
+                | Some(NameKind::Binder(_))
+                | Some(NameKind::GenericInt(_))
+                | Some(NameKind::GenericLength(_)) => true,
+                Some(NameKind::Unknown(_)) | None => false,
+            },
+            Expr::Len(id, _) => env.array_lens.contains_key(&id.name),
+            Expr::Unary { rhs, .. } => concrete(rhs, env),
+            Expr::Binary { lhs, rhs, .. } => concrete(lhs, env) && concrete(rhs, env),
+        }
+    }
+    if concrete(e, env) {
+        eval(e, env, &mut Diagnostics::new())
+    } else {
+        None
+    }
+}
+
 pub fn eval(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Value> {
     match e {
         Expr::Int(n, _) => Some(Value::Int(*n)),
@@ -367,10 +395,22 @@ pub fn type_check(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Ty> {
                     None
                 }
             };
-            // Both-concrete operands: surface invariant E1402/E1403 now.
-            // Unknown-typed names type-check WITHOUT a value — never eval.
-            if result.is_some() && env.concrete(e, diags).is_some() {
-                let _ = eval(e, env, diags);
+            // Subexpression-concrete operands: surface invariant E1402/E1403
+            // wherever BOTH operands of this node (recursively) are concrete
+            // — and, for division/remainder, wherever the DIVISOR is
+            // concretely zero (a known-zero divisor is an invariant failure
+            // even under an unknown dividend). Unknown-typed names
+            // type-check WITHOUT a value.
+            if result.is_some() {
+                if let (Some(lv), Some(rv)) =
+                    (eval_if_concrete(lhs, env), eval_if_concrete(rhs, env))
+                {
+                    let _ = binary(*op, lv, rv, *span, e, diags);
+                } else if matches!(op, BinOp::Div | BinOp::Rem) {
+                    if let Some(Value::Int(0)) = eval_if_concrete(rhs, env) {
+                        let _ = binary(*op, Value::Int(0), Value::Int(0), *span, e, diags);
+                    }
+                }
             }
             result
         }

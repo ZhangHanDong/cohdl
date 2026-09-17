@@ -16,7 +16,10 @@
 //! not for every property. Where a form IS checked here, the message mirrors
 //! expansion's so a called fn reported by both collapses under dedup.
 
-use crate::ast::{DeviceDef, FnDef, FnParamTy, GenericArg, GenericBound, Stmt, SubdesignDef};
+use crate::ast::{
+    ConstTy, DeviceDef, FnDef, FnParamTy, GenericArg, GenericBound, LayoutFor, Stmt, SubdesignDef,
+};
+use crate::check::eval::{NameKind, Ty};
 use crate::diag::{Diagnostic, Diagnostics};
 use crate::resolve::{short, World};
 use std::collections::{BTreeMap, BTreeSet};
@@ -136,11 +139,13 @@ fn check_one(world: &World, f: &FnDef, allow_sub_use: bool, diags: &mut Diagnost
                 }
             }
             Stmt::Layout(_) => {} // RFC-013 arity/nets still checked at expansion
-            // RFC-033: uniform static validation of consts/loops lands with
-            // Task 9; they cannot parse until Task 3.
-            Stmt::Const(_) | Stmt::For(_) => {}
+            // RFC-033 §8: uniform static validation — handled by the
+            // check_stmts recursion below (duplicate locals, consts, loops).
             // RFC-032: legal in a subdesign body; rejected in a fn so an
             // UNCALLED fn cannot hide one (expansion re-checks called fns).
+            // RFC-033 §8: static validation handles consts/loops via the
+            // check_stmts recursion below.
+            Stmt::Const(_) | Stmt::For(_) => {}
             Stmt::SubdesignUse(sub) => {
                 if !allow_sub_use {
                     diags.push(Diagnostic::error(
@@ -162,6 +167,358 @@ fn check_one(world: &World, f: &FnDef, allow_sub_use: bool, diags: &mut Diagnost
             }
         }
     }
+
+    // RFC-033 §8: uniform static declaration validation — decidable without
+    // values (duplicate locals, const kinds, loop bounds, loop-body admits).
+    let mut ctx = StaticCtx {
+        world,
+        names: {
+            let mut m = BTreeMap::new();
+            for g in &f.generics {
+                match &g.bound {
+                    GenericBound::Int(_) => {
+                        m.insert(g.name.name.clone(), NameKind::Unknown(Ty::Int));
+                    }
+                    GenericBound::Unit(u) if u.unit == crate::units::UnitType::Length => {
+                        m.insert(g.name.name.clone(), NameKind::Unknown(Ty::Length));
+                    }
+                    _ => {}
+                }
+            }
+            for p in &f.params {
+                m.insert(p.name.name.clone(), NameKind::Unknown(Ty::Int));
+            }
+            m
+        },
+        unknown_arrays: BTreeSet::new(),
+        labels: BTreeSet::new(),
+        seen_locals: BTreeSet::new(),
+        bases: bases.keys().map(|k| k.to_string()).collect(),
+    };
+    check_stmts(&mut ctx, &f.body, false, diags);
+}
+
+/// RFC-033 §8: the static-validation context — name kinds for `type_check`,
+/// declared arrays (length unevaluated at this stage), labels, and the
+/// duplicate-local ledger (the §8 compatibility correction).
+struct StaticCtx<'a> {
+    world: &'a World,
+    names: BTreeMap<String, NameKind>,
+    unknown_arrays: BTreeSet<String>,
+    labels: BTreeSet<String>,
+    seen_locals: BTreeSet<String>,
+    /// Every reference base name (params + locals + sub use sites) — the
+    /// known-name set for E202 purposes.
+    bases: BTreeSet<String>,
+}
+
+/// RFC-033 §8: recursive static validation of a statement list. `in_loop`
+/// gates the E1406 admission rule; `Stmt::For` recurses with the binder as
+/// `Unknown(Ty::Int)` (no value — skipped activations are not specialized).
+fn check_stmts(ctx: &mut StaticCtx, stmts: &[Stmt], in_loop: bool, diags: &mut Diagnostics) {
+    for stmt in stmts {
+        match stmt {
+            Stmt::Inst(i) => {
+                if !ctx.seen_locals.insert(i.name.name.clone()) {
+                    diags.push(Diagnostic::error(
+                        "E201",
+                        i.name.span,
+                        format!("`{}` is already defined in this scope", i.name.name),
+                    ));
+                }
+                if in_loop {
+                    diags.push(Diagnostic::error(
+                        "E1406",
+                        i.span,
+                        "`inst` is not admitted inside a `for` body — declare the array outside the loop and repeat only connections, calls and placements here (RFC-033 Candidate A)".to_string(),
+                    ));
+                }
+                if let Some((e, _)) = &i.array_len {
+                    static_type_check(ctx, e, Ty::Int, "an array length", diags);
+                }
+                if ctx.unknown_arrays.contains(&i.name.name) {
+                    ctx.unknown_arrays.remove(&i.name.name);
+                }
+                ctx.unknown_arrays.insert(i.name.name.clone());
+            }
+            Stmt::SubdesignUse(u) => {
+                if !ctx.seen_locals.insert(u.name.name.clone()) {
+                    diags.push(Diagnostic::error(
+                        "E201",
+                        u.name.span,
+                        format!("`{}` is already defined in this scope", u.name.name),
+                    ));
+                }
+                if in_loop {
+                    diags.push(Diagnostic::error(
+                        "E1406",
+                        u.span,
+                        "a `subdesign` use site is not admitted inside a `for` body — declare it outside the loop".to_string(),
+                    ));
+                }
+                if let Some((e, _)) = &u.array_len {
+                    static_type_check(ctx, e, Ty::Int, "an array length", diags);
+                }
+            }
+            Stmt::Const(c) => {
+                if !ctx.seen_locals.insert(c.name.name.clone()) {
+                    diags.push(Diagnostic::error(
+                        "E201",
+                        c.name.span,
+                        format!("`{}` is already defined in this scope", c.name.name),
+                    ));
+                }
+                let want = match c.ty {
+                    ConstTy::Int => Ty::Int,
+                    ConstTy::Length => Ty::Length,
+                };
+                // type_check evaluates concrete subexpressions, so a known
+                // `1 / 0` fails even inside a loop that never runs.
+                static_type_check(ctx, &c.value, want, "a const value", diags);
+                ctx.names
+                    .insert(c.name.name.clone(), NameKind::Unknown(want));
+            }
+            Stmt::For(f) => {
+                // Label/binder uniqueness against everything visible.
+                for id in [&f.label, &f.binder] {
+                    if !ctx.seen_locals.insert(id.name.clone())
+                        || ctx.names.contains_key(&id.name)
+                        || ctx.labels.contains(&id.name)
+                    {
+                        diags.push(Diagnostic::error(
+                            "E201",
+                            id.span,
+                            format!("`{}` is already defined in this scope", id.name),
+                        ));
+                    }
+                }
+                ctx.labels.insert(f.label.name.clone());
+                static_type_check(ctx, &f.start, Ty::Int, "a loop bound", diags);
+                static_type_check(ctx, &f.end, Ty::Int, "a loop bound", diags);
+                ctx.names
+                    .insert(f.binder.name.clone(), NameKind::Unknown(Ty::Int));
+                let binder_scoped = f.binder.name.clone();
+                let label_scoped = f.label.name.clone();
+                check_stmts(ctx, &f.body, true, diags);
+                // The binder (and label) are scoped to the loop — sibling
+                // loops may reuse the spelling.
+                ctx.names.remove(&binder_scoped);
+                ctx.seen_locals.remove(&binder_scoped);
+                ctx.seen_locals.remove(&label_scoped);
+            }
+            Stmt::Call(call) => {
+                // RFC-033 §8: expression generic arguments are checked
+                // statically (the argument expression itself, never the
+                // callee's body — skipped activations are not specialized).
+                for arg in &call.generic_args {
+                    if let GenericArg::Expr(e) = arg {
+                        static_type_check_any(ctx, e, "a generic argument", diags);
+                    }
+                }
+            }
+            Stmt::Net(n) => {
+                for m in &n.members {
+                    if !member_base_known(ctx, m) {
+                        diags.push(Diagnostic::error(
+                            "E202",
+                            m.base.span,
+                            format!(
+                                "`{}` is not a known instance or parameter in this scope",
+                                m.base.name
+                            ),
+                        ));
+                    }
+                }
+            }
+            Stmt::Nc(nc) => {
+                for m in &nc.members {
+                    if !member_base_known(ctx, m) {
+                        diags.push(Diagnostic::error(
+                            "E202",
+                            m.base.span,
+                            format!(
+                                "`{}` is not a known instance or parameter in this scope",
+                                m.base.name
+                            ),
+                        ));
+                    }
+                }
+            }
+            Stmt::Layout(block) => {
+                for c in &block.consts {
+                    let want = match c.ty {
+                        ConstTy::Int => Ty::Int,
+                        ConstTy::Length => Ty::Length,
+                    };
+                    static_type_check(ctx, &c.value, want, "a const value", diags);
+                }
+                for p in &block.placements {
+                    check_placement_static(ctx, p, diags);
+                }
+                check_layout_for_static(ctx, &block.loops, diags);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// RFC-033 §8: recursive layout-loop validation (consts, placements, nested).
+fn check_layout_for_static(ctx: &mut StaticCtx, loops: &[LayoutFor], diags: &mut Diagnostics) {
+    for f in loops {
+        for id in [&f.label, &f.binder] {
+            if ctx.names.contains_key(&id.name) || ctx.labels.contains(&id.name) {
+                diags.push(Diagnostic::error(
+                    "E201",
+                    id.span,
+                    format!("`{}` is already defined in this scope", id.name),
+                ));
+            }
+        }
+        ctx.labels.insert(f.label.name.clone());
+        static_type_check(ctx, &f.start, Ty::Int, "a loop bound", diags);
+        static_type_check(ctx, &f.end, Ty::Int, "a loop bound", diags);
+        ctx.names
+            .insert(f.binder.name.clone(), NameKind::Unknown(Ty::Int));
+        for c in &f.consts {
+            let want = match c.ty {
+                ConstTy::Int => Ty::Int,
+                ConstTy::Length => Ty::Length,
+            };
+            static_type_check(ctx, &c.value, want, "a const value", diags);
+        }
+        for p in &f.placements {
+            check_placement_static(ctx, p, diags);
+        }
+        check_layout_for_static(ctx, &f.loops, diags);
+        ctx.names.remove(&f.binder.name);
+    }
+}
+
+/// Whether a pin-reference's base name is a statically known base (param,
+/// local inst, sub use site). Loop frames inherit the parent's bases.
+fn member_base_known(ctx: &StaticCtx, m: &crate::ast::PinRef) -> bool {
+    ctx.bases.contains(&m.base.name)
+}
+
+/// Type-check one expression with ANY resulting kind (generic arguments may
+/// be Int or Length) — still surfaces invariant E1402/E1403.
+fn static_type_check_any(
+    ctx: &StaticCtx,
+    e: &crate::ast::Expr,
+    what: &str,
+    diags: &mut Diagnostics,
+) -> crate::check::eval::Ty {
+    use crate::check::eval::Env;
+    let none: BTreeSet<String> = BTreeSet::new();
+    let empty_lens: BTreeMap<String, i64> = BTreeMap::new();
+    let env = Env {
+        names: &ctx.names,
+        array_lens: &empty_lens,
+        unknown_arrays: &none,
+    };
+    let t = crate::check::eval::type_check(e, &env, diags);
+    match t {
+        Some(t) => t,
+        None => {
+            let _ = what;
+            Ty::Int
+        }
+    }
+}
+
+/// Type-check one expression statically; `type_check` also evaluates concrete
+/// subexpressions, surfacing invariant E1402/E1403 without values for the
+/// rest.
+fn static_type_check(
+    ctx: &StaticCtx,
+    e: &crate::ast::Expr,
+    want: Ty,
+    what: &str,
+    diags: &mut Diagnostics,
+) {
+    use crate::check::eval::Env;
+    let none: BTreeSet<String> = BTreeSet::new();
+    let empty_lens: BTreeMap<String, i64> = BTreeMap::new();
+    let env = Env {
+        names: &ctx.names,
+        array_lens: &empty_lens,
+        unknown_arrays: &none,
+    };
+    match crate::check::eval::type_check(e, &env, diags) {
+        Some(t) if t == want => {}
+        Some(_) => {
+            diags.push(Diagnostic::error(
+                "E1401",
+                e.span(),
+                format!(
+                    "{} must be an {}, but `{}` is a {}",
+                    what,
+                    match want {
+                        Ty::Int => "Int",
+                        Ty::Length => "Length",
+                    },
+                    crate::ast::expr_text(e),
+                    match crate::check::eval::type_check(e, &env, &mut Diagnostics::new()) {
+                        Some(Ty::Int) => "Int",
+                        _ => "Length",
+                    }
+                ),
+            ));
+        }
+        None => {}
+    }
+}
+
+/// Statically type-check a placement's expressions (at → Length, rotate →
+/// Int, segment indexes → Int).
+fn check_placement_static(ctx: &StaticCtx, p: &crate::ast::Placement, diags: &mut Diagnostics) {
+    static_type_check(ctx, &p.at.0, Ty::Length, "placement x", diags);
+    static_type_check(ctx, &p.at.1, Ty::Length, "placement y", diags);
+    if let Some(r) = &p.rotate {
+        static_type_check(ctx, r, Ty::Int, "a rotation", diags);
+    }
+    for seg in &p.path {
+        if let Some((e, _)) = &seg.index {
+            static_type_check(ctx, e, Ty::Int, "an index", diags);
+        }
+    }
+}
+
+/// RFC-033 §8: every design body gets the same static validation a fn body
+/// does (allowing subdesign use sites).
+pub fn check_design_bodies(world: &World, diags: &mut Diagnostics) {
+    for design in world.designs.values() {
+        let shim = FnDef {
+            name: design.name.clone(),
+            generics: Vec::new(),
+            params: Vec::new(),
+            body: design.body.clone(),
+        };
+        check_one(world, &shim, true, diags);
+    }
+}
+
+/// RFC-033 §8: statically validate a loop body ONCE per loop entry under the
+/// activation's known names (consts, binders, Int/Length generics bound by
+/// the call). Values are known here, so an activation-bound `1 / N` with
+/// `N = 0` reports E1403 — while the UNCALLEd definition check never sees a
+/// value (no specialization of skipped activations).
+pub fn check_loop_body_bound(
+    world: &World,
+    body: &[Stmt],
+    names: &BTreeMap<String, NameKind>,
+    bases: &BTreeSet<String>,
+    diags: &mut Diagnostics,
+) {
+    let mut ctx = StaticCtx {
+        world,
+        names: names.clone(),
+        unknown_arrays: BTreeSet::new(),
+        labels: BTreeSet::new(),
+        seen_locals: BTreeSet::new(),
+        bases: bases.clone(),
+    };
+    check_stmts(&mut ctx, body, true, diags);
 }
 
 /// The device (+ selected variant) an instance denotes, if concrete.
