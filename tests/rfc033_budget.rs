@@ -94,7 +94,7 @@ fn frame_depth_limit_is_64() {
     }
     inner.push_str("net _: led.A");
     for _ in 0..64 {
-        inner.push_str("}");
+        inner.push('}');
     }
     let src = format!(
         "{LIB}
@@ -114,7 +114,7 @@ design B {{
     }
     inner.push_str("net _: led.A");
     for _ in 0..65 {
-        inner.push_str("}");
+        inner.push('}');
     }
     let src = format!(
         "{LIB}

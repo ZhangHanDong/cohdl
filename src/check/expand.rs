@@ -498,9 +498,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             {
                 bases.insert(k.clone());
             }
-            crate::check::bodies::check_loop_body_bound(
-                self.world, &f.body, &names, &bases, self.diags,
-            );
+            crate::check::bodies::check_loop_body_bound(&f.body, &names, &bases, self.diags);
         }
         if lo > hi {
             self.diags.push(Diagnostic::error(
@@ -790,7 +788,7 @@ impl<'w, 'd> Expander<'w, 'd> {
         }
         if let Some(pos) = stack.iter().position(|s| s == k) {
             // Cyclic dependency — report once, naming the full cycle.
-            let mut cycle: Vec<String> = stack[pos..].iter().cloned().collect();
+            let mut cycle: Vec<String> = stack[pos..].to_vec();
             cycle.push(k.to_string());
             let shown: Vec<String> = cycle
                 .iter()
@@ -951,7 +949,7 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// Re-push diagnostics from a local batch with the frame suffix appended
     /// to each main message.
     fn push_with_suffix(&mut self, local: Diagnostics, scope: &Scope) {
-        for mut d in local.into_iter() {
+        for mut d in local.drain_batch() {
             d.message.push_str(&self.frame_suffix(scope));
             self.diags.push(d);
         }
@@ -1285,7 +1283,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 let Some(n) = self.eval_int(e, scope, "a rotation") else {
                     return;
                 };
-                if n < 0 || n > 359 {
+                if !(0..=359).contains(&n) {
                     self.diags.push(Diagnostic::error(
                         "E1007",
                         e.span(),

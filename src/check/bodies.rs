@@ -171,7 +171,6 @@ fn check_one(world: &World, f: &FnDef, allow_sub_use: bool, diags: &mut Diagnost
     // RFC-033 §8: uniform static declaration validation — decidable without
     // values (duplicate locals, const kinds, loop bounds, loop-body admits).
     let mut ctx = StaticCtx {
-        world,
         names: {
             let mut m = BTreeMap::new();
             for g in &f.generics {
@@ -201,8 +200,7 @@ fn check_one(world: &World, f: &FnDef, allow_sub_use: bool, diags: &mut Diagnost
 /// RFC-033 §8: the static-validation context — name kinds for `type_check`,
 /// declared arrays (length unevaluated at this stage), labels, and the
 /// duplicate-local ledger (the §8 compatibility correction).
-struct StaticCtx<'a> {
-    world: &'a World,
+struct StaticCtx {
     names: BTreeMap<String, NameKind>,
     unknown_arrays: BTreeSet<String>,
     labels: BTreeSet<String>,
@@ -357,7 +355,6 @@ fn check_stmts(ctx: &mut StaticCtx, stmts: &[Stmt], in_loop: bool, diags: &mut D
                 }
                 check_layout_for_static(ctx, &block.loops, diags);
             }
-            _ => {}
         }
     }
 }
@@ -504,14 +501,12 @@ pub fn check_design_bodies(world: &World, diags: &mut Diagnostics) {
 /// `N = 0` reports E1403 — while the UNCALLEd definition check never sees a
 /// value (no specialization of skipped activations).
 pub fn check_loop_body_bound(
-    world: &World,
     body: &[Stmt],
     names: &BTreeMap<String, NameKind>,
     bases: &BTreeSet<String>,
     diags: &mut Diagnostics,
 ) {
     let mut ctx = StaticCtx {
-        world,
         names: names.clone(),
         unknown_arrays: BTreeSet::new(),
         labels: BTreeSet::new(),

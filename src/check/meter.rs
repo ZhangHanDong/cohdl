@@ -32,16 +32,17 @@ fn body_has_m2(
 ) -> bool {
     for stmt in body {
         match stmt {
-            Stmt::Const(_) | Stmt::For(_) => return true,
+            Stmt::Const(_) => return true,
+            // A `for` is M2 on sight (labelled iteration); its bounds and
+            // body are still inspected for the walk's uniformity.
             Stmt::For(ForStmt {
                 start, end, body, ..
             }) => {
-                if expr_is_m2(start) || expr_is_m2(end) {
-                    return true;
-                }
+                let _ = (start, end);
                 if body_has_m2(world, body, visited) {
                     return true;
                 }
+                return true;
             }
             Stmt::Inst(i) => {
                 if let Some((e, _)) = &i.array_len {
@@ -49,10 +50,11 @@ fn body_has_m2(
                         return true;
                     }
                 }
-                if i.ty.generic_args.iter().any(|a| match a {
-                    GenericArg::Expr(_) => true,
-                    _ => false,
-                }) {
+                if i.ty
+                    .generic_args
+                    .iter()
+                    .any(|a| matches!(a, GenericArg::Expr(_)))
+                {
                     return true;
                 }
             }
@@ -66,10 +68,10 @@ fn body_has_m2(
                     if generics_have_int(&sd.generics) {
                         return true;
                     }
-                    if visited.insert(u.ty.name.name.clone()) {
-                        if body_has_m2(world, &sd.body, visited) {
-                            return true;
-                        }
+                    if visited.insert(u.ty.name.name.clone())
+                        && body_has_m2(world, &sd.body, visited)
+                    {
+                        return true;
                     }
                 }
             }
@@ -85,15 +87,15 @@ fn body_has_m2(
                     if generics_have_int(&fn_def.generics) {
                         return true;
                     }
-                    if visited.insert(call.callee.name.clone()) {
-                        if body_has_m2(world, &fn_def.body, visited) {
-                            return true;
-                        }
+                    if visited.insert(call.callee.name.clone())
+                        && body_has_m2(world, &fn_def.body, visited)
+                    {
+                        return true;
                     }
                 }
             }
             Stmt::Layout(block) => {
-                if layout_has_m2(world, block, visited) {
+                if layout_has_m2(block) {
                     return true;
                 }
             }
@@ -120,15 +122,11 @@ fn body_has_m2(
     false
 }
 
-fn layout_has_m2(
-    world: &World,
-    block: &LayoutBlock,
-    visited: &mut std::collections::BTreeSet<String>,
-) -> bool {
+fn layout_has_m2(block: &LayoutBlock) -> bool {
     if !block.consts.is_empty() {
         return true;
     }
-    if body_has_m2_layout_for(world, &block.loops, visited) {
+    if body_has_m2_layout_for(&block.loops) {
         return true;
     }
     for p in &block.placements {
@@ -146,11 +144,7 @@ fn layout_has_m2(
     false
 }
 
-fn body_has_m2_layout_for(
-    world: &World,
-    loops: &[crate::ast::LayoutFor],
-    visited: &mut std::collections::BTreeSet<String>,
-) -> bool {
+fn body_has_m2_layout_for(loops: &[crate::ast::LayoutFor]) -> bool {
     for f in loops {
         if expr_is_m2(&f.start) || expr_is_m2(&f.end) {
             return true;
@@ -168,7 +162,7 @@ fn body_has_m2_layout_for(
                 }
             }
         }
-        if body_has_m2_layout_for(world, &f.loops, visited) {
+        if body_has_m2_layout_for(&f.loops) {
             return true;
         }
     }
@@ -320,7 +314,7 @@ fn fmt_count(n: u64) -> String {
     let mut out = String::new();
     let bytes = s.as_bytes();
     for (i, c) in bytes.iter().enumerate() {
-        if i > 0 && (bytes.len() - i) % 3 == 0 {
+        if i > 0 && (bytes.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(*c as char);

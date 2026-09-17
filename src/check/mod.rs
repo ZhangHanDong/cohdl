@@ -34,9 +34,7 @@ fn run_declaration_checks(world: &mut World, diags: &mut Diagnostics) {
                 diags.push(Diagnostic::error(
                     "E406",
                     *span,
-                    format!(
-                        "integer generics are not admitted on `device` declarations — pin interfaces are structural variants (RFC-008)"
-                    ),
+                    "integer generics are not admitted on `device` declarations — pin interfaces are structural variants (RFC-008)".to_string(),
                 ));
             }
         }

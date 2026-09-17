@@ -486,19 +486,34 @@ mod tests {
     }
 
     fn ev(src: &str) -> Result<Value, String> {
-        let expr = e(src);
+        let full = format!("design D {{\n    const A: Int = {src}\n}}\n");
+        let expr = {
+            let mut sm = SourceMap::new();
+            let f = sm.add_file("t.cohdl", full.clone());
+            let mut diags = Diagnostics::new();
+            let tokens = crate::lex::lex(f, sm.text(f), &mut diags);
+            let ast = crate::parse::parse(tokens, &mut diags);
+            assert!(!diags.has_errors(), "parse failed:\n{}", diags.render(&sm));
+            let design = ast
+                .items
+                .iter()
+                .find_map(|i| match &i.kind {
+                    crate::ast::ItemKind::Design(d) => Some(d),
+                    _ => None,
+                })
+                .expect("design item");
+            match &design.body[0] {
+                crate::ast::Stmt::Const(c) => c.value.clone(),
+                other => panic!("expected a const, got {other:?}"),
+            }
+        };
         let mut diags = Diagnostics::new();
         let v = eval(&expr, &Env::empty(), &mut diags);
         match v {
             Some(v) if !diags.has_errors() => Ok(v),
             _ => {
-                // Render against the SAME multi-line text `e` parsed, so
-                // diagnostic offsets line up.
                 let mut sm = SourceMap::new();
-                sm.add_file(
-                    "t.cohdl",
-                    &format!("design D {{\n    const A: Int = {src}\n}}\n"),
-                );
+                sm.add_file("t.cohdl", full);
                 diags.sort(&sm);
                 Err(diags.render(&sm))
             }
