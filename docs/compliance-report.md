@@ -4158,3 +4158,46 @@ internals exception. E1301-E1307 registered. Notes and honest narrowings:
   every element to one pin silently was judged a trap, not a feature.
 - **`nc` on a port is rejected** (E1306): a port is a connection surface,
   not a device pin; an optional port dangles by simply not being wired.
+
+## RFC-033 — parameterized circuit construction, 2026-09-17
+
+Implemented in full per Candidate A: typed `Int`/`Length` compile-time
+expressions with an exact two-domain evaluator (Int i64 checked, Length
+femto i128, division never rounds), local `const`, `const N: Int`
+generics on `fn`/`subdesign` with expression arguments, expression-valued
+array lengths / indexes / placements / rotation, mandatory-labelled
+half-open `for` loops over connection operations, hygienic
+`__for_{LABEL}_{VALUE}` frames feeding the existing designator allocator,
+uniform static declaration validation, and deterministic expansion
+metering (100,000 iterations / 1,000,000 work items / 64 frames) that
+activates only when the reachable graph contains M2 syntax. E1401–E1407
+registered. Notes and honest narrowings:
+
+- **The one compatibility correction (RFC §8, enumerated):** duplicate
+  local declarations now fail at declaration time in uncalled `fn`s and
+  design bodies too (E201, formerly caught only when a design activated
+  the code); the same pass rejects known-kind const/bound mismatches and
+  known-zero divisors inside loops that never run. Corpus audit: zero new
+  errors across the 63 `lib/` packages and 3 `examples/` (Task 14
+  re-audits after the remaining tooling tasks; numbers to be pinned
+  there).
+- **`rotate` keeps the RFC-020 deviation:** any whole degree 0..=359 (not
+  the closed {0,90,180,270} set) — now expression-valued, evaluated
+  before the range check.
+- **`fmt` deviations, per RFC §8 tooling:** loops print in source order
+  among siblings (no reordering), and `__for_` frames reset the
+  anonymous-net and fn-call counters per iteration so sibling frames with
+  identical bodies produce distinct, injective paths
+  (`__for_links_0::LINK` vs `__for_b_0::LINK`); the frame segment carries
+  identity, never order-of-visitation.
+- **Parser deviation (a):** an `Expr::Length` node may carry a non-Length
+  `UnitValue` so legacy positions keep their own precise codes (`place …
+  at (0mm, 3V)` stays E1007); the evaluator judges by actual unit and
+  reports E1401 in expression positions.
+- **Parser deviation (b):** generic-argument expressions start only at a
+  Length literal, `(`/`-`/`+`, or a number/name/unit followed by an
+  arithmetic operator — a bare `Number`/`Unit`/`Name` keeps its legacy
+  `GenericArg` shape so E113/E112 diagnostics stay byte-identical.
+- **Package API docs move to schema v2** (bound `{"const":"Int"}`,
+  `body_source`): Task 14 lands the schema bump; the registry keeps the
+  v1 rows until then.

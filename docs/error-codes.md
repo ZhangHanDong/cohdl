@@ -71,7 +71,7 @@ CLI-only has at least one real call site in `src/`.
 
 | Code | Meaning |
 |---|---|
-| E201 | duplicate top-level declaration |
+| E201 | duplicate declaration — a top-level name declared twice at one module path, or a local name (instance, array, subdesign use site, const, loop label or loop variable) that collides with anything visible in its scope |
 | E202 | unknown name |
 | E203 | unknown pin on device/trait |
 | E204 | `[RESERVED, not yet implemented]` unknown spec field — no call site yet |
@@ -261,13 +261,13 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 
 | Code | Meaning |
 |---|---|
-| E1401 | expression kind/type mistake: an expression where an `Int`/`Length` is expected has the wrong kind, or (until the RFC-033 evaluator lands in Task 7) a computed expression sits in a position only literals reach |
-| E1402 | overflow or non-exact `Length` division (`1mm / 3` is never rounded) — Int/Length overflow, `i64::MIN / -1`, and unary negation of `i64::MIN` |
-| E1403 | division or remainder by zero (Int and Length operands alike) |
-| E1404 | reversed `for` range (start above the exclusive end — equal bounds are a valid empty loop) |
-| E1405 | expansion budget exceeded — 100,000 cumulative entered iterations / 1,000,000 work items / 64 active loop frames (RFC §9); reported once at the first overflow |
-| E1406 | declaration or operation not admitted in this context (`inst`/`subdesign` in a `for` body; non-place members in a layout loop) |
-| E1407 | const / array-length dependency cycle — the full cycle is named (`a` → `b` → … → `a`) |
+| E1401 | expected a compile-time `Int` or `Length` (or a supported operand pairing) — a unit literal where a count is required, an Int where a `Length` coordinate is required, `Int + Length`, `Length * Length`, a non-`Int`/`Length` const type, or an expression given to a non-Int/Length generic parameter |
+| E1402 | Int or Length overflow, `MIN / -1`, `MIN % -1`, an out-of-range integer literal, or a `Length / Int` that is not exactly representable (Length arithmetic never rounds) |
+| E1403 | division or remainder by zero, including a known zero divisor inside a loop body that never runs |
+| E1404 | reversed `for` range — the end is below the start (equal bounds are an empty loop, not an error) |
+| E1405 | deterministic expansion budget exceeded: 100,000 entered iterations, 1,000,000 work items, or 64 active loop frames; reported before the excess object is materialized, never a partial build |
+| E1406 | a declaration or operation not admitted in this context: `inst`/`subdesign` inside a `for` body (including an empty one), or anything but `const`/`place`/`for` inside a layout loop |
+| E1407 | cyclic constant / array-length dependency — the complete cycle is named (`N` → `leds.len` → `N`) |
 
 ## D00x — residual DRC (RFC-004; exactly four, never more)
 

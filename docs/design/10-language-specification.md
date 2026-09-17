@@ -1105,6 +1105,89 @@ design DualSidedBoard {
 - Not board-level layer stackup (how many copper layers a board has, their order) — that remains named future work per RFC-015's own disclosed gap. This RFC only concerns which of the two outer sides a component sits on.
 - Error codes stay in the existing E10xx family (layout constraints, RFC-013/020's home for placement-related diagnostics): invalid side value on a placement — no new block.
 
+# 10. Parameterized circuit construction (RFC-033)
+
+Accepted via RFC-033, see docs/design/rfc-033-parameterized-circuit.md. The
+rules below are the Accepted semantics, in this note's house style.
+
+## Expressions and constants
+
+A compile-time expression domain of two exact types: `Int` (signed 64-bit
+structural integer, never a unit) and `Length` (femto-exact mm, literals
+keep their spelling, computed values render canonically). Precedence:
+primary/parens, then unary, then `* / %`, then `+ -`; left-associative;
+source-tree evaluation order. `Int` arithmetic is checked (`MIN / -1`
+overflows); `Length` combines with `Length` by `+ -`, scales by `Int`, and
+divides by `Int` only when exactly representable — never rounded.
+
+```
+const N: Int = 2 * 2
+const PITCH: Length = 4mm
+inst leds: [LED; N]        // a computed array length
+place leds[1] at (10mm + 1 * PITCH, 2mm / 2) rotate 45 * 2
+```
+
+`const` declares a named constant in a design/subdesign/fn body (or a
+layout block); a const's value type-checks against its declared kind. The
+`-` is always its own token; a byte-adjacent `-` before a number/unit in
+operand position assembles a signed literal (`-1.5mm`, `-9223372036854775808`).
+
+## `const N: Int` generics
+
+`fn` and `subdesign` may declare `const NAME: Int = LITERAL` parameters;
+arguments are expressions evaluated in the caller's scope (`inner::<N + 1>`).
+Devices do not admit them (E406): pin interfaces are structural variants.
+
+## Labelled `for` loops
+
+```
+for links: n in 0..(leds.len - 1) {
+    net _: leds[n].DOUT, leds[n + 1].DIN
+}
+```
+
+Every loop is labelled; the range is half-open (`..`, exclusive end; equal
+bounds are a valid empty loop, a reversed range is E1404). The binder is
+visible inside the body as an `Int`. A loop body admits `const`, `net`,
+`nc`, fn calls, nested `for` and a placement-subset `layout`;
+`inst`/`subdesign` declarations are E1406 — declare arrays outside the
+loop. Layout loops admit `const`, `place`, nested `for` only.
+
+## Hygiene, identity, provenance
+
+Each iteration expands as a frame whose path segment is
+`__for_{LABEL}_{VALUE}` (negative values `neg{N}`): hygienic (sibling loops
+with identical bodies produce distinct nets), stable (inserting an
+unrelated loop or growing the bound never renumbers existing objects;
+renaming the label moves exactly those paths) and attributable (diagnostics
+inside a frame append ` — in <path>, <binder> = <value>`). Anonymous-net and
+fn-call counters reset per frame; the frame segment carries identity, never
+visitation order.
+
+## Static validation and budgets
+
+Declaration-time checks run over every body, called or not: duplicate local
+names (E201), const/bound kind mistakes (E1401), known-zero divisors even
+in loops that never run (E1403), dependency cycles among consts and array
+lengths (E1407, the full cycle named). Expansion is metered when the
+reachable graph contains any of this syntax: 100,000 cumulative entered
+iterations, 1,000,000 work items, 64 active frames — charged before any
+object is materialized; the first overflow reports once (E1405) and nothing
+partial is built.
+
+## Diagnostics
+
+| Code | Meaning |
+| --- | --- |
+| E1401 | expected a compile-time `Int` or `Length` (or a supported operand pairing) |
+| E1402 | overflow, `MIN / -1`, out-of-range literal, or non-exact `Length / Int` |
+| E1403 | division or remainder by zero, including a known zero divisor in a never-run loop |
+| E1404 | reversed `for` range (equal bounds are an empty loop, not an error) |
+| E1405 | expansion budget exceeded — reported before the excess object is materialized |
+| E1406 | declaration/operation not admitted in this context (loop bodies, layout loops) |
+| E1407 | cyclic const / array-length dependency — the complete cycle is named |
+
+
 # Not yet specified
 
 The following constructs are referenced conversationally (in the Conceptual Model, note 2, or in v1-legacy context) but have no Accepted RFC yet, and therefore no entry above. Do not assume any specific syntax for these until an RFC lands:
@@ -1116,7 +1199,7 @@ The following constructs are referenced conversationally (in the Conceptual Mode
 - place reaching an instance declared inside a called fn — explicitly deferred per Tony's direct decision (RFC-020/DR-026 amendment). place today resolves only against a design's own top-level instances; a component instantiated by a reusable sub-circuit fn (e.g. a connector helper) cannot currently be locked/oriented. A path-qualification mechanism was considered and withdrawn pending a real concrete need.
 - Glob imports / re-export sugar for the module system — deferred per RFC-016, pending real usage friction.
 - Board-level mounting holes, and any locating-hole shape beyond rect/circle/oval (true slots with rounded ends, keyed/D-shaped holes) — board-level holes explicitly deferred per RFC-022's own direct decision (closest existing analog is board_outline, RFC-020, but no construct exists yet); non-rect/circle/oval shapes explicitly deferred per RFC-023's own direct decision.
-- A general loop/iteration construct (e.g. auto-generating daisy-chain net wiring between consecutive array elements, or arithmetic-derived per-instance place/decouple data such as grid-formula coordinates) — explicitly deferred per RFC-024's own direct decision; array-typed instances (NAME: [Device; N], NAME[i] indexing) are the foundation such a construct would iterate over, but every daisy-chain net and every per-element place/decouple statement stays hand-written, one at a time, today.
+- Loop-body declarations (Candidate B) — RFC-033 delivered Candidate A: labelled `for` loops over connection operations (`net`/`nc`/calls/nested loops/placement subset) with computed indexes and coordinates, but a loop body still cannot declare an `inst` or `subdesign` (E1406); declare the array outside and repeat only connections inside. The pre-RFC-033 gap is otherwise closed: daisy-chain wiring and arithmetic-derived placements are now loop-generated.
 - Multi-dimensional array-typed instances (e.g. sw[row][col]) — explicitly deferred per RFC-024's own direct decision; no concrete need has been shown (OpenMicro's own keyboard matrix is expressed via ROW/COL nets, not a 2D instance grid).
 - Everything else in the Conceptual Model (Part, Instance, Net, Design) whose concrete syntax/semantics hasn't been directly pinned down by an Accepted RFC beyond what's already threaded through the sections above — note 2 describes their intended shape and philosophy in full.
 
