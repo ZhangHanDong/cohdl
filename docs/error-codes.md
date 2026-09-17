@@ -265,7 +265,7 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 | E1402 | overflow or non-exact `Length` division (`1mm / 3` is never rounded) — Int/Length overflow, `i64::MIN / -1`, and unary negation of `i64::MIN` |
 | E1403 | division or remainder by zero (Int and Length operands alike) |
 | E1404 | reversed `for` range (start above the exclusive end — equal bounds are a valid empty loop) |
-| E1405 | `[RESERVED, not yet implemented]` expansion budget exceeded (iterations / work items / active frames, RFC §9) — metering lands with RFC-033 Task 10 |
+| E1405 | expansion budget exceeded — 100,000 cumulative entered iterations / 1,000,000 work items / 64 active loop frames (RFC §9); reported once at the first overflow |
 | E1406 | declaration or operation not admitted in this context (`inst`/`subdesign` in a `for` body; non-place members in a layout loop) |
 | E1407 | const / array-length dependency cycle — the full cycle is named (`a` → `b` → … → `a`) |
 

@@ -43,6 +43,7 @@ pub fn expand_design(world: &World, design: &DesignDef, diags: &mut Diagnostics)
         active_calls: Vec::new(),
         call_counter: 0,
         anon_net_counter: 0,
+        meter: crate::check::meter::Meter::new(crate::check::meter::metering_needed(world, design)),
     };
     let mut scope = Scope {
         design_name: design.name.name.clone(),
@@ -59,6 +60,18 @@ pub fn expand_design(world: &World, design: &DesignDef, diags: &mut Diagnostics)
         frame: Vec::new(),
     };
     ex.walk_body(&design.body, &mut scope);
+    // RFC-033 §9: a tripped meter leaves no IR — assembly (and its
+    // obligation checks) is skipped; the E1405 already names the site.
+    if ex.meter.tripped() {
+        return DesignIr {
+            name: design.name.name.clone(),
+            instances: Default::default(),
+            subdesigns: Default::default(),
+            nets: Vec::new(),
+            nc_pins: Default::default(),
+            layout: Default::default(),
+        };
+    }
     ex.assemble(design)
 }
 
@@ -233,6 +246,9 @@ struct Expander<'w, 'd> {
     phys_bga: Vec<String>,
     /// fn names currently being expanded (cycle detection, RFC-006).
     active_calls: Vec<String>,
+    /// RFC-033 §9: the expansion budget ledger. Inactive (legacy graphs)
+    /// charges are always free.
+    meter: crate::check::meter::Meter,
     /// Global (per-design) call counter — `__fn{N}_{name}` segments.
     call_counter: usize,
     anon_net_counter: usize,
@@ -501,7 +517,13 @@ impl<'w, 'd> Expander<'w, 'd> {
             return;
         }
         // Frame depth is part of the budget (Task 10); iterations charged there too.
+        if !self.meter.enter_frame(f.span, self.diags) {
+            return;
+        }
         for v in lo..hi {
+            if !self.meter.enter_iteration(f.span, self.diags) {
+                break;
+            }
             let mut inner = self.enter_frame(&f.label, &f.binder, v, scope);
             let saved = (self.anon_net_counter, self.call_counter);
             self.anon_net_counter = 0;
@@ -510,6 +532,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             self.anon_net_counter = saved.0;
             self.call_counter = saved.1;
         }
+        self.meter.leave_frame();
     }
 
     /// RFC-033 §6: one iteration's frame — path gains `__for_{label}_{value}`
@@ -586,7 +609,13 @@ impl<'w, 'd> Expander<'w, 'd> {
             ));
             return;
         }
+        if !self.meter.enter_frame(f.span, self.diags) {
+            return;
+        }
         for v in lo..hi {
+            if !self.meter.enter_iteration(f.span, self.diags) {
+                break;
+            }
             let mut inner = self.enter_frame(&f.label, &f.binder, v, scope);
             // Layout consts are visible only in this layout and its loops.
             for c in &f.consts {
@@ -637,6 +666,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 self.handle_layout_for(nested, &mut inner_mut);
             }
         }
+        self.meter.leave_frame();
     }
 
     fn handle_layout(&mut self, block: &LayoutBlock, scope: &Scope) {
@@ -1061,6 +1091,13 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// relative to that subdesign's origin. Inside a called fn: rejected,
     /// unchanged from RFC-020.
     fn handle_placement(&mut self, placement: &crate::ast::Placement, scope: &Scope) {
+        // RFC-033 §9: one work item per placement, before any resolution.
+        if !self
+            .meter
+            .charge(1, "the placement", placement.span, self.diags)
+        {
+            return;
+        }
         use crate::units::UnitType;
         if scope.place_ctx == PlaceCtx::Fn || !self.active_calls.is_empty() {
             self.diags.push(Diagnostic::error(
@@ -1633,6 +1670,11 @@ impl<'w, 'd> Expander<'w, 'd> {
                 inst.name.span,
                 format!("`{}` is already defined in this scope", inst.name.name),
             ));
+            return;
+        }
+        // RFC-033 §9: one work item per real instance, charged BEFORE any
+        // materialization (a tripped meter leaves nothing behind).
+        if !self.meter.charge(1, "`inst`", inst.span, self.diags) {
             return;
         }
 
@@ -2277,6 +2319,19 @@ impl<'w, 'd> Expander<'w, 'd> {
     }
 
     fn handle_net(&mut self, net: &NetStmt, scope: &mut Scope) {
+        // RFC-033 §9: one work item per statement + one per member, before
+        // any resolution push.
+        if !self.meter.charge(1, "`net`", net.span, self.diags) {
+            return;
+        }
+        if !self.meter.charge(
+            net.members.len() as u64,
+            "net members",
+            net.span,
+            self.diags,
+        ) {
+            return;
+        }
         if let Some(name) = &net.name {
             if !self.check_not_reserved(name, "net") {
                 return;
@@ -2369,6 +2424,16 @@ impl<'w, 'd> Expander<'w, 'd> {
     }
 
     fn handle_nc(&mut self, nc: &NcStmt, scope: &mut Scope) {
+        // RFC-033 §9: one work item per statement + one per member.
+        if !self.meter.charge(1, "`nc`", nc.span, self.diags) {
+            return;
+        }
+        if !self
+            .meter
+            .charge(nc.members.len() as u64, "nc members", nc.span, self.diags)
+        {
+            return;
+        }
         for m in &nc.members {
             // Fan-out sugar stays scoped to NET member lists (E211 contract,
             // tests/inst_array.rs) — `nc` takes single elements only.
@@ -2578,6 +2643,10 @@ impl<'w, 'd> Expander<'w, 'd> {
         }
 
         let seg = format!("__fn{}_{}", self.call_counter, fndef.name.name);
+        // RFC-033 §9: one work item per entered call, before the body walk.
+        if !self.meter.charge(1, "the call", call.span, self.diags) {
+            return;
+        }
         self.call_counter += 1;
         let mut inner = Scope {
             design_name: scope.design_name.clone(),

@@ -7,6 +7,7 @@ pub mod footprints;
 pub mod generics;
 pub mod impls;
 pub mod ipc7351;
+pub mod meter;
 pub mod subdesigns;
 
 use crate::ast::{GenericBound, SourceFile};
