@@ -4161,7 +4161,7 @@ internals exception. E1301-E1307 registered. Notes and honest narrowings:
 
 ## RFC-033 — parameterized circuit construction, 2026-09-17
 
-Implemented in full per Candidate A: typed `Int`/`Length` compile-time
+Implemented per Candidate A: typed `Int`/`Length` compile-time
 expressions with an exact two-domain evaluator (Int i64 checked, Length
 femto i128, division never rounds), local `const`, `const N: Int`
 generics on `fn`/`subdesign` with expression arguments, expression-valued
@@ -4200,9 +4200,10 @@ registered. Notes and honest narrowings:
   at (0mm, 3V)` stays E1007); the evaluator judges by actual unit and
   reports E1401 in expression positions.
 - **Parser deviation (b):** generic-argument expressions start only at a
-  Length literal, `(`/`-`/`+`, or a number/name/unit followed by an
-  arithmetic operator — a bare `Number`/`Unit`/`Name` keeps its legacy
+  Length literal, `(`/`-`/`+`, a name followed by `.len`, or a
+  number/name/unit followed by an arithmetic operator — a bare
+  `Number`/`Unit`/`Name` keeps its legacy
   `GenericArg` shape so E113/E112 diagnostics stay byte-identical.
-- **Package API docs move to schema v2** (bound `{"const":"Int"}`,
-  `body_source`): Task 14 lands the schema bump; the registry keeps the
-  v1 rows until then.
+- **Package API docs use schema v2 for parameterized items** (bound
+  `{"const":"Int"}`, `body_source`); legacy documents remain v1. The
+  registry accepts both schema versions.

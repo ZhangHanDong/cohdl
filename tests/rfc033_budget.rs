@@ -190,3 +190,99 @@ design B {{
     assert!(r.contains("E1405"), "1,000,001 work items trips:\n{r}");
     assert_eq!(r.matches("error[E1405]").count(), 1, "exactly once:\n{r}");
 }
+
+#[test]
+fn literal_placements_do_not_activate_metering() {
+    let src = format!("{LIB} design B {{ inst a: HOST nc: a.P, a.Q layout {{ place a at (1mm, -2mm) rotate 90 }} }}");
+    let (chk, r) = check(&src);
+    assert!(!chk.diags.has_errors(), "{r}");
+    let design = chk.world.designs.values().next().unwrap();
+    assert!(!cohdl::check::meter::metering_needed(&chk.world, design));
+}
+
+#[test]
+fn empty_layout_loops_activate_and_obey_iteration_budget() {
+    let (chk, r) = check("design B { layout { for empty: i in 0..0 {} } }");
+    assert!(!chk.diags.has_errors(), "{r}");
+    let design = chk.world.designs.values().next().unwrap();
+    assert!(cohdl::check::meter::metering_needed(&chk.world, design));
+    let r = check("design B { layout { for too_many: i in 0..100001 {} } }").1;
+    assert_eq!(r.matches("error[E1405]").count(), 1, "{r}");
+}
+
+#[test]
+fn expanded_net_members_count_before_deduplication() {
+    // 20 instances + 21 work items for the initial net + 50,000 * 21
+    // for the repeated net. All nets merge, but all authored fanout counts.
+    let src = format!(
+        "{LIB} design B {{
+        inst a: [HOST; 20]
+        net _: a[0..=19].P
+        for repeat: i in 0..50000 {{ net _: a[0..=19].Q }}
+    }}"
+    );
+    let (chk, r) = check(&src);
+    assert_eq!(r.matches("error[E1405]").count(), 1, "{r}");
+    assert!(chk.ir.as_ref().is_none_or(|ir| ir.instances.is_empty()));
+}
+
+#[test]
+fn max_integer_selector_reports_bounds_without_overflowing() {
+    for index in [
+        "9223372036854775807..=9223372036854775807",
+        "(9223372036854775807)..=(9223372036854775807)",
+    ] {
+        let src = format!("{LIB} design B {{ inst a: [HOST; 1] net _: a[{index}].P nc: a[0].Q }}");
+        let r = check(&src).1;
+        assert!(r.contains("error[E202]"), "{r}");
+    }
+}
+
+#[test]
+fn computed_range_stride_must_be_positive() {
+    for stride in [0, -1] {
+        let src = format!("{LIB} design B {{ const S: Int = {stride} inst a: [HOST; 2] net _: a[0..=1 step S].P nc: a[0].Q, a[1].Q }}");
+        let r = check(&src).1;
+        assert!(r.contains("error[E211]"), "{r}");
+    }
+}
+
+#[test]
+fn largest_array_lengths_fail_before_bulk_allocation() {
+    for declaration in [
+        "inst a: [HOST; 9223372036854775807]",
+        "subdesign a: [Empty; 9223372036854775807]",
+    ] {
+        let src = format!(
+            "{LIB} pub subdesign Empty {{}} design B {{ const ACTIVE: Int = 0 {declaration} }}"
+        );
+        let (chk, r) = check(&src);
+        assert_eq!(r.matches("error[E1405]").count(), 1, "{r}");
+        assert!(chk
+            .ir
+            .as_ref()
+            .is_none_or(|ir| ir.instances.is_empty() && ir.subdesigns.is_empty()));
+    }
+}
+
+#[test]
+fn reference_expressions_activate_metering_at_every_call_site() {
+    for operation in [
+        "helper(a[0 + 0].P)",
+        "subdesign s: S { P: a[0 + 0].P }",
+        "#[bypass(a[0 + 0].P, 100nF)] inst b: HOST nc: b.P, b.Q",
+    ] {
+        let src = format!(
+            "{LIB} pub fn helper(p: Pin) {{ net _: p }}
+            pub subdesign S {{ ports {{ optional P: Pin }} }}
+            design B {{ inst a: [HOST; 1] net _: a[0].P nc: a[0].Q {operation} }}"
+        );
+        let (chk, r) = check(&src);
+        assert!(!chk.diags.has_errors(), "{operation}: {r}");
+        let design = chk.world.designs.values().next().unwrap();
+        assert!(
+            cohdl::check::meter::metering_needed(&chk.world, design),
+            "{operation}"
+        );
+    }
+}

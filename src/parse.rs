@@ -2715,7 +2715,7 @@ impl<'a> Parser<'a> {
             // A bare number stays `GenericArg::Number` (E113's precise
             // report at type check); a NON-Length unit literal stays
             // `GenericArg::Unit` (`MLCC<100nF, 16V, 10%>`); a bare ident
-            // stays a Name.
+            // stays a Name; a name followed by `.len` is an expression.
             let op_ahead = matches!(
                 self.peek_ahead(1),
                 TokenKind::Plus
@@ -2731,7 +2731,7 @@ impl<'a> Parser<'a> {
                     op_ahead
                         || matches!(self.peek(), TokenKind::Unit(v) if v.unit == UnitType::Length)
                 }
-                TokenKind::Ident(_) => op_ahead,
+                TokenKind::Ident(_) => op_ahead || matches!(self.peek_ahead(1), TokenKind::Dot),
                 _ => false,
             };
             if starts_expr {

@@ -36,6 +36,9 @@ pub enum Ty {
 /// What a name means during evaluation/type-checking.
 #[derive(Debug, Clone)]
 pub enum NameKind {
+    /// A visible pin, instance, net, or non-expression generic. Kept distinct
+    /// from an unknown Int/Length so visibility never invents a value type.
+    NonValue,
     Const(Value),
     Binder(i64),
     GenericInt(i64),
@@ -62,6 +65,156 @@ impl<'a> Env<'a> {
             array_lens: EMPTY_LENS.get_or_init(Default::default),
             unknown_arrays: EMPTY_UNKNOWN.get_or_init(Default::default),
         }
+    }
+}
+
+/// One lexical dependency: a typed const, or an array's Int length (`ty: None`).
+#[derive(Clone)]
+pub(crate) struct LocalExpr {
+    pub name: crate::ast::Ident,
+    pub value: Expr,
+    pub ty: Option<Ty>,
+    pub span: Span,
+}
+
+/// Resolve a body's dependency graph in either a type-only or bound environment.
+/// Unknown inputs remain typed unknowns; known values propagate without
+/// constructing any circuit objects or specializing a referenced callee.
+pub(crate) fn resolve_locals(
+    locals: &[LocalExpr],
+    names: &mut BTreeMap<String, NameKind>,
+    array_lens: &mut BTreeMap<String, i64>,
+    unknown_arrays: &mut BTreeSet<String>,
+    diags: &mut Diagnostics,
+) {
+    struct Resolver<'a> {
+        pending: BTreeMap<String, LocalExpr>,
+        names: &'a mut BTreeMap<String, NameKind>,
+        lens: &'a mut BTreeMap<String, i64>,
+        arrays: &'a mut BTreeSet<String>,
+        done: BTreeSet<String>,
+        stack: Vec<String>,
+        diags: &'a mut Diagnostics,
+    }
+    fn references(e: &Expr, out: &mut Vec<String>) {
+        match e {
+            Expr::Name(id) | Expr::Len(id, _) => out.push(id.name.clone()),
+            Expr::Unary { rhs, .. } | Expr::Paren(rhs, _) => references(rhs, out),
+            Expr::Binary { lhs, rhs, .. } => {
+                references(lhs, out);
+                references(rhs, out);
+            }
+            _ => {}
+        }
+    }
+    impl Resolver<'_> {
+        fn resolve(&mut self, name: &str) {
+            if self.done.contains(name) {
+                return;
+            }
+            if let Some(pos) = self.stack.iter().position(|n| n == name) {
+                let mut cycle = self.stack[pos..].to_vec();
+                cycle.push(name.to_string());
+                let rendered = cycle
+                    .iter()
+                    .map(|n| {
+                        if self.pending[n].ty.is_none() {
+                            format!("`{n}`.len")
+                        } else {
+                            format!("`{n}`")
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" → ");
+                self.diags.push(Diagnostic::error(
+                    "E1407",
+                    self.pending[name].span,
+                    format!("cyclic dependency: {rendered}"),
+                ));
+                self.done.extend(cycle);
+                return;
+            }
+            let local = self.pending[name].clone();
+            self.stack.push(name.to_string());
+            let mut refs = Vec::new();
+            references(&local.value, &mut refs);
+            for dependency in refs {
+                if self.pending.contains_key(&dependency) {
+                    self.resolve(&dependency);
+                }
+            }
+            self.stack.pop();
+            if !self.done.insert(name.to_string()) {
+                return;
+            }
+            let env = Env {
+                names: self.names,
+                array_lens: self.lens,
+                unknown_arrays: self.arrays,
+            };
+            let want = local.ty.unwrap_or(Ty::Int);
+            let Some(actual) = type_check(&local.value, &env, self.diags) else {
+                return;
+            };
+            if actual != want {
+                self.diags.push(Diagnostic::error(
+                    "E1401",
+                    local.value.span(),
+                    format!(
+                        "{} `{}` must be {}, but `{}` is {}",
+                        if local.ty.is_some() {
+                            "const"
+                        } else {
+                            "array length"
+                        },
+                        name,
+                        ty_name_ty(want),
+                        expr_text(&local.value),
+                        ty_name_ty(actual),
+                    ),
+                ));
+                return;
+            }
+            if let Some(value) = eval_if_concrete(&local.value, &env) {
+                if local.ty.is_some() {
+                    self.names.insert(name.to_string(), NameKind::Const(value));
+                } else if let Value::Int(n) = value {
+                    if n < 1 {
+                        self.diags.push(Diagnostic::error(
+                            "E211",
+                            local.value.span(),
+                            format!("array length `{n}` must be 1 or more"),
+                        ));
+                    } else {
+                        self.lens.insert(name.to_string(), n);
+                        self.arrays.remove(name);
+                    }
+                }
+            }
+        }
+    }
+    for local in locals {
+        if let Some(ty) = local.ty {
+            names.insert(local.name.name.clone(), NameKind::Unknown(ty));
+        } else {
+            unknown_arrays.insert(local.name.name.clone());
+        }
+    }
+    let mut resolver = Resolver {
+        pending: locals
+            .iter()
+            .map(|l| (l.name.name.clone(), l.clone()))
+            .collect(),
+        names,
+        lens: array_lens,
+        arrays: unknown_arrays,
+        done: BTreeSet::new(),
+        stack: Vec::new(),
+        diags,
+    };
+    let names: Vec<_> = resolver.pending.keys().cloned().collect();
+    for name in names {
+        resolver.resolve(&name);
     }
 }
 
@@ -228,7 +381,7 @@ fn length_literal(v: &UnitValue, span: Span, diags: &mut Diagnostics) -> Option<
 /// arrays); `None` otherwise, with no diagnostics. The static type-checker
 /// uses this per-binary-node so a known-zero divisor surfaces even under an
 /// unknown sibling operand.
-fn eval_if_concrete(e: &Expr, env: &Env) -> Option<Value> {
+pub(crate) fn eval_if_concrete(e: &Expr, env: &Env) -> Option<Value> {
     fn concrete(e: &Expr, env: &Env) -> bool {
         match e {
             Expr::Int(_, _) | Expr::Length(_, _) => true,
@@ -238,7 +391,7 @@ fn eval_if_concrete(e: &Expr, env: &Env) -> Option<Value> {
                 | Some(NameKind::Binder(_))
                 | Some(NameKind::GenericInt(_))
                 | Some(NameKind::GenericLength(_)) => true,
-                Some(NameKind::Unknown(_)) | None => false,
+                Some(NameKind::Unknown(_) | NameKind::NonValue) | None => false,
             },
             Expr::Len(id, _) => env.array_lens.contains_key(&id.name),
             Expr::Unary { rhs, .. } => concrete(rhs, env),
@@ -266,6 +419,14 @@ pub fn eval(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Value> {
             // Caller decides (definition validation never calls eval on
             // unknowns — it type-checks instead).
             Some(NameKind::Unknown(_)) => None,
+            Some(NameKind::NonValue) => {
+                diags.push(Diagnostic::error(
+                    "E1401",
+                    id.span,
+                    format!("`{}` is not a compile-time Int or Length value", id.name),
+                ));
+                None
+            }
             None => {
                 diags.push(Diagnostic::error(
                     "E202",
@@ -280,14 +441,23 @@ pub fn eval(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Value> {
         },
         Expr::Len(id, span) => match env.array_lens.get(&id.name) {
             Some(n) => Some(Value::Int(*n)),
+            None if env.unknown_arrays.contains(&id.name) => None,
             None => {
+                let known = env.names.contains_key(&id.name);
                 diags.push(Diagnostic::error(
-                    "E202",
+                    if known { "E1401" } else { "E202" },
                     *span,
-                    format!(
-                        "unknown array `{}` — `.len` reads a visible array's declared length",
-                        id.name
-                    ),
+                    if known {
+                        format!(
+                            "`{}` is not an array — `.len` requires a visible array",
+                            id.name
+                        )
+                    } else {
+                        format!(
+                            "unknown array `{}` — `.len` reads a visible array's declared length",
+                            id.name
+                        )
+                    },
                 ));
                 None
             }
@@ -334,6 +504,14 @@ pub fn type_check(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Ty> {
                 length_literal(u, id.span, diags).map(|_| Ty::Length)
             }
             Some(NameKind::Unknown(t)) => Some(*t),
+            Some(NameKind::NonValue) => {
+                diags.push(Diagnostic::error(
+                    "E1401",
+                    id.span,
+                    format!("`{}` is not a compile-time Int or Length value", id.name),
+                ));
+                None
+            }
             None => {
                 diags.push(Diagnostic::error(
                     "E202",
@@ -348,9 +526,28 @@ pub fn type_check(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Ty> {
         },
         // `.len` on a known array is an Int; on an unknown array (definition
         // validation) it is still an Int — just without a value.
-        Expr::Len(id, _) => {
-            let _ = id;
-            Some(Ty::Int)
+        Expr::Len(id, span) => {
+            if env.array_lens.contains_key(&id.name) || env.unknown_arrays.contains(&id.name) {
+                Some(Ty::Int)
+            } else {
+                let known = env.names.contains_key(&id.name);
+                diags.push(Diagnostic::error(
+                    if known { "E1401" } else { "E202" },
+                    *span,
+                    if known {
+                        format!(
+                            "`{}` is not an array — `.len` requires a visible array",
+                            id.name
+                        )
+                    } else {
+                        format!(
+                            "unknown array `{}` — `.len` reads a visible array's declared length",
+                            id.name
+                        )
+                    },
+                ));
+                None
+            }
         }
         Expr::Unary { op: _, rhs, span } => {
             // Unary preserves the operand's type; a concrete operand may
@@ -429,7 +626,7 @@ impl Env<'_> {
                     | Some(NameKind::Binder(_))
                     | Some(NameKind::GenericInt(_))
                     | Some(NameKind::GenericLength(_)) => Some(()),
-                    Some(NameKind::Unknown(_)) | None => None,
+                    Some(NameKind::Unknown(_) | NameKind::NonValue) | None => None,
                 },
                 Expr::Len(id, _) => env.array_lens.get(&id.name).map(|_| ()),
                 Expr::Unary { rhs, .. } => walk(rhs, env),

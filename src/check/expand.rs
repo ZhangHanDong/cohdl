@@ -7,7 +7,9 @@
 //! reference an instance declared later in the same body.
 
 use crate::ast::*;
-use crate::check::generics::{resolve_generic_args, GenericValue, Substitution};
+use crate::check::generics::{
+    resolve_generic_args, resolve_generic_args_in, CallerEnv, GenericValue, Substitution,
+};
 use crate::diag::{Diagnostic, Diagnostics};
 use crate::ir::{
     DesignIr, IrInstance, IrNet, LayoutDiffPair, LayoutIr, LayoutLengthMatch, LayoutNetClass,
@@ -55,6 +57,7 @@ pub fn expand_design(world: &World, design: &DesignDef, diags: &mut Diagnostics)
         local_insts: BTreeMap::new(),
         local_subs: BTreeMap::new(),
         arrays: BTreeMap::new(),
+        declared_lens: BTreeMap::new(),
         consts: BTreeMap::new(),
         binders: BTreeMap::new(),
         frame: Vec::new(),
@@ -118,6 +121,9 @@ struct Scope {
     /// An array's NAME is never itself in `local_insts` — only its elements
     /// (`NAME_0`…`NAME_{N-1}`), so a bare unindexed reference cannot resolve.
     arrays: BTreeMap<String, (i64, crate::span::Span)>,
+    /// Evaluated declaration lengths, visible before instances are expanded.
+    /// Separate from `arrays`, whose entries also signal materialized arrays.
+    declared_lens: BTreeMap<String, i64>,
     /// RFC-033 §3: this body's evaluated consts (name → value).
     consts: BTreeMap<String, crate::check::eval::Value>,
     /// RFC-033 §6: visible loop binders (name → current value). Empty until
@@ -129,10 +135,20 @@ struct Scope {
 }
 
 impl Scope {
-    /// RFC-033: the expression-visible names — consts, loop binders and
-    /// Int/Length generics from the substitution.
+    fn caller_env(&self) -> CallerEnv {
+        CallerEnv {
+            subst: self.subst.clone(),
+            names: self.names(),
+            array_lens: self.array_lens(),
+        }
+    }
+    /// RFC-033: expression names and kinds. Pin/instance parameters are
+    /// known names, but cannot be used as Int/Length values.
     fn names(&self) -> BTreeMap<String, crate::check::eval::NameKind> {
         let mut m = crate::check::generics::subst_names(&self.subst);
+        for name in self.bindings.keys() {
+            m.insert(name.clone(), crate::check::eval::NameKind::NonValue);
+        }
         for (k, v) in &self.consts {
             m.insert(k.clone(), crate::check::eval::NameKind::Const(*v));
         }
@@ -143,10 +159,9 @@ impl Scope {
     }
     /// RFC-033: visible array lengths (`.len`).
     fn array_lens(&self) -> BTreeMap<String, i64> {
-        self.arrays
-            .iter()
-            .map(|(k, (n, _))| (k.clone(), *n))
-            .collect()
+        let mut lens = self.declared_lens.clone();
+        lens.extend(self.arrays.iter().map(|(k, (n, _))| (k.clone(), *n)));
+        lens
     }
 }
 
@@ -332,10 +347,14 @@ impl<'w, 'd> Expander<'w, 'd> {
         for k in keys {
             self.eval_pending(&k, &pending, scope, &mut lens, &mut stack);
         }
+        scope.declared_lens.extend(lens.clone());
 
         // Pass 1: instances AND subdesign use sites (declarative bodies —
         // nets may reference later insts and later use sites' ports).
         for stmt in body {
+            if self.meter.tripped() {
+                return;
+            }
             if let Stmt::SubdesignUse(sub) = stmt {
                 self.handle_subdesign_use(sub, scope);
             }
@@ -371,7 +390,18 @@ impl<'w, 'd> Expander<'w, 'd> {
                         scope
                             .arrays
                             .insert(inst.name.name.clone(), (n, len_expr.span()));
+                        if !self.meter.ensure_capacity(
+                            n as u64,
+                            "`inst` array",
+                            inst.span,
+                            self.diags,
+                        ) {
+                            return;
+                        }
                         for i in 0..n {
+                            if self.meter.tripped() {
+                                return;
+                            }
                             let mut elem = inst.clone();
                             elem.name = Ident {
                                 name: element_name(&inst.name.name, i),
@@ -388,6 +418,9 @@ impl<'w, 'd> Expander<'w, 'd> {
         // after EVERY instance in this body exists — a bypass may reference an
         // instance declared later in source.
         for stmt in body {
+            if self.meter.tripped() {
+                return;
+            }
             if let Stmt::Inst(inst) = stmt {
                 if !inst.phys.is_empty() {
                     self.handle_inst_phys(inst, scope);
@@ -398,6 +431,9 @@ impl<'w, 'd> Expander<'w, 'd> {
         // resolve here (their pin references may name instances declared
         // anywhere in this body).
         for stmt in body {
+            if self.meter.tripped() {
+                return;
+            }
             match stmt {
                 Stmt::Inst(_) => {}
                 Stmt::Net(net) => self.handle_net(net, scope),
@@ -487,7 +523,11 @@ impl<'w, 'd> Expander<'w, 'd> {
         // under the bound substitution (before the range decision — even an
         // empty or skipped loop hides nothing decidable).
         {
-            let names = scope.names();
+            let mut names = scope.names();
+            names.insert(
+                f.binder.name.clone(),
+                crate::check::eval::NameKind::Unknown(crate::check::eval::Ty::Int),
+            );
             let mut bases: std::collections::BTreeSet<String> =
                 scope.bindings.keys().cloned().collect();
             for k in scope
@@ -498,7 +538,14 @@ impl<'w, 'd> Expander<'w, 'd> {
             {
                 bases.insert(k.clone());
             }
-            crate::check::bodies::check_loop_body_bound(&f.body, &names, &bases, self.diags);
+            crate::check::bodies::check_loop_body_bound(
+                self.world,
+                &f.body,
+                &names,
+                &bases,
+                &scope.array_lens(),
+                self.diags,
+            );
         }
         if lo > hi {
             self.diags.push(Diagnostic::error(
@@ -552,6 +599,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             local_insts: scope.local_insts.clone(),
             local_subs: scope.local_subs.clone(),
             arrays: scope.arrays.clone(),
+            declared_lens: scope.declared_lens.clone(),
             consts: scope.consts.clone(),
             binders: scope.binders.clone(),
             frame: scope.frame.clone(),
@@ -615,51 +663,17 @@ impl<'w, 'd> Expander<'w, 'd> {
                 break;
             }
             let mut inner = self.enter_frame(&f.label, &f.binder, v, scope);
-            // Layout consts are visible only in this layout and its loops.
-            for c in &f.consts {
-                let names = inner.names();
-                let lens = inner.array_lens();
-                let none = std::collections::BTreeSet::new();
-                let env = crate::check::eval::Env {
-                    names: &names,
-                    array_lens: &lens,
-                    unknown_arrays: &none,
-                };
-                let mut local = Diagnostics::new();
-                let val = crate::check::eval::eval(&c.value, &env, &mut local);
-                self.push_with_suffix(local, &inner);
-                match (c.ty, val) {
-                    (ConstTy::Int, Some(crate::check::eval::Value::Int(i))) => {
-                        inner
-                            .consts
-                            .insert(c.name.name.clone(), crate::check::eval::Value::Int(i));
-                    }
-                    (ConstTy::Length, Some(crate::check::eval::Value::Length(fv))) => {
-                        inner
-                            .consts
-                            .insert(c.name.name.clone(), crate::check::eval::Value::Length(fv));
-                    }
-                    (_, None) => {}
-                    _ => {
-                        self.diags.push(Diagnostic::error(
-                            "E1401",
-                            c.span,
-                            format!(
-                                "const `{}` cannot be assigned that value — it is declared `{}`",
-                                c.name.name,
-                                match c.ty {
-                                    ConstTy::Int => "Int",
-                                    ConstTy::Length => "Length",
-                                }
-                            ),
-                        ));
-                    }
-                }
-            }
+            self.bind_layout_constants(&f.consts, &mut inner);
             for p in &f.placements {
+                if self.meter.tripped() {
+                    break;
+                }
                 self.handle_placement(p, &inner);
             }
             for nested in &f.loops {
+                if self.meter.tripped() {
+                    break;
+                }
                 let mut inner_mut = inner.clone();
                 self.handle_layout_for(nested, &mut inner_mut);
             }
@@ -667,13 +681,75 @@ impl<'w, 'd> Expander<'w, 'd> {
         self.meter.leave_frame();
     }
 
+    fn bind_layout_constants(&mut self, consts: &[ConstStmt], scope: &mut Scope) {
+        let locals: Vec<_> = consts
+            .iter()
+            .map(|c| crate::check::eval::LocalExpr {
+                name: c.name.clone(),
+                value: c.value.clone(),
+                span: c.span,
+                ty: Some(match c.ty {
+                    ConstTy::Int => crate::check::eval::Ty::Int,
+                    ConstTy::Length => crate::check::eval::Ty::Length,
+                }),
+            })
+            .collect();
+        let mut names = scope.names();
+        let mut lens = scope.array_lens();
+        let mut unknown = BTreeSet::new();
+        let mut diags = Diagnostics::new();
+        crate::check::eval::resolve_locals(
+            &locals,
+            &mut names,
+            &mut lens,
+            &mut unknown,
+            &mut diags,
+        );
+        self.push_with_suffix(diags, scope);
+        for c in consts {
+            if let Some(crate::check::eval::NameKind::Const(value)) = names.get(&c.name.name) {
+                scope.consts.insert(c.name.name.clone(), *value);
+            }
+        }
+    }
+
     fn handle_layout(&mut self, block: &LayoutBlock, scope: &Scope) {
+        let mut local_diags = Diagnostics::new();
+        crate::check::bodies::check_layout_bound(
+            self.world,
+            block,
+            &scope.names(),
+            &scope.array_lens(),
+            &mut local_diags,
+        );
+        self.push_with_suffix(local_diags, scope);
         let resolve = |nets: &[Ident]| -> Vec<(String, Ident)> {
             nets.iter()
                 .map(|nid| (resolve_net_name(&nid.name, scope), nid.clone()))
                 .collect()
         };
         for c in &block.constraints {
+            let nets = match c {
+                LayoutConstraint::NetClass { nets, .. }
+                | LayoutConstraint::DiffPair { nets, .. }
+                | LayoutConstraint::LengthMatch { nets, .. } => nets,
+            };
+            if !self.meter.charge(
+                1 + nets.len() as u64,
+                "layout constraint",
+                c.span(),
+                self.diags,
+            ) {
+                return;
+            }
+            if matches!(c, LayoutConstraint::DiffPair { differential_impedance, single_ended_impedance, frequency, .. }
+                if differential_impedance.is_some() || single_ended_impedance.is_some() || frequency.is_some())
+                && !self
+                    .meter
+                    .charge(1, "diff-pair physics bracket", c.span(), self.diags)
+            {
+                return;
+            }
             let raw = match c {
                 LayoutConstraint::NetClass { name, nets, .. } => RawLayout::NetClass {
                     name: name.clone(),
@@ -713,51 +789,18 @@ impl<'w, 'd> Expander<'w, 'd> {
         // RFC-033: layout consts are visible only in this layout and its
         // loops — evaluate into a local scope clone.
         let mut layout_scope = scope.clone();
-        for c in &block.consts {
-            let names = layout_scope.names();
-            let lens = layout_scope.array_lens();
-            let none = std::collections::BTreeSet::new();
-            let env = crate::check::eval::Env {
-                names: &names,
-                array_lens: &lens,
-                unknown_arrays: &none,
-            };
-            let mut local = Diagnostics::new();
-            let val = crate::check::eval::eval(&c.value, &env, &mut local);
-            self.push_with_suffix(local, &layout_scope);
-            match (c.ty, val) {
-                (ConstTy::Int, Some(crate::check::eval::Value::Int(i))) => {
-                    layout_scope
-                        .consts
-                        .insert(c.name.name.clone(), crate::check::eval::Value::Int(i));
-                }
-                (ConstTy::Length, Some(crate::check::eval::Value::Length(f))) => {
-                    layout_scope
-                        .consts
-                        .insert(c.name.name.clone(), crate::check::eval::Value::Length(f));
-                }
-                (_, None) => {}
-                _ => {
-                    self.diags.push(Diagnostic::error(
-                        "E1401",
-                        c.span,
-                        format!(
-                            "const `{}` cannot be assigned that value — it is declared `{}`",
-                            c.name.name,
-                            match c.ty {
-                                ConstTy::Int => "Int",
-                                ConstTy::Length => "Length",
-                            }
-                        ),
-                    ));
-                }
-            }
-        }
+        self.bind_layout_constants(&block.consts, &mut layout_scope);
         for placement in &block.placements {
+            if self.meter.tripped() {
+                return;
+            }
             self.handle_placement(placement, &layout_scope);
         }
         // RFC-033: labelled placement loops.
         for lf in &block.loops {
+            if self.meter.tripped() {
+                return;
+            }
             let mut s = layout_scope.clone();
             self.handle_layout_for(lf, &mut s);
         }
@@ -797,7 +840,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                     // way a length participates in a cycle).
                     match pending.get(name) {
                         Some((_, Some(_), _)) => format!("`{}`", name),
-                        _ => format!("`{}.len`", name),
+                        _ => format!("`{}`.len", name),
                     }
                 })
                 .collect();
@@ -851,11 +894,8 @@ impl<'w, 'd> Expander<'w, 'd> {
         };
         // Array lengths of still-pending arrays read as unknown arrays (their
         // length is exactly what is being computed).
-        let known_lens: std::collections::BTreeMap<String, i64> = scope
-            .arrays
-            .iter()
-            .map(|(n, (v, _))| (n.clone(), *v))
-            .collect();
+        let mut known_lens = scope.array_lens();
+        known_lens.extend(lens.iter().map(|(name, len)| (name.clone(), *len)));
         let pending_arrays: std::collections::BTreeSet<String> = pending
             .iter()
             .filter(|(_, (_, ty, _))| ty.is_none())
@@ -1526,6 +1566,26 @@ impl<'w, 'd> Expander<'w, 'd> {
             }
         };
         for pa in &inst.phys {
+            let targets = match pa {
+                PhysAttr::Bypass { .. } => 1,
+                PhysAttr::CrystalOscillator { .. } => 3,
+                PhysAttr::SwitchingConverter {
+                    input_capacitor,
+                    output_capacitor,
+                    ..
+                } => {
+                    1 + u64::from(input_capacitor.is_some()) + u64::from(output_capacitor.is_some())
+                }
+                _ => 0,
+            };
+            if !self.meter.charge(
+                1 + targets,
+                "physics record and targets",
+                pa.span(),
+                self.diags,
+            ) {
+                return;
+            }
             match pa {
                 PhysAttr::Bypass {
                     inst: target,
@@ -1725,12 +1785,12 @@ impl<'w, 'd> Expander<'w, 'd> {
                 Some(ty_name.name.clone()),
             )
         } else if let Some(dev) = self.world.devices.get(&ty_name.name) {
-            let args = resolve_generic_args(
+            let args = resolve_generic_args_in(
                 self.world,
                 &format!("device `{}`", dev.name.name),
                 &dev.generics,
                 &inst.ty.generic_args,
-                &scope.subst,
+                &scope.caller_env(),
                 inst.ty.span,
                 self.diags,
             );
@@ -1921,57 +1981,99 @@ impl<'w, 'd> Expander<'w, 'd> {
     /// source-facing spelling stays `NAME[i]`.
     /// RFC-033: evaluate a selector's expressions to concrete indices
     /// (Range inclusive semantics: start..=end with optional step).
-    fn eval_indices(&mut self, sel: &IndexSel, scope: &Scope) -> Option<Vec<i64>> {
-        let (start, end, step) = match sel {
-            IndexSel::Single(e, _) => (
-                self.eval_int(e, scope, "an index")?,
-                self.eval_int(e, scope, "an index")?,
-                1,
-            ),
-            IndexSel::Range {
-                start, end, step, ..
-            } => {
-                let s = self.eval_int(start, scope, "a range start")?;
-                let e = self.eval_int(end, scope, "a range end")?;
-                let st = match step {
-                    None => 1,
-                    Some(e) => self.eval_int(e, scope, "a stride")?,
-                };
-                (s, e, st)
-            }
-            IndexSel::List(items, _) => {
-                let mut out = Vec::with_capacity(items.len());
-                for e in items {
-                    out.push(self.eval_int(e, scope, "an index")?);
-                }
-                return Some(out);
-            }
-        };
-        let step = step.max(1);
-        let mut out = Vec::new();
-        let mut i = start;
-        while i <= end {
-            out.push(i);
-            i += step;
-        }
-        Some(out)
-    }
-
     fn array_bounds(
         &mut self,
         base: &Ident,
         sel: &IndexSel,
         n: i64,
         scope: &Scope,
+        charge_members: bool,
     ) -> Option<Vec<i64>> {
-        // RFC-033: selectors evaluate against the visible names (generic Int
-        // parameters via the substitution); a bare-literal fast path keeps
-        // the pre-RFC diagnostics identical.
-        let idx = match sel.literal_indices() {
-            Some(idx) => idx,
-            None => self.eval_indices(sel, scope)?,
+        let out_of_bounds = |ex: &mut Self, i: i64| {
+            ex.diags.push(Diagnostic::error(
+                "E202",
+                sel.span(),
+                format!(
+                    "index {} is out of bounds for `{}` — valid indices are 0..={} (length {}){}",
+                    i,
+                    base.name,
+                    n - 1,
+                    n,
+                    ex.frame_suffix(scope)
+                ),
+            ));
         };
-        if idx.is_empty() {
+        let indices = match sel {
+            IndexSel::Range {
+                start, end, step, ..
+            } => {
+                let start = self.eval_int(start, scope, "a range start")?;
+                let end = self.eval_int(end, scope, "a range end")?;
+                let step = match step {
+                    None => 1,
+                    Some(e) => self.eval_int(e, scope, "a stride")?,
+                };
+                if step <= 0 {
+                    self.diags.push(Diagnostic::error(
+                        "E211",
+                        sel.span(),
+                        format!("array range stride `{step}` must be 1 or more"),
+                    ));
+                    return None;
+                }
+                if start > end {
+                    Vec::new()
+                } else {
+                    // Count and validate a range without constructing it. i128
+                    // handles the distance between any two i64 endpoints.
+                    if start < 0 || start >= n {
+                        out_of_bounds(self, start);
+                        return None;
+                    }
+                    let count = (i128::from(end) - i128::from(start)) / i128::from(step) + 1;
+                    let last = i128::from(start) + (count - 1) * i128::from(step);
+                    if last >= i128::from(n) {
+                        let first_bad = i128::from(start)
+                            + ((i128::from(n) - i128::from(start) - 1) / i128::from(step) + 1)
+                                * i128::from(step);
+                        out_of_bounds(self, first_bad as i64);
+                        return None;
+                    }
+                    if charge_members
+                        && !self
+                            .meter
+                            .charge(count as u64, "net members", sel.span(), self.diags)
+                    {
+                        return None;
+                    }
+                    return Some(
+                        std::iter::successors(Some(start), |i| {
+                            i.checked_add(step).filter(|next| *next <= end)
+                        })
+                        .collect(),
+                    );
+                }
+            }
+            IndexSel::Single(e, _) => vec![self.eval_int(e, scope, "an index")?],
+            IndexSel::List(items, _) => {
+                if charge_members
+                    && !self.meter.ensure_capacity(
+                        items.len() as u64,
+                        "net members",
+                        sel.span(),
+                        self.diags,
+                    )
+                {
+                    return None;
+                }
+                let mut out = Vec::with_capacity(items.len());
+                for e in items {
+                    out.push(self.eval_int(e, scope, "an index")?);
+                }
+                out
+            }
+        };
+        if indices.is_empty() {
             self.diags.push(Diagnostic::error(
                 "E211",
                 sel.span(),
@@ -1979,24 +2081,20 @@ impl<'w, 'd> Expander<'w, 'd> {
             ));
             return None;
         }
-        for i in &idx {
+        for i in &indices {
             if *i < 0 || *i >= n {
-                self.diags.push(Diagnostic::error(
-                    "E202",
-                    sel.span(),
-                    format!(
-                        "index {} is out of bounds for `{}` — valid indices are 0..={} (length {}){}",
-                        i,
-                        base.name,
-                        n - 1,
-                        n,
-                        self.frame_suffix(scope)
-                    ),
-                ));
+                out_of_bounds(self, *i);
                 return None;
             }
         }
-        Some(idx)
+        if charge_members
+            && !self
+                .meter
+                .charge(indices.len() as u64, "net members", sel.span(), self.diags)
+        {
+            return None;
+        }
+        Some(indices)
     }
 
     /// RFC-024: expand a possibly-indexed net member into flat, ordinary
@@ -2009,7 +2107,11 @@ impl<'w, 'd> Expander<'w, 'd> {
         // Only the fan-out SUGAR (range/list) expands here; a `Single` index
         // is a real reference and is resolved by `resolve_pin_ref` itself.
         let Some(sel @ (IndexSel::Range { .. } | IndexSel::List(..))) = &m.index else {
-            return vec![m.clone()];
+            return if self.meter.charge(1, "net member", m.span, self.diags) {
+                vec![m.clone()]
+            } else {
+                Vec::new()
+            };
         };
         let Some((n, _)) = scope.arrays.get(&m.base.name).copied() else {
             self.diags.push(Diagnostic::error(
@@ -2022,7 +2124,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             ));
             return Vec::new();
         };
-        let Some(idx) = self.array_bounds(&m.base, sel, n, scope) else {
+        let Some(idx) = self.array_bounds(&m.base, sel, n, scope, true) else {
             return Vec::new();
         };
         idx.into_iter()
@@ -2079,7 +2181,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 };
                 // RFC-033: a computed single index evaluates in this scope.
                 let i = self.eval_int(e, scope, "an index")?;
-                self.array_bounds(&r.base, sel, n, scope)?;
+                self.array_bounds(&r.base, sel, n, scope, false)?;
                 Some(Cow::Owned(PinRef {
                     base: Ident {
                         name: element_name(&r.base.name, i),
@@ -2322,14 +2424,6 @@ impl<'w, 'd> Expander<'w, 'd> {
         if !self.meter.charge(1, "`net`", net.span, self.diags) {
             return;
         }
-        if !self.meter.charge(
-            net.members.len() as u64,
-            "net members",
-            net.span,
-            self.diags,
-        ) {
-            return;
-        }
         if let Some(name) = &net.name {
             if !self.check_not_reserved(name, "net") {
                 return;
@@ -2340,7 +2434,11 @@ impl<'w, 'd> Expander<'w, 'd> {
             // RFC-024: a range/stride/list member expands to the flat PinRef
             // list first; everything downstream is byte-identical to the
             // hand-written form.
-            for expanded in self.expand_member(m, scope) {
+            let expanded_members = self.expand_member(m, scope);
+            if self.meter.tripped() {
+                return;
+            }
+            for expanded in expanded_members {
                 if let Some(resolved) = self.resolve_pin_ref(&expanded, scope) {
                     members.push(resolved);
                 }
@@ -2370,6 +2468,12 @@ impl<'w, 'd> Expander<'w, 'd> {
         // RFC-027: record this declaration's physics attributes against the
         // net's emitted display name (dup/one-primary checks at assembly).
         for pa in &net.phys {
+            if !self
+                .meter
+                .charge(1, "net physics record", pa.span(), self.diags)
+            {
+                return;
+            }
             match pa {
                 PhysAttr::Ground {
                     primary,
@@ -2512,13 +2616,13 @@ impl<'w, 'd> Expander<'w, 'd> {
         }
 
         // Named generic parameters come from the turbofish, resolved in the
-        // CALLER's substitution (outward-in threading, RFC-006).
-        let subst = resolve_generic_args(
+        // CALLER's lexical environment (outward-in threading, RFC-006/033).
+        let subst = resolve_generic_args_in(
             self.world,
             &format!("fn `{}`", fndef.name.name),
             &fndef.generics,
             &call.generic_args,
-            &scope.subst,
+            &scope.caller_env(),
             call.span,
             self.diags,
         );
@@ -2656,6 +2760,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             local_insts: BTreeMap::new(),
             local_subs: BTreeMap::new(),
             arrays: BTreeMap::new(),
+            declared_lens: BTreeMap::new(),
             consts: BTreeMap::new(),
             binders: BTreeMap::new(),
             frame: Vec::new(),
@@ -2749,22 +2854,29 @@ impl<'w, 'd> Expander<'w, 'd> {
             return;
         }
         // RFC-007 generics, reused verbatim.
-        let subst = resolve_generic_args(
+        let subst = resolve_generic_args_in(
             self.world,
             &format!("subdesign `{}`", crate::resolve::short(&ty_name.name)),
             &sd.generics,
             &stmt.ty.generic_args,
-            &scope.subst,
+            &scope.caller_env(),
             stmt.ty.span,
             self.diags,
         );
+        let node_work = 1 + sd.ports.len() as u64;
+        if !self
+            .meter
+            .ensure_capacity(node_work, "subdesign node and ports", stmt.span, self.diags)
+        {
+            return;
+        }
         let ports: BTreeMap<String, (Obligation, Span)> = sd
             .ports
             .iter()
             .map(|p| (p.name.name.clone(), (p.obligation, p.span)))
             .collect();
-        let element_names: Vec<String> = match &stmt.array_len {
-            None => vec![stmt.name.name.clone()],
+        let element_count = match &stmt.array_len {
+            None => 1,
             Some((len_expr, _)) => {
                 // RFC-033: the subdesign array length evaluates against the
                 // scope (consts/generics; pass 0 handles dependency order for
@@ -2783,12 +2895,36 @@ impl<'w, 'd> Expander<'w, 'd> {
                 scope
                     .arrays
                     .insert(stmt.name.name.clone(), (n, len_expr.span()));
-                (0..n).map(|i| element_name(&stmt.name.name, i)).collect()
+                n
             }
         };
         let body = sd.body.clone();
         let fq = ty_name.name.clone();
-        for elem in element_names {
+        // Empty bodies have no intervening source sites. Preflight their
+        // entire array before bulk allocation; nonempty bodies stay interleaved
+        // per node so an earlier body failure retains its original site.
+        if body.is_empty()
+            && !self.meter.ensure_capacity(
+                (element_count as u64).saturating_mul(node_work),
+                "subdesign nodes and ports",
+                stmt.span,
+                self.diags,
+            )
+        {
+            return;
+        }
+        for i in 0..element_count {
+            if !self
+                .meter
+                .charge(node_work, "subdesign node and ports", stmt.span, self.diags)
+            {
+                return;
+            }
+            let elem = if stmt.array_len.is_some() {
+                element_name(&stmt.name.name, i)
+            } else {
+                stmt.name.name.clone()
+            };
             // RFC-024 discipline: each element is fully real, so its
             // generated name takes the SAME duplicate check a hand-written
             // declaration would (physical arrays get this via handle_inst).
@@ -2826,6 +2962,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 local_insts: BTreeMap::new(),
                 local_subs: BTreeMap::new(),
                 arrays: BTreeMap::new(),
+                declared_lens: BTreeMap::new(),
                 consts: BTreeMap::new(),
                 binders: BTreeMap::new(),
                 frame: Vec::new(),
@@ -2873,6 +3010,14 @@ impl<'w, 'd> Expander<'w, 'd> {
         let sub_short = crate::resolve::short(&self.sub_nodes[&node_path].fq).to_string();
         let mut seen: BTreeMap<&str, Span> = BTreeMap::new();
         for conn in &stmt.conns {
+            // One authored entry plus its one scalar pin/net target. The
+            // synthesized joining net below is deliberately not charged.
+            if !self
+                .meter
+                .charge(2, "port connection", conn.span, self.diags)
+            {
+                return;
+            }
             if let Some(prev) = seen.insert(conn.port.name.as_str(), conn.span) {
                 self.diags.push(
                     Diagnostic::error(
@@ -3754,4 +3899,181 @@ fn is_valid_designator(s: &str) -> bool {
         && s.len() > prefix_len
         && s[prefix_len..].chars().all(|c| c.is_ascii_digit())
         && !s[prefix_len..].starts_with('0')
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+    use crate::check::meter::MAX_WORK_ITEMS;
+
+    const LIB: &str = "pub device D { pins { A: 1 [passive], B: 2 [passive] } }";
+
+    // Exercise the real expansion handlers close to the production limit,
+    // without allocating a million objects to prove each semantic charge.
+    fn metered(src: &str, initial_work: u64) -> (u64, usize, String) {
+        let checked = crate::pipeline::check_files_in(
+            "board",
+            &[("main.cohdl".into(), format!("{LIB} {src}"))],
+            None,
+        )
+        .unwrap();
+        assert!(
+            !checked.diags.has_errors(),
+            "{}",
+            checked.diags.render(&checked.sm)
+        );
+        let design = checked.world.designs.values().next().unwrap();
+        let mut diags = Diagnostics::new();
+        let mut ex = Expander {
+            world: &checked.world,
+            diags: &mut diags,
+            instances: BTreeMap::new(),
+            net_decls: Vec::new(),
+            nc_pins: Vec::new(),
+            layout_raw: Vec::new(),
+            board_outline: None,
+            placements: Vec::new(),
+            sub_nodes: BTreeMap::new(),
+            active_subs: Vec::new(),
+            abs_node_places: BTreeMap::new(),
+            rel_places: Vec::new(),
+            synth_net_conns: Vec::new(),
+            phys_grounds: Vec::new(),
+            phys_high_currents: Vec::new(),
+            phys_impedances: Vec::new(),
+            phys_bypasses: Vec::new(),
+            phys_crystals: Vec::new(),
+            phys_converters: Vec::new(),
+            phys_bga: Vec::new(),
+            active_calls: Vec::new(),
+            call_counter: 0,
+            anon_net_counter: 0,
+            meter: crate::check::meter::Meter::new(true),
+        };
+        let mut scope = Scope {
+            design_name: design.name.name.clone(),
+            path: design.name.name.clone(),
+            is_design_body: true,
+            place_ctx: PlaceCtx::Design,
+            subst: Substitution::new(),
+            bindings: BTreeMap::new(),
+            local_insts: BTreeMap::new(),
+            local_subs: BTreeMap::new(),
+            arrays: BTreeMap::new(),
+            declared_lens: BTreeMap::new(),
+            consts: BTreeMap::new(),
+            binders: BTreeMap::new(),
+            frame: Vec::new(),
+        };
+
+        ex.meter.work = initial_work;
+        ex.walk_body(&design.body, &mut scope);
+        let result = (ex.meter.work, ex.sub_nodes.len());
+        (result.0, result.1, diags.render(&checked.sm))
+    }
+
+    #[test]
+    fn logical_nodes_and_optional_ports_are_charged_before_materialization() {
+        let source = "pub subdesign S { ports { optional P: Pin optional Q: Pin } }
+            design B { subdesign a: S subdesign b: S }";
+        let (work, nodes, diagnostics) = metered(source, MAX_WORK_ITEMS - 5);
+        assert_eq!(nodes, 1, "{diagnostics}");
+        assert_eq!(work, MAX_WORK_ITEMS - 2);
+        assert_eq!(
+            diagnostics.matches("error[E1405]").count(),
+            1,
+            "{diagnostics}"
+        );
+        let (_, nodes, diagnostics) = metered(
+            "pub subdesign S {} design B { subdesign a: S subdesign b: S }",
+            MAX_WORK_ITEMS - 1,
+        );
+        assert_eq!(nodes, 1, "{diagnostics}");
+        assert_eq!(
+            diagnostics.matches("error[E1405]").count(),
+            1,
+            "{diagnostics}"
+        );
+        let (work, nodes, diagnostics) = metered(
+            "pub subdesign S { ports { optional P: Pin optional Q: Pin } }
+            design B { subdesign a: S }",
+            MAX_WORK_ITEMS - 3,
+        );
+        assert_eq!((work, nodes), (MAX_WORK_ITEMS, 1));
+        assert!(diagnostics.is_empty(), "{diagnostics}");
+    }
+
+    #[test]
+    fn array_preflight_preserves_first_failing_body_site() {
+        let (work, nodes, diagnostics) = metered(
+            "pub subdesign S { ports { optional P: Pin } net inside: P }
+            design B { subdesign a: [S; 3] }",
+            MAX_WORK_ITEMS - 2,
+        );
+        assert_eq!((work, nodes), (MAX_WORK_ITEMS, 1));
+        assert_eq!(
+            diagnostics.matches("error[E1405]").count(),
+            1,
+            "{diagnostics}"
+        );
+        assert!(diagnostics.contains("`net` would exceed"), "{diagnostics}");
+    }
+
+    #[test]
+    fn list_fanout_charges_repeated_members_before_materialization() {
+        let (work, _, diagnostics) = metered(
+            "design B { inst a: [D; 1] net _: a[0, 0, 0].A nc: a[0].B }",
+            MAX_WORK_ITEMS - 4,
+        );
+        assert_eq!(work, MAX_WORK_ITEMS - 2);
+        assert_eq!(
+            diagnostics.matches("error[E1405]").count(),
+            1,
+            "{diagnostics}"
+        );
+        assert!(
+            diagnostics.contains("net members would exceed"),
+            "{diagnostics}"
+        );
+    }
+
+    #[test]
+    fn authored_port_connections_charge_entry_and_target_without_synthesized_net() {
+        let (work, _, diagnostics) = metered(
+            "pub subdesign S { ports { optional P: Pin optional Q: Pin } }
+            design B { inst a: D subdesign s: S { P: a.A Q: named } net named: a.B }",
+            0,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics}");
+        // Instance + node and two ports + two (entry + target) + net and member.
+        assert_eq!(work, 1 + 3 + 4 + 2);
+    }
+
+    #[test]
+    fn layout_constraints_charge_declaration_references_and_physics_bracket() {
+        let (work, _, diagnostics) = metered(
+            "design B { inst a: D net P: a.A net N: a.B
+            layout { net_class C { P, N } length_match(P, N)
+                diff_pair(P, N) [differential_impedance: 100ohm] } }",
+            0,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics}");
+        // One instance, two net/member pairs, three constraints with two refs,
+        // and one resolved diff-pair physics bracket.
+        assert_eq!(work, 1 + 4 + 9 + 1);
+    }
+
+    #[test]
+    fn physics_records_and_authored_targets_are_charged() {
+        let (work, _, diagnostics) = metered(
+            "design B { #[bga_fanout] inst a: D
+            #[bypass(a.A, 100nF)] inst b: D
+            #[ground(primary)] net G: a.A, a.B, b.A, b.B }",
+            0,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics}");
+        // Two instances; bare BGA record; bypass record and explicit pin target;
+        // net statement and four members; ground record (no explicit targets).
+        assert_eq!(work, 2 + 1 + 2 + 5 + 1);
+    }
 }

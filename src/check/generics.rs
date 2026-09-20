@@ -23,6 +23,42 @@ pub enum GenericValue {
 
 pub type Substitution = BTreeMap<String, GenericValue>;
 
+/// Expression values at an actual call site, alongside legacy generic bindings.
+#[derive(Default)]
+pub struct CallerEnv {
+    pub subst: Substitution,
+    pub names: BTreeMap<String, crate::check::eval::NameKind>,
+    pub array_lens: BTreeMap<String, i64>,
+}
+
+impl CallerEnv {
+    fn from_subst(subst: &Substitution) -> Self {
+        Self {
+            subst: subst.clone(),
+            names: subst_names(subst),
+            array_lens: BTreeMap::new(),
+        }
+    }
+
+    fn eval_env(&self) -> crate::check::eval::Env<'_> {
+        crate::check::eval::Env {
+            names: &self.names,
+            array_lens: &self.array_lens,
+            unknown_arrays: crate::check::eval::Env::empty().unknown_arrays,
+        }
+    }
+}
+
+pub(crate) fn checked_int(text: &str, span: Span, diags: &mut Diagnostics) -> Option<i64> {
+    text.parse().map_err(|_| {
+        diags.push(Diagnostic::error(
+            "E1401",
+            span,
+            format!("`{text}` is not an Int — integer literals are whole decimal numbers in −2^63 … 2^63−1"),
+        ));
+    }).ok()
+}
+
 /// RFC-033: the `NameKind` view of a substitution — the single source every
 /// expander `Env` construction goes through. Int → `GenericInt`; a Length
 /// unit value → `GenericLength`; other units and device bindings carry no
@@ -61,6 +97,26 @@ pub fn resolve_generic_args(
     site: Span,
     diags: &mut Diagnostics,
 ) -> Substitution {
+    resolve_generic_args_in(
+        world,
+        owner_desc,
+        params,
+        args,
+        &CallerEnv::from_subst(env),
+        site,
+        diags,
+    )
+}
+
+pub fn resolve_generic_args_in(
+    world: &World,
+    owner_desc: &str,
+    params: &[GenericParam],
+    args: &[GenericArg],
+    env: &CallerEnv,
+    site: Span,
+    diags: &mut Diagnostics,
+) -> Substitution {
     if args.len() > params.len() {
         diags.push(Diagnostic::error(
             "E401",
@@ -80,7 +136,7 @@ pub fn resolve_generic_args(
     for (i, param) in params.iter().enumerate() {
         match args.get(i) {
             Some(arg) => {
-                if let Some(value) = resolve_one(world, param, arg, env, diags) {
+                if let Some(value) = resolve_one_in(world, param, arg, env, diags) {
                     subst.insert(param.name.name.clone(), value);
                 }
             }
@@ -161,6 +217,34 @@ pub(crate) fn resolve_one(
     env: &Substitution,
     diags: &mut Diagnostics,
 ) -> Option<GenericValue> {
+    resolve_one_in(world, param, arg, &CallerEnv::from_subst(env), diags)
+}
+
+fn resolve_one_in(
+    world: &World,
+    param: &GenericParam,
+    arg: &GenericArg,
+    caller: &CallerEnv,
+    diags: &mut Diagnostics,
+) -> Option<GenericValue> {
+    let env = &caller.subst;
+    // Local Int/Length values use the same evaluator as expression arguments.
+    // Keep legacy substitution forwarding first to preserve unit text and errors.
+    if let GenericArg::Name(name) = arg {
+        if !env.contains_key(&name.name)
+            && caller.names.contains_key(&name.name)
+            && (matches!(param.bound, GenericBound::Int(_))
+                || matches!(&param.bound, GenericBound::Unit(u) if u.unit == crate::units::UnitType::Length))
+        {
+            return resolve_one_in(
+                world,
+                param,
+                &GenericArg::Expr(Expr::Name(name.clone())),
+                caller,
+                diags,
+            );
+        }
+    }
     match (&param.bound, arg) {
         // ---- unit-bound parameter ----
         (GenericBound::Unit(u), GenericArg::Unit(val, span)) => {
@@ -356,14 +440,7 @@ pub(crate) fn resolve_one(
         (GenericBound::Unit(u), GenericArg::Expr(e))
             if u.unit == crate::units::UnitType::Length =>
         {
-            let names = subst_names(env);
-            let empty_lens = BTreeMap::new();
-            let empty_unknown = std::collections::BTreeSet::new();
-            let env_ref = crate::check::eval::Env {
-                names: &names,
-                array_lens: &empty_lens,
-                unknown_arrays: &empty_unknown,
-            };
+            let env_ref = caller.eval_env();
             match crate::check::eval::eval(e, &env_ref, diags)? {
                 crate::check::eval::Value::Length(f) => {
                     Some(GenericValue::Unit(crate::check::eval::length_value(f)))
@@ -413,17 +490,10 @@ pub(crate) fn resolve_one(
         (GenericBound::Int(_), arg @ (GenericArg::Expr(_) | GenericArg::Number(..))) => {
             let e = match arg {
                 GenericArg::Expr(e) => e.clone(),
-                GenericArg::Number(n, sp) => Expr::Int(n.parse().unwrap_or(0), *sp),
+                GenericArg::Number(n, sp) => Expr::Int(checked_int(n, *sp, diags)?, *sp),
                 _ => unreachable!(),
             };
-            let names = subst_names(env);
-            let empty_lens = BTreeMap::new();
-            let empty_unknown = std::collections::BTreeSet::new();
-            let env_ref = crate::check::eval::Env {
-                names: &names,
-                array_lens: &empty_lens,
-                unknown_arrays: &empty_unknown,
-            };
+            let env_ref = caller.eval_env();
             match crate::check::eval::eval(&e, &env_ref, diags)? {
                 crate::check::eval::Value::Int(i) => Some(GenericValue::Int(i)),
                 crate::check::eval::Value::Length(_) => {

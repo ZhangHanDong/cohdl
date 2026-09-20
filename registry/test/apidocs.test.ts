@@ -292,9 +292,30 @@ describe("handleApidocsPut", () => {
 
   it("rejects an invalid body without storing anything", async () => {
     const h = harness();
+    const { response, body } = await invoke(h, JSON.stringify({ schema_version: 3 }));
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("api docs must declare `schema_version` 1 or 2");
+    expect(h.store.put).not.toHaveBeenCalled();
+  });
+
+  it("accepts schema v2 uploads for the published package and version", async () => {
+    const h = harness();
+    const uploaded = new TextEncoder().encode(JSON.stringify({
+      schema_version: 2,
+      package: { name: "passive", version: "1.0.0" },
+      items: [],
+    }));
+    const { response, body } = await invoke(h, uploaded);
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ name: "passive", version: "1.0.0", size: uploaded.length });
+    expect(h.store.put).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects schema v2 without the package envelope", async () => {
+    const h = harness();
     const { response, body } = await invoke(h, JSON.stringify({ schema_version: 2 }));
     expect(response.status).toBe(400);
-    expect(body.error).toBe("api docs must declare `schema_version` 1");
+    expect(body.error).toContain("package.name");
     expect(h.store.put).not.toHaveBeenCalled();
   });
 

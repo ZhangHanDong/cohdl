@@ -7,7 +7,7 @@
 //! the reachable expansion graph contains M2 syntax — a purely legacy graph
 //! keeps the pre-RFC behavior (no counting, no limits, bytes unchanged).
 
-use crate::ast::{Expr, ForStmt, GenericArg, GenericBound, LayoutBlock, Stmt};
+use crate::ast::{Expr, GenericArg, GenericBound, LayoutBlock, Stmt};
 use crate::diag::{Diagnostic, Diagnostics};
 use crate::resolve::World;
 use crate::span::Span;
@@ -33,17 +33,8 @@ fn body_has_m2(
     for stmt in body {
         match stmt {
             Stmt::Const(_) => return true,
-            // A `for` is M2 on sight (labelled iteration); its bounds and
-            // body are still inspected for the walk's uniformity.
-            Stmt::For(ForStmt {
-                start, end, body, ..
-            }) => {
-                let _ = (start, end);
-                if body_has_m2(world, body, visited) {
-                    return true;
-                }
-                return true;
-            }
+            // The loop itself activates metering, including an empty body.
+            Stmt::For(_) => return true,
             Stmt::Inst(i) => {
                 if let Some((e, _)) = &i.array_len {
                     if expr_is_m2(e) {
@@ -53,8 +44,14 @@ fn body_has_m2(
                 if i.ty
                     .generic_args
                     .iter()
-                    .any(|a| matches!(a, GenericArg::Expr(_)))
+                    .any(|a| matches!(a, GenericArg::Expr(e) if expr_is_m2(e)))
                 {
+                    return true;
+                }
+                if i.phys.iter().any(|attr| {
+                    matches!(attr,
+                    crate::ast::PhysAttr::Bypass { index: Some((e, _)), .. } if expr_is_m2(e))
+                }) {
                     return true;
                 }
             }
@@ -63,6 +60,19 @@ fn body_has_m2(
                     if expr_is_m2(e) {
                         return true;
                     }
+                }
+                if u.ty
+                    .generic_args
+                    .iter()
+                    .any(|a| matches!(a, GenericArg::Expr(e) if expr_is_m2(e)))
+                {
+                    return true;
+                }
+                if u.conns
+                    .iter()
+                    .any(|c| c.value.index.as_ref().is_some_and(index_sel_is_m2))
+                {
+                    return true;
                 }
                 if let Some(sd) = world.subdesigns.get(&u.ty.name.name) {
                     if generics_have_int(&sd.generics) {
@@ -79,7 +89,14 @@ fn body_has_m2(
                 if call
                     .generic_args
                     .iter()
-                    .any(|a| matches!(a, GenericArg::Expr(_)))
+                    .any(|a| matches!(a, GenericArg::Expr(e) if expr_is_m2(e)))
+                {
+                    return true;
+                }
+                if call
+                    .args
+                    .iter()
+                    .any(|arg| arg.index.as_ref().is_some_and(index_sel_is_m2))
                 {
                     return true;
                 }
@@ -123,10 +140,7 @@ fn body_has_m2(
 }
 
 fn layout_has_m2(block: &LayoutBlock) -> bool {
-    if !block.consts.is_empty() {
-        return true;
-    }
-    if body_has_m2_layout_for(&block.loops) {
+    if !block.consts.is_empty() || !block.loops.is_empty() {
         return true;
     }
     for p in &block.placements {
@@ -144,42 +158,17 @@ fn layout_has_m2(block: &LayoutBlock) -> bool {
     false
 }
 
-fn body_has_m2_layout_for(loops: &[crate::ast::LayoutFor]) -> bool {
-    for f in loops {
-        if expr_is_m2(&f.start) || expr_is_m2(&f.end) {
-            return true;
-        }
-        if !f.consts.is_empty() {
-            return true;
-        }
-        for p in &f.placements {
-            if expr_is_m2(&p.at.0) || expr_is_m2(&p.at.1) {
-                return true;
-            }
-            if let Some(r) = &p.rotate {
-                if expr_is_m2(r) {
-                    return true;
-                }
-            }
-        }
-        if body_has_m2_layout_for(&f.loops) {
-            return true;
-        }
-    }
-    false
-}
-
 fn generics_have_int(generics: &[crate::ast::GenericParam]) -> bool {
     generics
         .iter()
         .any(|g| matches!(g.bound, GenericBound::Int(_)))
 }
 
-/// An expression is M2 when it is anything but a bare literal (int or
-/// parenthesized int) — names, `.len`, unary, binary all count.
+/// Literals and parentheses preserve legacy resource behavior; names,
+/// `.len`, unary and binary operations activate metering.
 fn expr_is_m2(e: &Expr) -> bool {
     match e {
-        Expr::Int(_, _) => false,
+        Expr::Int(_, _) | Expr::Length(_, _) => false,
         Expr::Paren(inner, _) => expr_is_m2(inner),
         _ => true,
     }
@@ -226,11 +215,30 @@ impl Meter {
     /// Charge `n` work items; on the first overflow push E1405 (once) and
     /// return false.
     pub fn charge(&mut self, n: u64, what: &str, span: Span, diags: &mut Diagnostics) -> bool {
+        if !self.ensure_capacity(n, what, span, diags) {
+            return false;
+        }
+        if self.active {
+            self.work += n;
+        }
+        true
+    }
+
+    /// Reject a bulk expansion before allocation without charging its items
+    /// twice. Only use when every item has the same failing source site and
+    /// no intervening semantic events can consume work.
+    pub fn ensure_capacity(
+        &mut self,
+        n: u64,
+        what: &str,
+        span: Span,
+        diags: &mut Diagnostics,
+    ) -> bool {
         if !self.active || self.tripped {
             return !self.tripped;
         }
-        let (next, over) = self.work.overflowing_add(n);
-        if over || next > MAX_WORK_ITEMS {
+        let next = self.work.saturating_add(n);
+        if next > MAX_WORK_ITEMS {
             self.tripped = true;
             diags.push(Diagnostic::error(
                 "E1405",
@@ -238,13 +246,12 @@ impl Meter {
                 format!(
                     "{} would exceed the deterministic expansion budget: {} work items (limit {})",
                     what,
-                    next.min(u64::MAX / 2),
+                    next,
                     fmt_limit(MAX_WORK_ITEMS)
                 ),
             ));
             return false;
         }
-        self.work = next;
         true
     }
 
