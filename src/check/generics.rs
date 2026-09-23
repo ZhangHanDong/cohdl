@@ -226,7 +226,8 @@ pub(crate) fn resolve_one(
 pub(super) fn wrong_unit_argument(
     param: &GenericParam,
     expected: crate::units::UnitType,
-    value: &crate::units::UnitValue,
+    actual: crate::units::UnitType,
+    text: &str,
     span: Span,
 ) -> Diagnostic {
     Diagnostic::error(
@@ -236,14 +237,35 @@ pub(super) fn wrong_unit_argument(
             "generic argument for `{}` has the wrong unit type: expected `{}`, found `{}`",
             param.name.name,
             expected.type_name(),
-            value.unit.type_name()
+            actual.type_name()
         ),
     )
-    .with_primary_label(format!(
-        "`{}` is a `{}`",
-        value.text,
-        value.unit.type_name()
-    ))
+    .with_primary_label(format!("`{text}` is a `{}`", actual.type_name()))
+}
+
+/// A Length expression's type mismatch is independent of its eventual value.
+/// Keep literal labels compatible; other expressions name the expression so
+/// definition and activation diagnostics agree even before generics bind.
+pub(super) fn wrong_length_expression(
+    param: &GenericParam,
+    expected: crate::units::UnitType,
+    expr: &Expr,
+) -> Diagnostic {
+    let mut inner = expr;
+    while let Expr::Paren(e, _) = inner {
+        inner = e;
+    }
+    let text = match inner {
+        Expr::Length(value, _) => value.text.clone(),
+        _ => expr_text(expr),
+    };
+    wrong_unit_argument(
+        param,
+        expected,
+        crate::units::UnitType::Length,
+        &text,
+        expr.span(),
+    )
 }
 
 fn resolve_one_in(
@@ -277,7 +299,9 @@ fn resolve_one_in(
             if val.unit == u.unit {
                 Some(GenericValue::Unit(val.clone()))
             } else {
-                diags.push(wrong_unit_argument(param, u.unit, val, *span));
+                diags.push(wrong_unit_argument(
+                    param, u.unit, val.unit, &val.text, *span,
+                ));
                 None
             }
         }
@@ -478,8 +502,8 @@ fn resolve_one_in(
                 // wrong-unit mistake a unit literal makes — the historical
                 // E112 shape (code, message, label) the pre-expression
                 // grammar produced, not E1401.
-                Some(crate::check::eval::Value::Length(v)) => {
-                    diags.push(wrong_unit_argument(param, u.unit, &v, e.span()));
+                Some(crate::check::eval::Value::Length(_)) => {
+                    diags.push(wrong_length_expression(param, u.unit, e));
                     None
                 }
                 Some(crate::check::eval::Value::Int(_)) => {

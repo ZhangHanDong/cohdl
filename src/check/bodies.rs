@@ -761,7 +761,7 @@ fn check_device_generic_args(world: &World, inst: &crate::ast::InstStmt, diags: 
         if let (GenericBound::Unit(u), GenericArg::Unit(v, span)) = (&param.bound, arg) {
             if v.unit != u.unit {
                 diags.push(crate::check::generics::wrong_unit_argument(
-                    param, u.unit, v, *span,
+                    param, u.unit, v.unit, &v.text, *span,
                 ));
             }
         }
@@ -1045,24 +1045,9 @@ fn check_named_generic_args(
                     if let Some(param) = params.and_then(|p| p.get(i)) {
                         if let GenericBound::Unit(unit) = &param.bound {
                             if ty == Ty::Length {
-                                // The lexical environment includes local consts. Use
-                                // the shared evaluator to retain literal spelling and
-                                // canonicalize arithmetic exactly as expansion does.
-                                let env = crate::check::eval::Env {
-                                    names: &ctx.names,
-                                    array_lens: &ctx.array_lens,
-                                    unknown_arrays: &ctx.unknown_arrays,
-                                };
-                                if let Some(crate::check::eval::Value::Length(value)) =
-                                    crate::check::eval::eval_if_concrete(e, &env)
-                                {
-                                    diags.push(crate::check::generics::wrong_unit_argument(
-                                        param,
-                                        unit.unit,
-                                        &value,
-                                        e.span(),
-                                    ));
-                                }
+                                diags.push(crate::check::generics::wrong_length_expression(
+                                    param, unit.unit, e,
+                                ));
                             }
                         }
                     }

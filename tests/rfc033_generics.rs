@@ -427,14 +427,14 @@ fn parenthesized_length_wrong_unit_is_checked_once_in_every_body_context() {
 #[test]
 fn computed_length_wrong_unit_is_checked_once_in_every_body_context() {
     for src in wrong_unit_contexts("1.50mm + 0mm", "") {
-        assert_wrong_unit(&src, "1.50mm + 0mm", "1.5mm", "Length", &["E112"]);
+        assert_wrong_unit(&src, "1.50mm + 0mm", "1.50mm + 0mm", "Length", &["E112"]);
     }
 }
 
 #[test]
 fn const_length_expression_wrong_unit_uses_the_lexical_environment() {
     for src in wrong_unit_contexts("L + 0mm", "const L: Length = 1.50mm") {
-        assert_wrong_unit(&src, "L + 0mm", "1.5mm", "Length", &["E112"]);
+        assert_wrong_unit(&src, "L + 0mm", "L + 0mm", "Length", &["E112"]);
     }
 }
 
@@ -447,5 +447,21 @@ fn empty_loop_keeps_the_static_wrong_unit_error() {
             "{DIRECT_LIB}\ndesign B {{ for empty: i in 0..0 {{ inst bad: D<{argument}> }} }}"
         );
         assert_wrong_unit(&src, argument, value, unit, &["E1406", "E112"]);
+    }
+}
+
+#[test]
+fn unknown_length_expression_wrong_unit_is_checked_in_unused_and_used_bodies() {
+    for argument in ["L + 0mm", "(L)"] {
+        let body = format!("inst x: D<{argument}> net _: x.A, x.B");
+        let sources = [
+            format!("{DIRECT_LIB}\npub fn f<L: Length>() {{ {body} }} design B {{}}"),
+            format!("{DIRECT_LIB}\npub fn f<L: Length>() {{ {body} }} design B {{ f::<1.50mm>() }}"),
+            format!("{DIRECT_LIB}\npub subdesign S<L: Length> {{ {body} }} design B {{}}"),
+            format!("{DIRECT_LIB}\npub subdesign S<L: Length> {{ {body} }} design B {{ subdesign s: S<1.50mm> {{}} }}"),
+        ];
+        for src in sources {
+            assert_wrong_unit(&src, argument, argument, "Length", &["E112"]);
+        }
     }
 }
