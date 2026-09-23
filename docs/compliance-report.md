@@ -4177,13 +4177,17 @@ record for this implementation.
   rotation/side transforms and explicit overrides. LED, RC and FilterBank
   oracles also check complete endpoint partitions, named rails, nc,
   parts, BOM and surviving designators against hand-authored expectations.
-- **Named nets in circuit loops remain a release decision.** The current
-  implementation gives them private frame names. Repeating `net VCC`
-  inside a loop does not itself join an outer `VCC`. The review's proposed
-  restriction has not been accepted or implemented. Current RC examples
-  declare the shared rail outside the loop and use anonymous connections
-  through an explicit shared pin. Existing function/subdesign private-net
-  rules have not been changed to merge names globally.
+- **Directly authored named nets in circuit loops are rejected.** This
+  PR implements the review's conservative option: E1406 points at the
+  net name and explains the shared-pin/anonymous-net alternative. The
+  definition pass checks empty/nested loops and unused definitions once
+  per source site; repeated helper calls do not duplicate the diagnostic,
+  and separate sites are not collapsed. Shared rails are declared outside
+  the loop and joined through an explicit shared pin. Helper-private nets
+  keep their existing isolation. Regressions check exact diagnostic counts
+  and spans, complete endpoint sets, manufacturing names and power/ground
+  attributes. This is a Proposed implementation choice for review, not a
+  formal acceptance record or a change to global net-name merging.
 - **Length identity uses the typed value, while forwarding preserves
   authored text.** Literal, parenthesized-literal and pure parameter/const
   forwarding retain spellings such as `1.50mm`; arithmetic results use
@@ -4231,7 +4235,7 @@ record for this implementation.
 - **Compatibility evidence is scoped to fixed inputs and revisions.**
   The pre-RFC baseline is `b78b7432b1dc9e01bd9e751c0878b11602c8c456`,
   not `99e9385` (which already contains RFC-033). At verified code
-  revision `10f59a9`, all **63 package directories** from the baseline
+  revision `9950a9c`, all **63 package directories** from the baseline
   tree (**60 lib + 3 examples**) have identical complete diagnostic JSON,
   exit status and stderr. The three examples also have byte-identical
   outputs from all four emitters, including output manifests and
@@ -4248,17 +4252,18 @@ record for this implementation.
   resolved placements, exact source file/line/column and read-only,
   deterministic extraction. Browser selection/source navigation remains
   an optional follow-up check, not a language-PR acceptance gate.
-- **Combined local checks at `10f59a9`:** 823 Rust tests, the IPC-2581
+- **Combined local checks at `9950a9c`:** 836 Rust tests, the IPC-2581
   schema gate with `xmllint`, all-targets clippy, Rust/source formatting and
   build passed. Explorer's eight extractor tests passed, including the
   message-only diagnostic consumer. Registry's 207 tests/typecheck/lint/build
   and Explorer's eleven web tests/build remain valid from `26adacf`: those
   targets' source trees are unchanged. The old
   corpus, seven Length cases, product oracles and OpenMicroKBD comparisons
-  above were repeated with this same compiler binary. The named-net
-  language decision, upstream allocation/acceptance and CI on the
-  eventual PR head remain open. Manual UI checks remain unverified
-  optional follow-up.
+  above were repeated with this same compiler binary. Eleven additional
+  real-CLI acceptance groups check named-net rejection and legal complete
+  topology, including IPC-2581 power/ground classification. The upstream
+  allocation/acceptance record and CI on the eventual PR head remain open.
+  Manual UI checks remain unverified optional follow-up.
 - **Activation context survives message-only consumers.** Loop E1007
   duplicate-placement and rotation failures include the resolved target,
   loop path and binder values in the main diagnostic message. Putting this
