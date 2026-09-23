@@ -220,6 +220,32 @@ pub(crate) fn resolve_one(
     resolve_one_in(world, param, arg, &CallerEnv::from_subst(env), diags)
 }
 
+/// Static validation and expansion describe a concrete wrong-unit argument
+/// identically, allowing the existing exact diagnostic deduplication to merge
+/// their reports without dropping errors from distinct bindings.
+pub(super) fn wrong_unit_argument(
+    param: &GenericParam,
+    expected: crate::units::UnitType,
+    value: &crate::units::UnitValue,
+    span: Span,
+) -> Diagnostic {
+    Diagnostic::error(
+        "E112",
+        span,
+        format!(
+            "generic argument for `{}` has the wrong unit type: expected `{}`, found `{}`",
+            param.name.name,
+            expected.type_name(),
+            value.unit.type_name()
+        ),
+    )
+    .with_primary_label(format!(
+        "`{}` is a `{}`",
+        value.text,
+        value.unit.type_name()
+    ))
+}
+
 fn resolve_one_in(
     world: &World,
     param: &GenericParam,
@@ -251,19 +277,7 @@ fn resolve_one_in(
             if val.unit == u.unit {
                 Some(GenericValue::Unit(val.clone()))
             } else {
-                diags.push(
-                    Diagnostic::error(
-                        "E112",
-                        *span,
-                        format!(
-                            "generic argument for `{}` has the wrong unit type: expected `{}`, found `{}`",
-                            param.name.name,
-                            u.unit.type_name(),
-                            val.unit.type_name()
-                        ),
-                    )
-                    .with_primary_label(format!("`{}` is a `{}`", val.text, val.unit.type_name())),
-                );
+                diags.push(wrong_unit_argument(param, u.unit, val, *span));
                 None
             }
         }
@@ -465,23 +479,7 @@ fn resolve_one_in(
                 // E112 shape (code, message, label) the pre-expression
                 // grammar produced, not E1401.
                 Some(crate::check::eval::Value::Length(v)) => {
-                    diags.push(
-                        Diagnostic::error(
-                            "E112",
-                            e.span(),
-                            format!(
-                                "generic argument for `{}` has the wrong unit type: expected `{}`, found `{}`",
-                                param.name.name,
-                                u.unit.type_name(),
-                                v.unit.type_name()
-                            ),
-                        )
-                        .with_primary_label(format!(
-                            "`{}` is a `{}`",
-                            v.text,
-                            v.unit.type_name()
-                        )),
-                    );
+                    diags.push(wrong_unit_argument(param, u.unit, &v, e.span()));
                     None
                 }
                 Some(crate::check::eval::Value::Int(_)) => {
@@ -969,9 +967,8 @@ fn normalize_generic_arg(a: &crate::ast::GenericArg) -> String {
         crate::ast::GenericArg::Number(n, _) => n.clone(),
         // RFC-033: an expression argument's identity is its EVALUATED value —
         // exact femto + unit, so `1.50mm` and `1.5mm` are one component.
-        // Pure evaluation (a scratch diagnostic batch): this runs in the AVL
-        // scan, after `resolve_generic_args` already reported any malformed
-        // argument — re-validating here would double-report E112.
+        // Identity calculation is pure: evaluation diagnostics stay local;
+        // argument validation is owned by the binding checks.
         crate::ast::GenericArg::Expr(e) => {
             let names = std::collections::BTreeMap::new();
             let lens = std::collections::BTreeMap::new();

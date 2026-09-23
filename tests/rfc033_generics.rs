@@ -277,7 +277,7 @@ pub device Cap2<C: Capacitance> {{
     pins {{ A: 1 [passive], B: 2 [passive] }}
     spec {{ capacitance: C }}
 }}
-pub footprint FPDD {{}}
+pub footprint FPD {{}}
 pub part C1: Cap2<1.5mm> {{ primary {{ mfr: \"m\", mpn: \"c1\", footprint: FPD }} }}
 design B {{
     inst a: C1
@@ -288,19 +288,27 @@ design B {{
     assert!(c.diags.has_errors(), "must be rejected");
     let e112: Vec<&cohdl::diag::Diagnostic> = c.diags.iter().filter(|d| d.code == "E112").collect();
     assert_eq!(e112.len(), 1, "exactly one E112:\n{r}");
+    // Reject any additional error, including fixture resolution failures.
+    let codes: Vec<&str> = c
+        .diags
+        .iter()
+        .filter(|d| matches!(d.severity, cohdl::diag::Severity::Error))
+        .map(|d| d.code)
+        .collect();
+    assert_eq!(codes, vec!["E112"], "the complete error set:\n{r}");
     let d = e112[0];
     assert!(matches!(d.severity, cohdl::diag::Severity::Error));
     assert_eq!(
         d.message,
         "generic argument for `C` has the wrong unit type: expected `Capacitance`, found `Length`"
     );
+    let start = src.find("<1.5mm>").unwrap() + 1;
+    assert_eq!(
+        d.primary.span,
+        cohdl::span::Span::new(cohdl::span::FileId(0), start as u32, (start + 5) as u32)
+    );
     assert_eq!(c.sm.snippet(d.primary.span), "1.5mm");
     assert_eq!(d.primary.message, "`1.5mm` is a `Length`");
-    // And no E1401 piggybacking on the same site.
-    assert!(
-        !r.contains("E1401"),
-        "the wrong-unit diagnostic is the one report:\n{r}"
-    );
 }
 
 #[test]
@@ -324,11 +332,120 @@ design B {{
     assert!(c.diags.has_errors());
     let e112: Vec<&cohdl::diag::Diagnostic> = c.diags.iter().filter(|d| d.code == "E112").collect();
     assert_eq!(e112.len(), 1, "exactly one E112:\n{r}");
+    assert_eq!(
+        c.diags
+            .iter()
+            .filter(|d| d.severity == cohdl::diag::Severity::Error)
+            .map(|d| d.code)
+            .collect::<Vec<_>>(),
+        vec!["E112"],
+        "{r}"
+    );
     let d = e112[0];
     assert_eq!(
         d.message,
         "generic argument for `W` has the wrong unit type: expected `Length`, found `Capacitance`"
     );
+    let start = src.find("<1.5uF>").unwrap() + 1;
+    assert_eq!(
+        d.primary.span,
+        cohdl::span::Span::new(cohdl::span::FileId(0), start as u32, (start + 5) as u32)
+    );
     assert_eq!(c.sm.snippet(d.primary.span), "1.5uF");
     assert_eq!(d.primary.message, "`1.5uF` is a `Capacitance`");
+}
+
+// Every body is checked even when no expansion reaches it. When it does
+// expand, both passes must describe the same static mistake identically.
+const DIRECT_LIB: &str = r#"
+pub device D<C: Capacitance> { pins { A: 1 [passive], B: 2 [passive] } spec { capacitance: C } }
+pub footprint FPD {}
+pub part P: D<1uF> { primary { mfr: "m", mpn: "c", footprint: FPD } }
+"#;
+
+fn assert_wrong_unit(src: &str, argument: &str, value: &str, unit: &str, codes: &[&str]) {
+    use cohdl::diag::Severity;
+    use cohdl::span::{FileId, Span};
+    let (c, rendered) = check(src);
+    let errors: Vec<_> = c
+        .diags
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .collect();
+    assert_eq!(
+        errors.iter().map(|d| d.code).collect::<Vec<_>>(),
+        codes,
+        "{src}\n{rendered}"
+    );
+    let wrong: Vec<_> = errors.iter().filter(|d| d.code == "E112").collect();
+    assert_eq!(wrong.len(), 1, "{rendered}");
+    let d = wrong[0];
+    let start = src.find(&format!("D<{argument}>")).expect("argument site") + 2;
+    assert_eq!(
+        d.primary.span,
+        Span::new(FileId(0), start as u32, (start + argument.len()) as u32)
+    );
+    assert_eq!(c.sm.snippet(d.primary.span), argument);
+    assert_eq!(d.message, format!("generic argument for `C` has the wrong unit type: expected `Capacitance`, found `{unit}`"));
+    assert_eq!(d.primary.message, format!("`{value}` is a `{unit}`"));
+    assert!(d.secondary.is_empty());
+    assert!(d.help.is_empty());
+}
+
+fn wrong_unit_contexts(argument: &str, prefix: &str) -> Vec<String> {
+    let body = format!("{prefix} inst x: D<{argument}> net _: x.A, x.B");
+    vec![
+        format!("{DIRECT_LIB}\ndesign B {{ {body} }}"),
+        format!("{DIRECT_LIB}\npub fn f() {{ {body} }} design B {{}}"),
+        format!("{DIRECT_LIB}\npub fn f() {{ {body} }} design B {{ f() }}"),
+        format!("{DIRECT_LIB}\npub subdesign S {{ {body} }} design B {{}}"),
+        format!("{DIRECT_LIB}\npub subdesign S {{ {body} }} design B {{ subdesign s: S {{}} }}"),
+    ]
+}
+
+#[test]
+fn non_length_wrong_unit_is_checked_once_in_every_body_context() {
+    for src in wrong_unit_contexts("1.5V", "") {
+        assert_wrong_unit(&src, "1.5V", "1.5V", "Voltage", &["E112"]);
+    }
+}
+
+#[test]
+fn bare_length_wrong_unit_is_checked_once_in_every_body_context() {
+    for src in wrong_unit_contexts("1.50mm", "") {
+        assert_wrong_unit(&src, "1.50mm", "1.50mm", "Length", &["E112"]);
+    }
+}
+
+#[test]
+fn parenthesized_length_wrong_unit_is_checked_once_in_every_body_context() {
+    for src in wrong_unit_contexts("(1.50mm)", "") {
+        assert_wrong_unit(&src, "(1.50mm)", "1.50mm", "Length", &["E112"]);
+    }
+}
+
+#[test]
+fn computed_length_wrong_unit_is_checked_once_in_every_body_context() {
+    for src in wrong_unit_contexts("1.50mm + 0mm", "") {
+        assert_wrong_unit(&src, "1.50mm + 0mm", "1.5mm", "Length", &["E112"]);
+    }
+}
+
+#[test]
+fn const_length_expression_wrong_unit_uses_the_lexical_environment() {
+    for src in wrong_unit_contexts("L + 0mm", "const L: Length = 1.50mm") {
+        assert_wrong_unit(&src, "L + 0mm", "1.5mm", "Length", &["E112"]);
+    }
+}
+
+#[test]
+fn empty_loop_keeps_the_static_wrong_unit_error() {
+    // Physical inst declarations are independently forbidden in loops.
+    // Even a zero-iteration loop must retain its unit diagnostic as well.
+    for (argument, value, unit) in [("1.5V", "1.5V", "Voltage"), ("1.50mm", "1.50mm", "Length")] {
+        let src = format!(
+            "{DIRECT_LIB}\ndesign B {{ for empty: i in 0..0 {{ inst bad: D<{argument}> }} }}"
+        );
+        assert_wrong_unit(&src, argument, value, unit, &["E1406", "E112"]);
+    }
 }

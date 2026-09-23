@@ -186,7 +186,7 @@ impl DefinitionChecks<'_> {
                 Stmt::Inst(inst) => {
                     check_inst_kind(world, trait_generics, unit_generics, &inst.ty.name, diags);
                     check_variant_selection(world, inst, diags);
-                    check_device_generic_args(world, f, inst, diags);
+                    check_device_generic_args(world, inst, diags);
                 }
                 Stmt::Call(call) => {
                     check_call_kind(world, &call.callee, diags);
@@ -739,12 +739,7 @@ fn check_variant_selection(world: &World, inst: &crate::ast::InstStmt, diags: &m
 /// unit-literal argument whose type mismatches its unit-bound parameter
 /// (E112). A `Name` argument referencing a fn generic is a valid
 /// passthrough; full bound checking is deferred to call-time substitution.
-fn check_device_generic_args(
-    world: &World,
-    _f: &FnDef,
-    inst: &crate::ast::InstStmt,
-    diags: &mut Diagnostics,
-) {
+fn check_device_generic_args(world: &World, inst: &crate::ast::InstStmt, diags: &mut Diagnostics) {
     let Some(dev) = world.devices.get(&inst.ty.name.name) else {
         return;
     };
@@ -765,15 +760,8 @@ fn check_device_generic_args(
     for (param, arg) in dev.generics.iter().zip(args) {
         if let (GenericBound::Unit(u), GenericArg::Unit(v, span)) = (&param.bound, arg) {
             if v.unit != u.unit {
-                diags.push(Diagnostic::error(
-                    "E112",
-                    *span,
-                    format!(
-                        "generic argument for `{}` has the wrong unit type: expected `{}`, found `{}`",
-                        param.name.name,
-                        u.unit.type_name(),
-                        v.unit.type_name()
-                    ),
+                diags.push(crate::check::generics::wrong_unit_argument(
+                    param, u.unit, v, *span,
                 ));
             }
         }
@@ -1053,7 +1041,31 @@ fn check_named_generic_args(
                 if let Some(expected) = expected {
                     static_type_check(ctx, e, expected, "a generic argument", diags);
                 } else {
-                    static_type_check_any(ctx, e, "a generic argument", diags);
+                    let ty = static_type_check_any(ctx, e, "a generic argument", diags);
+                    if let Some(param) = params.and_then(|p| p.get(i)) {
+                        if let GenericBound::Unit(unit) = &param.bound {
+                            if ty == Ty::Length {
+                                // The lexical environment includes local consts. Use
+                                // the shared evaluator to retain literal spelling and
+                                // canonicalize arithmetic exactly as expansion does.
+                                let env = crate::check::eval::Env {
+                                    names: &ctx.names,
+                                    array_lens: &ctx.array_lens,
+                                    unknown_arrays: &ctx.unknown_arrays,
+                                };
+                                if let Some(crate::check::eval::Value::Length(value)) =
+                                    crate::check::eval::eval_if_concrete(e, &env)
+                                {
+                                    diags.push(crate::check::generics::wrong_unit_argument(
+                                        param,
+                                        unit.unit,
+                                        &value,
+                                        e.span(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
                 }
             }
             GenericArg::Unit(value, span) if expected == Some(Ty::Int) => {
