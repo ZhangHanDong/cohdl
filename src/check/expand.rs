@@ -159,7 +159,7 @@ impl Scope {
             m.insert(name.clone(), crate::check::eval::NameKind::NonValue);
         }
         for (k, v) in &self.consts {
-            m.insert(k.clone(), crate::check::eval::NameKind::Const(*v));
+            m.insert(k.clone(), crate::check::eval::NameKind::Const(v.clone()));
         }
         for (k, v) in &self.binders {
             m.insert(k.clone(), crate::check::eval::NameKind::Binder(*v));
@@ -718,7 +718,7 @@ impl<'w, 'd> Expander<'w, 'd> {
         self.push_with_suffix(diags, scope);
         for c in consts {
             if let Some(crate::check::eval::NameKind::Const(value)) = names.get(&c.name.name) {
-                scope.consts.insert(c.name.name.clone(), *value);
+                scope.consts.insert(c.name.name.clone(), value.clone());
             }
         }
     }
@@ -1058,7 +1058,7 @@ impl<'w, 'd> Expander<'w, 'd> {
         let v = crate::check::eval::eval(e, &env, &mut local);
         self.push_with_suffix(local, scope);
         match v {
-            Some(crate::check::eval::Value::Length(f)) => Some(crate::check::eval::length_value(f)),
+            Some(crate::check::eval::Value::Length(v)) => Some(v),
             Some(crate::check::eval::Value::Int(_)) => {
                 self.diags.push(Diagnostic::error(
                     "E1401",

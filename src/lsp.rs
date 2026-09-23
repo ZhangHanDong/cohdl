@@ -1620,7 +1620,7 @@ fn len_hover_in_expr(
             .collect();
         for (n, _, _, v) in consts.iter() {
             if let Some(v) = v {
-                names.insert(n.clone(), crate::check::eval::NameKind::Const(*v));
+                names.insert(n.clone(), crate::check::eval::NameKind::Const(v.clone()));
             }
         }
         for (n, k) in literal_only {
@@ -1696,8 +1696,10 @@ fn rfc033_hover(
                             let mut names = std::collections::BTreeMap::new();
                             for (n, _, _, v) in consts.iter() {
                                 if let Some(v) = v {
-                                    names
-                                        .insert(n.clone(), crate::check::eval::NameKind::Const(*v));
+                                    names.insert(
+                                        n.clone(),
+                                        crate::check::eval::NameKind::Const(v.clone()),
+                                    );
                                 }
                             }
                             let lens = std::collections::BTreeMap::new();
@@ -1713,8 +1715,8 @@ fn rfc033_hover(
                                     crate::check::eval::Value::Int(i) => {
                                         format!("value: {i}")
                                     }
-                                    crate::check::eval::Value::Length(f) => {
-                                        format!("value: {}", crate::check::eval::length_text(f))
+                                    crate::check::eval::Value::Length(v) => {
+                                        format!("value: {}", v.text)
                                     }
                                 };
                                 text.push_str(&format!("\n\n- {shown}"));
@@ -1729,7 +1731,10 @@ fn rfc033_hover(
                         let mut names = std::collections::BTreeMap::new();
                         for (n, _, _, v) in consts.iter() {
                             if let Some(v) = v {
-                                names.insert(n.clone(), crate::check::eval::NameKind::Const(*v));
+                                names.insert(
+                                    n.clone(),
+                                    crate::check::eval::NameKind::Const(v.clone()),
+                                );
                             }
                         }
                         let lens = std::collections::BTreeMap::new();
@@ -1787,7 +1792,9 @@ fn rfc033_hover(
                                                 if let Some(v) = v {
                                                     names.insert(
                                                         n.clone(),
-                                                        crate::check::eval::NameKind::Const(*v),
+                                                        crate::check::eval::NameKind::Const(
+                                                            v.clone(),
+                                                        ),
                                                     );
                                                 }
                                             }
@@ -1845,15 +1852,12 @@ fn rfc033_hover(
                                     crate::ast::ConstTy::Int => "Int",
                                     crate::ast::ConstTy::Length => "Length",
                                 },
-                                val.map_or(String::new(), |v| match v {
+                                val.clone().map_or(String::new(), |v| match v {
                                     crate::check::eval::Value::Int(i) => {
                                         format!("\n\n- value: {i}")
                                     }
-                                    crate::check::eval::Value::Length(fl) => {
-                                        format!(
-                                            "\n\n- value: {}",
-                                            crate::check::eval::length_text(fl)
-                                        )
+                                    crate::check::eval::Value::Length(v) => {
+                                        format!("\n\n- value: {}", v.text)
                                     }
                                 })
                             );

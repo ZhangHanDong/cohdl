@@ -442,9 +442,7 @@ fn resolve_one_in(
         {
             let env_ref = caller.eval_env();
             match crate::check::eval::eval(e, &env_ref, diags)? {
-                crate::check::eval::Value::Length(f) => {
-                    Some(GenericValue::Unit(crate::check::eval::length_value(f)))
-                }
+                crate::check::eval::Value::Length(v) => Some(GenericValue::Unit(v)),
                 crate::check::eval::Value::Int(_) => {
                     diags.push(Diagnostic::error(
                         "E1401",
@@ -460,17 +458,47 @@ fn resolve_one_in(
             }
         }
         (GenericBound::Unit(u), GenericArg::Expr(e)) => {
-            diags.push(Diagnostic::error(
-                "E1401",
-                e.span(),
-                format!(
-                    "`{}` is an expression — only Int and Length arguments may be computed; `{}` expects a `{}` literal",
-                    expr_text(e),
-                    param.name.name,
-                    u.unit.type_name()
-                ),
-            ));
-            None
+            let env_ref = caller.eval_env();
+            match crate::check::eval::eval(e, &env_ref, diags) {
+                // A bare Length literal in a non-Length unit slot is the same
+                // wrong-unit mistake a unit literal makes — the historical
+                // E112 shape (code, message, label) the pre-expression
+                // grammar produced, not E1401.
+                Some(crate::check::eval::Value::Length(v)) => {
+                    diags.push(
+                        Diagnostic::error(
+                            "E112",
+                            e.span(),
+                            format!(
+                                "generic argument for `{}` has the wrong unit type: expected `{}`, found `{}`",
+                                param.name.name,
+                                u.unit.type_name(),
+                                v.unit.type_name()
+                            ),
+                        )
+                        .with_primary_label(format!(
+                            "`{}` is a `{}`",
+                            v.text,
+                            v.unit.type_name()
+                        )),
+                    );
+                    None
+                }
+                Some(crate::check::eval::Value::Int(_)) => {
+                    diags.push(Diagnostic::error(
+                        "E1401",
+                        e.span(),
+                        format!(
+                            "`{}` is an Int, but `{}` expects a `{}`",
+                            expr_text(e),
+                            param.name.name,
+                            u.unit.type_name()
+                        ),
+                    ));
+                    None
+                }
+                None => None, // already diagnosed by the evaluator
+            }
         }
         (GenericBound::Traits(_), GenericArg::Expr(e)) => {
             diags.push(Diagnostic::error(
@@ -939,9 +967,32 @@ fn normalize_generic_arg(a: &crate::ast::GenericArg) -> String {
         crate::ast::GenericArg::Unit(v, _) => format!("{}{}", v.femto, v.unit.type_name()),
         crate::ast::GenericArg::Name(i) => i.name.clone(),
         crate::ast::GenericArg::Number(n, _) => n.clone(),
-        // RFC-033: an expression argument prints in its canonical spelling;
-        // Task 7 replaces this with the evaluated value's identity.
-        crate::ast::GenericArg::Expr(e) => crate::ast::expr_text(e),
+        // RFC-033: an expression argument's identity is its EVALUATED value —
+        // exact femto + unit, so `1.50mm` and `1.5mm` are one component.
+        // Pure evaluation (a scratch diagnostic batch): this runs in the AVL
+        // scan, after `resolve_generic_args` already reported any malformed
+        // argument — re-validating here would double-report E112.
+        crate::ast::GenericArg::Expr(e) => {
+            let names = std::collections::BTreeMap::new();
+            let lens = std::collections::BTreeMap::new();
+            let unknown_arrays = std::collections::BTreeSet::new();
+            let env = crate::check::eval::Env {
+                names: &names,
+                array_lens: &lens,
+                unknown_arrays: &unknown_arrays,
+            };
+            let mut scratch = crate::diag::Diagnostics::new();
+            match crate::check::eval::eval(e, &env, &mut scratch) {
+                Some(crate::check::eval::Value::Length(v)) => {
+                    format!("{}{}", v.femto, v.unit.type_name())
+                }
+                Some(crate::check::eval::Value::Int(i)) => i.to_string(),
+                // Not evaluable as a constant here (a Name argument is
+                // rejected as non-concrete by the part check anyway) — the
+                // written text keeps distinct entries distinct.
+                None => crate::ast::expr_text(e),
+            }
+        }
     }
 }
 

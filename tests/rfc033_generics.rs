@@ -96,3 +96,239 @@ design Board {{ inst h: HOST  net _: h.P, h.Q }}"
         "Int default must be an integer literal"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Numeric identity vs literal spelling: two contracts. Identity is the exact
+// femto count + unit type (1.5mm == 1.50mm); the spelling is what the source
+// wrote and must survive pure forwarding (literal, parens, parameter/const
+// chains) — only arithmetic composes a canonical text.
+// ---------------------------------------------------------------------------
+
+const SPACER_LIB: &str = r#"
+pub trait Cap { designator_prefix: "C" }
+pub device Spacer<W: Length> {
+    pins { A: 1 [passive], B: 2 [passive] }
+    spec { width: W }
+}
+impl Cap for Spacer {}
+pub footprint FP {}
+pub part SP15: Spacer<1.5mm> { primary { mfr: "m", mpn: "sp", footprint: FP } }
+"#;
+
+#[test]
+fn equal_value_different_spelling_is_one_identity_no_e802() {
+    // `1.5mm` and `1.50mm` under one MPN: same component, no E802.
+    let src = format!(
+        "{LIB}
+pub device SpA<W: Length> {{
+    pins {{ A: 1 [passive], B: 2 [passive] }}
+    spec {{ width: W }}
+}}
+pub footprint FPA {{}}
+pub part S1: SpA<1.5mm> {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPA }} }}
+pub part S2: SpA<1.50mm> {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPA }} }}
+design B {{
+    inst a: S1  inst b: S2
+    net _: a.A, b.A  net _: a.B, b.B
+}}
+"
+    );
+    let (c, r) = check(&src);
+    assert!(!c.diags.has_errors(), "equal femto = one identity:\n{r}");
+}
+
+#[test]
+fn different_values_under_one_mpn_still_e802() {
+    let src = format!(
+        "{LIB}
+pub device SpB<W: Length> {{
+    pins {{ A: 1 [passive], B: 2 [passive] }}
+    spec {{ width: W }}
+}}
+pub footprint FPB {{}}
+pub part S1: SpB<1.5mm> {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPB }} }}
+pub part S2: SpB<2.0mm> {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPB }} }}
+design B {{
+    inst a: S1  inst b: S2
+    net _: a.A, b.A  net _: a.B, b.B
+}}
+"
+    );
+    let (c, r) = check(&src);
+    assert!(c.diags.has_errors(), "distinct values stay distinct");
+    let e802: Vec<_> = c.diags.iter().filter(|d| d.code == "E802").collect();
+    assert_eq!(e802.len(), 1, "exactly one E802:\n{r}");
+    assert!(
+        r.contains("shares manufacturer `m` + MPN `sp`"),
+        "the AVL message:\n{r}"
+    );
+}
+
+#[test]
+fn default_and_equal_explicit_argument_share_identity() {
+    let src = format!(
+        "{LIB}
+pub device SpC<W: Length = 1.5mm> {{
+    pins {{ A: 1 [passive], B: 2 [passive] }}
+    spec {{ width: W }}
+}}
+pub footprint FPC {{}}
+pub part S1: SpC {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPC }} }}
+pub part S2: SpC<1.50mm> {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPC }} }}
+design B {{
+    inst a: S1  inst b: S2
+    net _: a.A, b.A  net _: a.B, b.B
+}}
+"
+    );
+    let (c, r) = check(&src);
+    assert!(
+        !c.diags.has_errors(),
+        "default `1.5mm` and explicit `1.50mm` are the same component:\n{r}"
+    );
+}
+
+#[test]
+fn spec_width_text_survives_pure_forwarding() {
+    // The IR spec carries the source's literal spelling through every pure
+    // forwarding form; arithmetic composes the canonical text instead.
+    let src = |arg: &str| {
+        format!(
+            "{SPACER_LIB}
+pub part PX: Spacer<{arg}> {{ primary {{ mfr: \"m\", mpn: \"px\", footprint: FP }} }}
+design B {{
+    inst x: PX
+    net _: x.A  net _: x.B
+}}
+"
+        )
+    };
+    // (literal, expected spec text)
+    for (arg, want) in [
+        ("1.50mm", "1.50mm"),
+        ("(1.50mm)", "1.50mm"),
+        ("((1.50mm))", "1.50mm"),
+        ("1.50mm + 0mm", "1.5mm"),
+        ("0mm + 1.50mm", "1.5mm"),
+        ("-1.50mm", "-1.50mm"),
+    ] {
+        let mut c = check_files_in("board", &[("src/main.cohdl".to_string(), src(arg))], None)
+            .expect("selection");
+        let _ = build_artifacts(&mut c, &LockState::default());
+        assert!(
+            !c.diags.has_errors(),
+            "`{arg}` must check cleanly:\n{}",
+            c.diags.render(&c.sm)
+        );
+        let ir = c.ir.as_ref().unwrap();
+        let width = ir.instances["B::x"].specs.get("width").unwrap();
+        assert_eq!(
+            width.text, want,
+            "`{arg}`: spelling contract (femto {})",
+            width.femto
+        );
+    }
+}
+
+#[test]
+fn spec_width_text_survives_generic_and_const_chains() {
+    // Pure forwarding through a generic parameter and a Length const keeps
+    // the original literal; the value rides the substitution, the spelling
+    // with it.
+    let src = format!(
+        "{SPACER_LIB}
+pub device Wrap<W: Length> {{
+    pins {{ A: 1 [passive], B: 2 [passive] }}
+    spec {{ width: W }}
+}}
+pub part W1: Wrap<1.50mm> {{ primary {{ mfr: \"m\", mpn: \"w1\", footprint: FP }} }}
+pub subdesign Carrier<T: Length> {{
+    ports {{ required G: Pin }}
+    inst s: Spacer<T>
+    net _: G, s.A  net _: s.B
+}}
+design B {{
+    const T: Length = 1.50mm
+    inst w: W1
+    subdesign c1: Carrier<1.50mm> {{ G: w.A }}
+    subdesign c2: Carrier<T> {{ G: w.B }}
+    net link: w.A, w.B
+}}"
+    );
+    let (c, r) = check(&src);
+    assert!(!c.diags.has_errors(), "{r}");
+    let ir = c.ir.as_ref().unwrap();
+    let w = ir.instances["B::w"].specs.get("width").unwrap();
+    assert_eq!(w.text, "1.50mm");
+    for path in ["B::c1::s", "B::c2::s"] {
+        let s = ir.instances[path].specs.get("width").unwrap();
+        assert_eq!(s.text, "1.50mm", "{path}: forwarded spelling");
+    }
+}
+
+#[test]
+fn bare_length_into_capacitance_is_exactly_one_e112() {
+    // `1.5mm` where a Capacitance is expected: one E112 with the same shape
+    // the pre-expression grammar produced — expected/found units, and the
+    // primary label naming the literal.
+    let src = format!(
+        "{LIB}
+pub device Cap2<C: Capacitance> {{
+    pins {{ A: 1 [passive], B: 2 [passive] }}
+    spec {{ capacitance: C }}
+}}
+pub footprint FPDD {{}}
+pub part C1: Cap2<1.5mm> {{ primary {{ mfr: \"m\", mpn: \"c1\", footprint: FPD }} }}
+design B {{
+    inst a: C1
+    net _: a.A  net _: a.B
+}}"
+    );
+    let (c, r) = check(&src);
+    assert!(c.diags.has_errors(), "must be rejected");
+    let e112: Vec<&cohdl::diag::Diagnostic> = c.diags.iter().filter(|d| d.code == "E112").collect();
+    assert_eq!(e112.len(), 1, "exactly one E112:\n{r}");
+    let d = e112[0];
+    assert!(matches!(d.severity, cohdl::diag::Severity::Error));
+    assert_eq!(
+        d.message,
+        "generic argument for `C` has the wrong unit type: expected `Capacitance`, found `Length`"
+    );
+    assert_eq!(c.sm.snippet(d.primary.span), "1.5mm");
+    assert_eq!(d.primary.message, "`1.5mm` is a `Length`");
+    // And no E1401 piggybacking on the same site.
+    assert!(
+        !r.contains("E1401"),
+        "the wrong-unit diagnostic is the one report:\n{r}"
+    );
+}
+
+#[test]
+fn wrong_unit_literal_matches_pre_expression_diag_shape() {
+    // A non-Length unit literal in a Length slot keeps the exact historical
+    // code/message/span/label — the pre-existing compatible path.
+    let src = format!(
+        "{LIB}
+pub device SpE<W: Length> {{
+    pins {{ A: 1 [passive], B: 2 [passive] }}
+    spec {{ width: W }}
+}}
+pub footprint FPE {{}}
+pub part S1: SpE<1.5uF> {{ primary {{ mfr: \"m\", mpn: \"sp\", footprint: FPE }} }}
+design B {{
+    inst a: S1
+    net _: a.A  net _: a.B
+}}"
+    );
+    let (c, r) = check(&src);
+    assert!(c.diags.has_errors());
+    let e112: Vec<&cohdl::diag::Diagnostic> = c.diags.iter().filter(|d| d.code == "E112").collect();
+    assert_eq!(e112.len(), 1, "exactly one E112:\n{r}");
+    let d = e112[0];
+    assert_eq!(
+        d.message,
+        "generic argument for `W` has the wrong unit type: expected `Length`, found `Capacitance`"
+    );
+    assert_eq!(c.sm.snippet(d.primary.span), "1.5uF");
+    assert_eq!(d.primary.message, "`1.5uF` is a `Capacitance`");
+}

@@ -20,11 +20,13 @@ use crate::diag::{Diagnostic, Diagnostics};
 use crate::span::Span;
 use crate::units::{UnitType, UnitValue};
 
-/// A fully evaluated expression value. `Length` is femto-mm.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A fully evaluated expression value. `Length` carries the full unit value:
+/// exact femto-mm for identity, plus the source spelling when the value is a
+/// literal or a pure forward of one (arithmetic composes the canonical text).
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {
     Int(i64),
-    Length(i128),
+    Length(UnitValue),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -323,24 +325,29 @@ fn binary(
             .checked_rem(b)
             .map(Int)
             .or_else(|| overflow(diags, span, e)),
+        // Length arithmetic composes a CANONICAL text: only a literal (or a
+        // pure forward of one) keeps its own spelling.
         (BinOp::Add, Length(a), Length(b)) => a
-            .checked_add(b)
-            .map(Length)
+            .femto
+            .checked_add(b.femto)
+            .map(|f| Length(length_value(f)))
             .or_else(|| overflow_len(diags, span, e)),
         (BinOp::Sub, Length(a), Length(b)) => a
-            .checked_sub(b)
-            .map(Length)
+            .femto
+            .checked_sub(b.femto)
+            .map(|f| Length(length_value(f)))
             .or_else(|| overflow_len(diags, span, e)),
         (BinOp::Mul, Int(a), Length(b)) | (BinOp::Mul, Length(b), Int(a)) => {
             // Int-scaling keeps the femto domain exact.
-            (b).checked_mul(a as i128)
-                .map(Length)
+            b.femto
+                .checked_mul(a as i128)
+                .map(|f| Length(length_value(f)))
                 .or_else(|| overflow_len(diags, span, e))
         }
         (BinOp::Div, Length(_), Int(0)) => div_zero(diags, span, e),
         (BinOp::Div, Length(a), Int(b)) => {
             let b = b as i128;
-            if a % b != 0 {
+            if a.femto % b != 0 {
                 diags.push(Diagnostic::error(
                     "E1402",
                     span,
@@ -351,7 +358,7 @@ fn binary(
                 ));
                 return None;
             }
-            Some(Length(a / b))
+            Some(Length(length_value(a.femto / b)))
         }
         (op, lv, rv) => kind_mismatch(diags, span, e, op, ty_name(&lv), ty_name(&rv)),
     }
@@ -360,9 +367,9 @@ fn binary(
 /// The `Value` of an `Expr::Length` node — `None` (E1401) when the node
 /// carries a non-Length unit (Task 3 keeps such nodes so legacy positions
 /// can report their own codes; the evaluator itself judges by actual unit).
-fn length_literal(v: &UnitValue, span: Span, diags: &mut Diagnostics) -> Option<i128> {
+fn length_literal(v: &UnitValue, span: Span, diags: &mut Diagnostics) -> Option<UnitValue> {
     if v.unit == UnitType::Length {
-        Some(v.femto)
+        Some(v.clone())
     } else {
         diags.push(Diagnostic::error(
             "E1401",
@@ -408,11 +415,13 @@ pub(crate) fn eval_if_concrete(e: &Expr, env: &Env) -> Option<Value> {
 pub fn eval(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Value> {
     match e {
         Expr::Int(n, _) => Some(Value::Int(*n)),
+        // A literal keeps its own spelling — the literal IS the provenance.
         Expr::Length(v, span) => length_literal(v, *span, diags).map(Value::Length),
         Expr::Paren(inner, _) => eval(inner, env, diags),
         Expr::Name(id) => match env.names.get(&id.name) {
-            Some(NameKind::Const(v)) => Some(*v),
+            Some(NameKind::Const(v)) => Some(v.clone()),
             Some(NameKind::Binder(i)) | Some(NameKind::GenericInt(i)) => Some(Value::Int(*i)),
+            // A forwarded Length keeps the spelling it was bound with.
             Some(NameKind::GenericLength(u)) => {
                 length_literal(u, id.span, diags).map(Value::Length)
             }
@@ -471,8 +480,9 @@ pub fn eval(e: &Expr, env: &Env, diags: &mut Diagnostics) -> Option<Value> {
                     .map(Value::Int)
                     .or_else(|| overflow(diags, *span, e)),
                 (UnaryOp::Neg, Value::Length(f)) => f
+                    .femto
                     .checked_neg()
-                    .map(Value::Length)
+                    .map(|x| Value::Length(length_value(x)))
                     .or_else(|| overflow_len(diags, *span, e)),
             }
         }
@@ -741,18 +751,18 @@ mod tests {
     #[test]
     fn length_domain() {
         assert!(matches!(
-            ev("10mm + 2 * 4mm"),
-            Ok(Value::Length(18_000_000_000_000_000))
+            ev("10mm + 2 * 4mm").unwrap(),
+            Value::Length(v) if v.femto == 18_000_000_000_000_000
         ));
         assert!(matches!(
-            ev("1.00mm + 0mm"),
-            Ok(Value::Length(1_000_000_000_000_000))
+            ev("1.00mm + 0mm").unwrap(),
+            Value::Length(v) if v.femto == 1_000_000_000_000_000
         ));
         assert_eq!(length_text(1_000_000_000_000_000), "1mm");
         assert_eq!(length_text(-500_000_000_000_000), "-0.5mm");
         assert!(matches!(
-            ev("1mm / 8"),
-            Ok(Value::Length(125_000_000_000_000))
+            ev("1mm / 8").unwrap(),
+            Value::Length(v) if v.femto == 125_000_000_000_000
         ));
         assert!(ev("1mm / 3").unwrap_err().contains("E1402"));
         assert!(ev("10mm + 2").unwrap_err().contains("E1401"));

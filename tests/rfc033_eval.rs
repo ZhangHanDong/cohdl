@@ -77,18 +77,18 @@ fn int_overflow_and_zero_division() {
 #[test]
 fn exact_length_arithmetic() {
     assert!(matches!(
-        ev("10mm + 2 * 4mm"),
-        Ok(Value::Length(18_000_000_000_000_000))
+        ev("10mm + 2 * 4mm").unwrap(),
+        Value::Length(v) if v.femto == 18_000_000_000_000_000
     ));
     assert!(matches!(
-        ev("1.00mm + 0mm"),
-        Ok(Value::Length(1_000_000_000_000_000))
+        ev("1.00mm + 0mm").unwrap(),
+        Value::Length(v) if v.femto == 1_000_000_000_000_000
     ));
     assert_eq!(eval::length_text(1_000_000_000_000_000), "1mm");
     assert_eq!(eval::length_text(-500_000_000_000_000), "-0.5mm");
     assert!(matches!(
-        ev("1mm / 8"),
-        Ok(Value::Length(125_000_000_000_000))
+        ev("1mm / 8").unwrap(),
+        Value::Length(v) if v.femto == 125_000_000_000_000
     ));
     assert!(ev("1mm / 3").unwrap_err().contains("E1402"));
     assert!(ev("10mm + 2").unwrap_err().contains("E1401"));
