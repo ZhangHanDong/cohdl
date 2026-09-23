@@ -50,11 +50,16 @@ impl CallerEnv {
 }
 
 pub(crate) fn checked_int(text: &str, span: Span, diags: &mut Diagnostics) -> Option<i64> {
-    text.parse().map_err(|_| {
+    text.parse().map_err(|error: std::num::ParseIntError| {
+        let overflow = !text.contains('.') && matches!(error.kind(), std::num::IntErrorKind::PosOverflow | std::num::IntErrorKind::NegOverflow);
         diags.push(Diagnostic::error(
-            "E1401",
+            if overflow { "E1402" } else { "E1401" },
             span,
-            format!("`{text}` is not an Int — integer literals are whole decimal numbers in −2^63 … 2^63−1"),
+            if overflow {
+                format!("`{text}` is out of range for an Int (−2^63 … 2^63−1)")
+            } else {
+                format!("`{text}` is not an Int — integer literals are whole decimal numbers in −2^63 … 2^63−1")
+            },
         ));
     }).ok()
 }

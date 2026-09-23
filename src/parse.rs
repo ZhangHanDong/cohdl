@@ -2629,21 +2629,22 @@ impl<'a> Parser<'a> {
                             let TokenKind::Number(n) = t.kind else {
                                 unreachable!()
                             };
-                            match n.parse::<i64>() {
-                                Ok(v) => default = Some(GenericDefault::Int(v, t.span)),
-                                Err(_) => {
-                                    self.diags.push(
-                                        Diagnostic::error(
-                                            "E1401",
-                                            t.span,
-                                            format!(
-                                                "`{}` is not an Int — const defaults are whole decimal numbers",
-                                                n
-                                            ),
-                                        ),
-                                    );
-                                }
-                            }
+                            default = crate::check::generics::checked_int(&n, t.span, self.diags)
+                                .map(|v| GenericDefault::Int(v, t.span));
+                        }
+                        TokenKind::Minus if matches!(self.peek_ahead(1), TokenKind::Number(_)) => {
+                            let minus = self.bump();
+                            let t = self.bump();
+                            let TokenKind::Number(n) = t.kind else {
+                                unreachable!()
+                            };
+                            let span = minus.span.to(t.span);
+                            default = crate::check::generics::checked_int(
+                                &format!("-{n}"),
+                                span,
+                                self.diags,
+                            )
+                            .map(|v| GenericDefault::Int(v, span));
                         }
                         other => {
                             // An Int default must be an integer literal — a
@@ -4466,24 +4467,12 @@ impl<'a> Parser<'a> {
                             unreachable!()
                         };
                         let span = minus.span.to(t.span);
-                        return match text.parse::<u64>() {
-                            // `-9223372036854775808` fits: parse the magnitude
-                            // as u64 and wrap — exactly i64::MIN.
-                            Ok(m) if m <= (1u64 << 63) => {
-                                Some((Expr::Int((m as i128).wrapping_neg() as i64, span), 1))
-                            }
-                            _ => {
-                                self.diags.push(Diagnostic::error(
-                                    "E1402",
-                                    span,
-                                    format!(
-                                        "`-{}` is out of range for an Int (−2^63 … 2^63−1)",
-                                        text
-                                    ),
-                                ));
-                                None
-                            }
-                        };
+                        return crate::check::generics::checked_int(
+                            &format!("-{text}"),
+                            span,
+                            self.diags,
+                        )
+                        .map(|n| (Expr::Int(n, span), 1));
                     }
                     TokenKind::Unit(_) if adjacent => {
                         let t = self.bump();
@@ -4538,20 +4527,8 @@ impl<'a> Parser<'a> {
                 let TokenKind::Number(text) = t.kind else {
                     unreachable!()
                 };
-                match text.parse::<i64>() {
-                    Ok(n) => Some((Expr::Int(n, t.span), 1)),
-                    Err(_) => {
-                        self.diags.push(Diagnostic::error(
-                            "E1401",
-                            t.span,
-                            format!(
-                                "`{}` is not an Int — integer literals are whole decimal numbers in −2^63 … 2^63−1",
-                                text
-                            ),
-                        ));
-                        None
-                    }
-                }
+                crate::check::generics::checked_int(&text, t.span, self.diags)
+                    .map(|n| (Expr::Int(n, t.span), 1))
             }
             TokenKind::Unit(_) => {
                 let t = self.bump();
@@ -4573,7 +4550,13 @@ impl<'a> Parser<'a> {
             TokenKind::LParen => {
                 let open = self.span();
                 self.bump();
-                let (inner, depth) = self.expr_add(budget - 1)?;
+                let Some((inner, depth)) = self.expr_add(budget - 1) else {
+                    // A rejected numeric literal has already consumed its token.
+                    // Close its parentheses so a generic use does not acquire
+                    // unrelated delimiter errors during recovery.
+                    self.eat(&TokenKind::RParen);
+                    return None;
+                };
                 self.expect(&TokenKind::RParen, "to close the parenthesized expression");
                 Some((
                     Expr::Paren(Box::new(inner), open.to(self.prev_span())),

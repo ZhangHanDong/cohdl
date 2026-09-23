@@ -26,14 +26,28 @@ fn bare_int_arguments_never_fall_back_to_zero() {
             "pub fn f<const N: Int>(p: Pin) {{ for n: i in 0..N {{ net _: p }} }}
              design B {{ inst a: P f::<{value}>(a.A) net _: a.A, a.B }}"
         ));
-        assert!(r.contains("E1401"), "invalid Int {value}: {r}");
+        assert!(
+            r.contains(if value.contains('.') {
+                "E1401"
+            } else {
+                "E1402"
+            }),
+            "invalid Int {value}: {r}"
+        );
     }
     for value in ["9223372036854775808", "1.5"] {
         let r = diagnostics(&format!(
             "pub fn f<const N: Int = {value}>(p: Pin) {{ net _: p }}
              design B {{ inst a: P f(a.A) nc: a.B }}"
         ));
-        assert!(r.contains("E1401"), "invalid default {value}: {r}");
+        assert!(
+            r.contains(if value.contains('.') {
+                "E1401"
+            } else {
+                "E1402"
+            }),
+            "invalid default {value}: {r}"
+        );
     }
     for value in ["0", "9223372036854775807", "-9223372036854775808"] {
         let r = diagnostics(&format!(

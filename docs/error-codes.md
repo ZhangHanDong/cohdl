@@ -261,7 +261,7 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 
 | Code | Meaning |
 |---|---|
-| E1401 | expected a compile-time `Int` or `Length` (or a supported operand pairing) — a unit literal where a count is required, an Int where a `Length` coordinate is required, `Int + Length`, `Length * Length`, a non-`Int`/`Length` const type, or an expression given to a non-Int/Length generic parameter |
+| E1401 | expected a compile-time `Int` or `Length` (or a supported operand pairing) — a unit literal where a count is required, an Int where a `Length` coordinate is required, `Int + Length`, `Length * Length`, a non-`Int`/`Length` const type, or an expression given to a non-Int/Length generic parameter; a fractional numeric literal in an Int position is E1401, while an integer outside i64 is E1402 |
 | E1402 | Int or Length overflow, `MIN / -1`, `MIN % -1`, an out-of-range integer literal, or a `Length / Int` that is not exactly representable (Length arithmetic never rounds) |
 | E1403 | division or remainder by zero, including a known zero divisor inside a loop body that never runs |
 | E1404 | reversed `for` range — the end is below the start (equal bounds are an empty loop, not an error) |

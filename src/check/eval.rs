@@ -87,10 +87,12 @@ pub(crate) fn resolve_locals(
     names: &mut BTreeMap<String, NameKind>,
     array_lens: &mut BTreeMap<String, i64>,
     unknown_arrays: &mut BTreeSet<String>,
+    failed: &[Span],
     diags: &mut Diagnostics,
 ) {
     struct Resolver<'a> {
         pending: BTreeMap<String, LocalExpr>,
+        failed: &'a [Span],
         names: &'a mut BTreeMap<String, NameKind>,
         lens: &'a mut BTreeMap<String, i64>,
         arrays: &'a mut BTreeSet<String>,
@@ -149,6 +151,9 @@ pub(crate) fn resolve_locals(
             if !self.done.insert(name.to_string()) {
                 return;
             }
+            if expression_failed(local.value.span(), self.failed) {
+                return;
+            }
             let env = Env {
                 names: self.names,
                 array_lens: self.lens,
@@ -199,10 +204,12 @@ pub(crate) fn resolve_locals(
         if let Some(ty) = local.ty {
             names.insert(local.name.name.clone(), NameKind::Unknown(ty));
         } else {
+            array_lens.remove(&local.name.name);
             unknown_arrays.insert(local.name.name.clone());
         }
     }
     let mut resolver = Resolver {
+        failed,
         pending: locals
             .iter()
             .map(|l| (l.name.name.clone(), l.clone()))
@@ -218,6 +225,22 @@ pub(crate) fn resolve_locals(
     for name in names {
         resolver.resolve(&name);
     }
+}
+
+/// A failed subexpression prevents evaluating its enclosing expression. These
+/// sites belong to one definition or activation, never a global dedup key.
+pub(crate) fn expression_failed(span: Span, failed: &[Span]) -> bool {
+    failed
+        .iter()
+        .any(|bad| bad.file == span.file && span.start <= bad.start && bad.end <= span.end)
+}
+
+pub(crate) fn expression_failures(diags: &Diagnostics) -> Vec<Span> {
+    diags
+        .iter()
+        .filter(|d| matches!(d.code, "E1401" | "E1402" | "E1403" | "E1407" | "E211"))
+        .map(|d| d.primary.span)
+        .collect()
 }
 
 fn ty_name(v: &Value) -> &'static str {
@@ -347,7 +370,10 @@ fn binary(
         (BinOp::Div, Length(_), Int(0)) => div_zero(diags, span, e),
         (BinOp::Div, Length(a), Int(b)) => {
             let b = b as i128;
-            if a.femto % b != 0 {
+            let Some(remainder) = a.femto.checked_rem(b) else {
+                return overflow_len(diags, span, e);
+            };
+            if remainder != 0 {
                 diags.push(Diagnostic::error(
                     "E1402",
                     span,
@@ -358,7 +384,10 @@ fn binary(
                 ));
                 return None;
             }
-            Some(Length(length_value(a.femto / b)))
+            a.femto
+                .checked_div(b)
+                .map(|v| Length(length_value(v)))
+                .or_else(|| overflow_len(diags, span, e))
         }
         (op, lv, rv) => kind_mismatch(diags, span, e, op, ty_name(&lv), ty_name(&rv)),
     }

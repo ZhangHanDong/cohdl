@@ -109,7 +109,14 @@ fn constant_cycles_are_reported_in_unused_and_layout_scopes() {
 fn invalid_bare_int_arguments_are_rejected_in_uncalled_helpers() {
     for number in ["1.5", "9223372036854775808"] {
         let r = diagnostics(&format!("pub fn f<const N: Int>(p: Pin) {{ net _: p }} pub fn unused(p: Pin) {{ f::<{number}>(p) }} design B {{}}"));
-        assert!(r.contains("E1401"), "{r}");
+        assert!(
+            r.contains(if number.contains('.') {
+                "E1401"
+            } else {
+                "E1402"
+            }),
+            "{r}"
+        );
     }
 }
 

@@ -328,3 +328,43 @@ fn fmt_count(n: u64) -> String {
     }
     out
 }
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+    use crate::span::FileId;
+
+    #[test]
+    fn exact_limits_admit_the_last_item_and_reject_the_next_once() {
+        let span = Span::new(FileId(0), 7, 11);
+        for kind in ["work", "iteration", "frame"] {
+            let mut meter = Meter::new(true);
+            let mut diags = Diagnostics::new();
+            match kind {
+                "work" => meter.work = MAX_WORK_ITEMS - 1,
+                "iteration" => meter.iterations = MAX_ITERATIONS - 1,
+                _ => meter.frames = MAX_FRAMES - 1,
+            }
+            let enter = |meter: &mut Meter, diags: &mut Diagnostics| match kind {
+                "work" => meter.charge(1, "test item", span, diags),
+                "iteration" => meter.enter_iteration(span, diags),
+                _ => meter.enter_frame(span, diags),
+            };
+            assert!(enter(&mut meter, &mut diags));
+            assert!(!meter.tripped());
+            assert!(diags.is_empty());
+            assert!(!enter(&mut meter, &mut diags));
+            assert!(!enter(&mut meter, &mut diags));
+            assert!(meter.tripped());
+            let ds: Vec<_> = diags.iter().collect();
+            assert_eq!(ds.len(), 1);
+            assert_eq!(ds[0].code, "E1405");
+            assert_eq!(ds[0].primary.span, span);
+            assert!(ds[0].message.contains(match kind {
+                "work" => "1000001 work items",
+                "iteration" => "iteration 100001",
+                _ => "65 active frames",
+            }));
+        }
+    }
+}

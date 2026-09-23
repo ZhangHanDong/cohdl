@@ -191,3 +191,19 @@ fn length_value_carries_canonical_text() {
     assert_eq!(v.text, "2.5mm");
     assert_eq!(v.femto, 2_500_000_000_000_000);
 }
+
+#[test]
+fn length_minimum_is_valid_but_division_overflow_is_checked() {
+    let min = "(0.000000000000001mm * -9223372036854775808 * -9223372036854775808 * -2)";
+    assert!(matches!(ev(min).unwrap(), Value::Length(v) if v.femto == i128::MIN));
+    for (expression, code) in [
+        (format!("{min} / -1"), "E1402"),
+        ("1mm / 3".into(), "E1402"),
+        (format!("{min} / 0"), "E1403"),
+    ] {
+        let (e, _) = expr_of(&expression);
+        let mut diags = Diagnostics::new();
+        assert!(eval::eval(&e, &Env::empty(), &mut diags).is_none());
+        assert_eq!(diags.iter().map(|d| d.code).collect::<Vec<_>>(), [code]);
+    }
+}

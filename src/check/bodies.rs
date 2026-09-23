@@ -341,6 +341,7 @@ fn prepare_scope(ctx: &mut StaticCtx, stmts: &[Stmt], diags: &mut Diagnostics) {
         &mut ctx.names,
         &mut ctx.array_lens,
         &mut ctx.unknown_arrays,
+        &[],
         diags,
     );
 }

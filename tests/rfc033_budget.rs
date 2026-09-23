@@ -286,3 +286,46 @@ fn reference_expressions_activate_metering_at_every_call_site() {
         );
     }
 }
+
+#[test]
+fn budget_failure_cannot_produce_build_artifacts() {
+    for declaration in [
+        "inst huge: [LED; 1000001]",
+        "subdesign huge: [Empty; 1000001]",
+    ] {
+        let (mut checked, rendered) = check(&format!(
+            "{LIB} pub subdesign Empty {{}} design B {{ const ACTIVE: Int = 1 {declaration} }}"
+        ));
+        assert_eq!(
+            checked.diags.iter().map(|d| d.code).collect::<Vec<_>>(),
+            ["E1405"],
+            "{rendered}"
+        );
+        assert!(
+            cohdl::pipeline::build_artifacts(&mut checked, &cohdl::lock::LockState::default())
+                .is_none()
+        );
+        assert!(checked.ir.as_ref().is_none_or(|ir| ir.instances.is_empty()
+            && ir.subdesigns.is_empty()
+            && ir.layout.placements.is_empty()));
+    }
+}
+
+#[test]
+fn empty_layout_iteration_limits_are_exact() {
+    for count in [100000, 100001] {
+        let (c, r) = check(&format!(
+            "design B {{ layout {{ for empty: i in 0..{count} {{}} }} }}"
+        ));
+        let expected = if count == 100000 {
+            vec![]
+        } else {
+            vec!["E1405"]
+        };
+        assert_eq!(
+            c.diags.iter().map(|d| d.code).collect::<Vec<_>>(),
+            expected,
+            "{r}"
+        );
+    }
+}
