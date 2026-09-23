@@ -34,6 +34,7 @@ import {
   itemsByFq,
   kindCounts,
   moduleGroups,
+  netCount,
   padFacts,
   padsByFq,
   partsForDevice,
@@ -909,9 +910,11 @@ function CircuitBody({
         </Section>
       )}
       {hasSummary ? (
-        <p className="api-fact">
-          {body.nets} net statement{body.nets === 1 ? "" : "s"} in the body
-        </p>
+        typeof netCount(body.nets) === "number" ? (
+          <p className="api-fact">
+            {body.nets} net statement{body.nets === 1 ? "" : "s"} in the body
+          </p>
+        ) : null
       ) : (
         <Section title="Body (canonical source)" count={1}>
           <pre className="code-panel api-body-source">

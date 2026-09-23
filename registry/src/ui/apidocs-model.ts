@@ -178,6 +178,14 @@ export function avlColumns(part: PartDoc): string[] {
   return cols;
 }
 
+/// A v1 summary always carries a numeric `nets` (possibly 0). RFC-033 M2
+/// items omit the whole summary, so a genuinely absent key yields null — the
+/// caller then omits the net count instead of printing a bogus one. A
+/// hostile non-number also degrades to null, in the spirit of `mm`.
+export function netCount(nets: number | undefined): number | null {
+  return typeof nets === "number" && Number.isFinite(nets) ? nets : null;
+}
+
 /// One list-row line: the `#[intent]` when present, otherwise a small
 /// derived fact. Deterministic — it only reads the item. A hostile item
 /// missing its kind-named payload gets an empty summary, never a crash.
@@ -208,9 +216,9 @@ export function itemSummary(item: ApiDocsItem): string {
       // RFC-033: an M2 item carries body_source instead of the lossy summary.
       if (item.body_source !== undefined) return "full body source";
       const params = asArray(item.fn.params).length;
-      return `${params} parameter${params === 1 ? "" : "s"} · ${item.fn.nets} net${
-        item.fn.nets === 1 ? "" : "s"
-      }`;
+      const nets = netCount(item.fn.nets);
+      const netPart = nets === null ? "" : ` · ${nets} net${nets === 1 ? "" : "s"}`;
+      return `${params} parameter${params === 1 ? "" : "s"}${netPart}`;
     }
     case "pad": {
       if (!item.pad) return "";
@@ -232,17 +240,17 @@ export function itemSummary(item: ApiDocsItem): string {
       if (!item.design) return "";
       if (item.body_source !== undefined) return "full body source";
       const insts = asArray(item.design.insts).length;
-      return `${insts} instance${insts === 1 ? "" : "s"} · ${item.design.nets} net${
-        item.design.nets === 1 ? "" : "s"
-      }`;
+      const nets = netCount(item.design.nets);
+      const netPart = nets === null ? "" : ` · ${nets} net${nets === 1 ? "" : "s"}`;
+      return `${insts} instance${insts === 1 ? "" : "s"}${netPart}`;
     }
     case "subdesign": {
       if (!item.subdesign) return "";
       if (item.body_source !== undefined) return "full body source";
       const ports = asArray(item.subdesign.ports).length;
-      return `${ports} port${ports === 1 ? "" : "s"} · ${item.subdesign.nets} net${
-        item.subdesign.nets === 1 ? "" : "s"
-      }`;
+      const nets = netCount(item.subdesign.nets);
+      const netPart = nets === null ? "" : ` · ${nets} net${nets === 1 ? "" : "s"}`;
+      return `${ports} port${ports === 1 ? "" : "s"}${netPart}`;
     }
   }
 }
@@ -269,8 +277,9 @@ export function genericSignature(g: GenericDoc | undefined): string {
 }
 
 /// A cohdl-style one-line signature for fn (and, with "design"/"subdesign",
-/// subdesign) pages. Designs are bare-named blocks — no generics, no
-/// parameter list.
+/// subdesign) pages. Designs are bare-named blocks; a subdesign takes
+/// generics and ports (not fn-style parentheses), per the RFC-032/RFC-033
+/// grammar — `subdesign Bank<const N: Int = 2>`.
 export function fnSignature(
   keyword: string,
   name: string,
@@ -278,10 +287,11 @@ export function fnSignature(
 ): string {
   if (keyword === "design") return `design ${name}`;
   const generics = asArray(fn.generics).map(genericSignature);
+  const genericPart = generics.length > 0 ? `<${generics.join(", ")}>` : "";
+  if (keyword === "subdesign") return `${keyword} ${name}${genericPart}`;
   const params = asArray((fn as FnDoc).params).map(
     (p) => `${p?.name}: ${fnParamType(p?.type)}`,
   );
-  const genericPart = generics.length > 0 ? `<${generics.join(", ")}>` : "";
   return `${keyword} ${name}${genericPart}(${params.join(", ")})`;
 }
 

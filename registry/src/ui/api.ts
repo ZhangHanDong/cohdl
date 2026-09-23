@@ -195,9 +195,12 @@ export interface InstDoc {
 export interface FnDoc {
   generics?: GenericDoc[];
   params?: FnParamDoc[];
+  /// RFC-033 (schema 2): an M2 item omits the lossy insts/calls/nets
+  /// summary entirely — body_source at the ITEM level replaces it. v1 items
+  /// always carry `nets` (possibly 0); `insts`/`calls` only when non-empty.
   insts?: InstDoc[];
   calls?: string[];
-  nets: number;
+  nets?: number;
 }
 
 /// RFC-032: a subdesign's typed surface — like an fn, plus ports.
@@ -206,13 +209,13 @@ export interface SubdesignDoc {
   ports?: { name: string; obligation: "required" | "optional" }[];
   insts?: InstDoc[];
   calls?: string[];
-  nets: number;
+  nets?: number;
 }
 
 export interface DesignDoc {
   insts?: InstDoc[];
   calls?: string[];
-  nets: number;
+  nets?: number;
 }
 
 export interface AvlEntryDoc {
