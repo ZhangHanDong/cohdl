@@ -2,6 +2,78 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 #[test]
+fn loop_placement_errors_keep_provenance_in_the_explorer_message() {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let dir = std::env::temp_dir().join(format!(
+        "cohdl-explorer-loop-diagnostics-{}-{stamp}",
+        std::process::id()
+    ));
+    std::fs::create_dir(&dir).unwrap();
+    std::fs::create_dir(dir.join("src")).unwrap();
+    std::fs::write(
+        dir.join("cohdl.toml"),
+        "[package]\nname = \"loop_diagnostics\"\nversion = \"0.1.0\"\n[dependencies]\n",
+    )
+    .unwrap();
+    let library = include_str!("fixtures/parameterized/src/main.cohdl")
+        .split("pub fn attach")
+        .next()
+        .unwrap();
+    for (body, iterations) in [
+        (
+            "for pos: i in 0..2 { place a[i] at (0mm, 0mm) place a[i] at (1mm, 0mm) }",
+            [0, 1],
+        ),
+        (
+            "for pos: i in 0..4 { place a[i] at (0mm, 0mm) rotate 200 * i }",
+            [2, 3],
+        ),
+    ] {
+        let source = format!(
+            "{library}\ndesign B {{ inst a: [P; 4] net _: a[0..=3].A, a[0..=3].B layout {{ {body} }} }}"
+        );
+        std::fs::write(dir.join("src/main.cohdl"), &source).unwrap();
+        let model = cohdl_explorer::project_model::extract(&dir).unwrap();
+        assert_eq!(model.verdict, "fail");
+        let errors: Vec<_> = model
+            .diagnostics
+            .iter()
+            .filter(|d| d.severity == "error")
+            .collect();
+        assert_eq!(errors.len(), 2);
+        for (error, i) in errors.iter().zip(iterations) {
+            assert_eq!(error.code, "E1007");
+            for detail in [
+                format!("B::a_{i}"),
+                format!("B::__for_pos_{i}"),
+                format!("i = {i}"),
+            ] {
+                assert!(
+                    error.message.contains(&detail),
+                    "Explorer message lost {detail}: {}",
+                    error.message
+                );
+            }
+            if i >= 2 {
+                assert!(error.message.contains(&format!("rotate {}", 200 * i)));
+            }
+        }
+        assert_ne!(errors[0].message, errors[1].message);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("src/main.cohdl")).unwrap(),
+            source
+        );
+        for path in ["cohdl.lock", "design.lock", "out"] {
+            assert!(!dir.join(path).exists());
+        }
+    }
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn expanded_instances_keep_complete_layout_connectivity_and_source_locations() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/parameterized");
     let source = std::fs::read_to_string(dir.join("src/main.cohdl")).unwrap();
