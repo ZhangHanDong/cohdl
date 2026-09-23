@@ -1389,11 +1389,10 @@ impl<'w, 'd> Expander<'w, 'd> {
                 // layout `for` iterates within the same coordinate owner
                 // (RFC-033 §6 — `Scope::path` keeps iteration identity,
                 // `Scope::layout_owner` keeps the coordinate frame).
-                let Some(owner) = scope.layout_owner.clone() else {
-                    // Unreachable: every PlaceCtx::Sub scope is constructed by
-                    // `handle_subdesign_use` with its node path as owner.
-                    return;
-                };
+                let owner = scope
+                    .layout_owner
+                    .clone()
+                    .expect("PlaceCtx::Sub is only entered via handle_subdesign_use, which always sets layout_owner to the node path");
                 let same = |t: &PlaceTarget| match t {
                     PlaceTarget::Inst(p) | PlaceTarget::Node(p) => *p == target_path,
                 };

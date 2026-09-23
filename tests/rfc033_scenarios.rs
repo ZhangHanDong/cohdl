@@ -243,59 +243,35 @@ fn nested_filter_bank_counts_and_override() {
 }
 
 // ---------------------------------------------------------------------------
-// T1 regression: subdesign layout `for` loops keep their placements (review
-// blocker #1). The frame a default is recorded against is the subdesign NODE,
-// not the loop-qualified `__for_{label}_{value}` path — otherwise
-// `default_placements` finds no anchor for the owner and silently drops every
-// loop-authored placement.
+// Subdesign layout `for` loops must keep their placements. The frame a
+// default is recorded against is the subdesign NODE, not the loop-qualified
+// `__for_{label}_{value}` path — otherwise `default_placements` finds no
+// anchor for the owner and silently drops every loop-authored placement.
 // ---------------------------------------------------------------------------
 
-/// One placement row by exact path, from the CHECKED IR (strict: every
-/// path/coordinate/angle/side asserted directly against `DesignIr`).
-fn ir_place<'a>(ir: &'a cohdl::ir::DesignIr, path: &str) -> &'a cohdl::ir::LayoutPlacement {
-    ir.layout
-        .placements
-        .iter()
-        .find(|p| p.path == path)
-        .unwrap_or_else(|| {
-            panic!(
-                "no placement for {path}: {:?}",
-                ir.layout
-                    .placements
-                    .iter()
-                    .map(|p| &p.path)
-                    .collect::<Vec<_>>()
-            )
-        })
-}
-
-/// The full (path, x, y, rotate, side) set, in path order, for exact-equality
-/// comparisons — no contains/counting-only assertions.
+/// femto-mm value of a whole-mm coordinate.
 fn mm(x: i128) -> i128 {
     x * 1_000_000_000_000_000
 }
 
+/// The complete board placement mapping, in collection order, compared for
+/// exact equality — a dropped row or a phantom row both fail.
 fn placement_set(
     ir: &cohdl::ir::DesignIr,
-    keep: &[&str],
 ) -> Vec<(String, i128, i128, u16, cohdl::ast::PlacementSide)> {
-    let mut rows: Vec<_> = ir
-        .layout
+    ir.layout
         .placements
         .iter()
-        .filter(|p| keep.iter().any(|k| p.path == *k))
         .map(|p| (p.path.clone(), p.at.0.femto, p.at.1.femto, p.rotate, p.side))
-        .collect();
-    rows.sort_by(|a, b| a.0.cmp(&b.0));
-    rows
+        .collect()
 }
 
 #[test]
 fn subdesign_layout_loop_composes_the_full_expected_set() {
-    // The review's exact Scenario-3 shape: Bank<3>'s layout loop places its
-    // resistor array; the board anchors source (0,0) and the whole bank
-    // (20,20). Expected: source (0,0), b.rs_0 (20,20), b.rs_1 (25,20),
-    // b.rs_2 (30,20) — the complete set, nothing dropped, nothing extra.
+    // Bank<3>'s layout loop places its resistor array; the board anchors
+    // source (0,0) and the whole bank (20,20). Expected: source (0,0),
+    // b.rs_0 (20,20), b.rs_1 (25,20), b.rs_2 (30,20) — the complete set,
+    // nothing dropped, nothing extra.
     let src = format!(
         "{LIB}
 pub subdesign Bank<const N: Int> {{
@@ -313,16 +289,17 @@ design Board {{
     let mut checked = check(&src);
     let _ = cohdl::pipeline::build_artifacts(&mut checked, &LockState::default()).expect("build");
     let ir = checked.ir.as_ref().unwrap();
-    let got = placement_set(
-        ir,
-        &[
-            "Board::source",
-            "Board::b::rs_0",
-            "Board::b::rs_1",
-            "Board::b::rs_2",
-        ],
-    );
+    // Explicit placements keep declaration order; composed defaults append
+    // after, in path order.
+    let got = placement_set(ir);
     let want = vec![
+        (
+            "Board::source".to_string(),
+            mm(0),
+            mm(0),
+            0,
+            cohdl::ast::PlacementSide::Top,
+        ),
         (
             "Board::b::rs_0".to_string(),
             mm(20),
@@ -344,18 +321,8 @@ design Board {{
             0,
             cohdl::ast::PlacementSide::Top,
         ),
-        (
-            "Board::source".to_string(),
-            mm(0),
-            mm(0),
-            0,
-            cohdl::ast::PlacementSide::Top,
-        ),
     ];
-    assert_eq!(got, want, "the full placement set, exactly");
-    // And exactly these four board placements exist — no dropped loop rows,
-    // no phantom rows.
-    assert_eq!(ir.layout.placements.len(), 4, "complete set, nothing extra");
+    assert_eq!(got, want, "the full placement mapping, exactly");
 }
 
 #[test]
@@ -387,17 +354,17 @@ design Board {{
     // b rotate 90, top: inv=270 → (dx,dy)→(dy,−dx).
     // rs_0 local (0,1) → (1,0) → (11,10), rotate 0+90=90.
     // rs_1 local (3,1) → (1,−3) → (11,7), rotate 90.
-    let got = placement_set(
-        ir,
-        &[
-            "Board::source",
-            "Board::a::rs_0",
-            "Board::a::rs_1",
-            "Board::b::rs_0",
-            "Board::b::rs_1",
-        ],
-    );
+    // Row order: the explicit `place source` first, then composed defaults in
+    // path order (a::rs_0, a::rs_1, b::rs_0, b::rs_1).
+    let got = placement_set(ir);
     let want = vec![
+        (
+            "Board::source".to_string(),
+            mm(0),
+            mm(0),
+            0,
+            cohdl::ast::PlacementSide::Top,
+        ),
         (
             "Board::a::rs_0".to_string(),
             mm(10),
@@ -426,15 +393,11 @@ design Board {{
             90,
             cohdl::ast::PlacementSide::Top,
         ),
-        (
-            "Board::source".to_string(),
-            mm(0),
-            mm(0),
-            0,
-            cohdl::ast::PlacementSide::Top,
-        ),
     ];
-    assert_eq!(got, want, "each instance composes through its own anchor");
+    assert_eq!(
+        got, want,
+        "each instance composes through its own anchor, complete mapping"
+    );
 }
 
 #[test]
@@ -464,18 +427,36 @@ design Board {{
     let ir = checked.ir.as_ref().unwrap();
     // rs_0 local (0,2), bottom: mirror → (0,2); inv(180)=180 → (0,−2);
     // absolute (10,8); rotate = 180+360−0 = 180 (reflection reverses);
-    // side flips to bottom.
-    let rs0 = ir_place(ir, "Board::p::rs_0");
-    assert_eq!((rs0.at.0.femto, rs0.at.1.femto), (mm(10), mm(8)));
+    // side flips to bottom. rs_1 is the explicit override, verbatim.
+    // Row order: source, the reach-in override p.rs[1], then the composed
+    // default p.rs_0 (defaults append in path order after explicit rows).
+    let got = placement_set(ir);
+    let want = vec![
+        (
+            "Board::source".to_string(),
+            mm(0),
+            mm(0),
+            0,
+            cohdl::ast::PlacementSide::Top,
+        ),
+        (
+            "Board::p::rs_1".to_string(),
+            mm(1),
+            mm(1),
+            45,
+            cohdl::ast::PlacementSide::Top,
+        ),
+        (
+            "Board::p::rs_0".to_string(),
+            mm(10),
+            mm(8),
+            180,
+            cohdl::ast::PlacementSide::Bottom,
+        ),
+    ];
     assert_eq!(
-        (rs0.rotate, rs0.side),
-        (180, cohdl::ast::PlacementSide::Bottom)
-    );
-    // rs_1 is the explicit override, verbatim.
-    let rs1 = ir_place(ir, "Board::p::rs_1");
-    assert_eq!(
-        (rs1.at.0.femto, rs1.at.1.femto, rs1.rotate, rs1.side),
-        (mm(1), mm(1), 45, cohdl::ast::PlacementSide::Top)
+        got, want,
+        "reflection math + override, as the complete mapping"
     );
 }
 
@@ -519,7 +500,8 @@ design Board {{
 #[test]
 fn subdesign_layout_loop_duplicate_still_e1007() {
     // A loop-authored default for the same target as a sibling default in the
-    // SAME subdesign layout is still a duplicate (E1007).
+    // SAME subdesign layout is still a duplicate (E1007) — exactly one
+    // diagnostic, pointing at the loop's placement site.
     let src = format!(
         "{LIB}
 pub subdesign S {{
@@ -539,13 +521,16 @@ design Board {{
     );
     let files = vec![("src/main.cohdl".to_string(), src)];
     let mut checked = cohdl::pipeline::check_files_in("board", &files, None).expect("selection");
-    let _ = cohdl::pipeline::build_artifacts(&mut checked, &LockState::default());
+    let _ = cohdl::pipeline::build_artifacts(&mut checked, &cohdl::lock::LockState::default());
     checked.diags.sort(&checked.sm);
-    let r = checked.diags.render(&checked.sm);
-    assert!(
-        r.contains("E1007") && r.contains("placed more than once"),
-        "duplicate within the subdesign's layout (incl. via loop):\n{r}"
-    );
+    let e1007: Vec<&cohdl::diag::Diagnostic> =
+        checked.diags.iter().filter(|d| d.code == "E1007").collect();
+    assert_eq!(e1007.len(), 1, "exactly one E1007, got all: {e1007:?}");
+    let d = e1007[0];
+    assert_eq!(d.message, "`rs[i]` is placed more than once");
+    assert!(matches!(d.severity, cohdl::diag::Severity::Error));
+    // The primary span names the loop's placement path itself.
+    assert_eq!(checked.sm.snippet(d.primary.span), "rs[i]");
 }
 
 #[test]
@@ -587,20 +572,11 @@ design Board {{
     //     leaves_1 at (110,100) → rs at (110,100),(112,100).
     // m2: leaves_0 at (0,200) → (0,200),(2,200);
     //     leaves_1 at (10,200) → (10,200),(12,200).
-    let got = placement_set(
-        ir,
-        &[
-            "Board::m1::leaves_0::rs_0",
-            "Board::m1::leaves_0::rs_1",
-            "Board::m1::leaves_1::rs_0",
-            "Board::m1::leaves_1::rs_1",
-            "Board::m2::leaves_0::rs_0",
-            "Board::m2::leaves_0::rs_1",
-            "Board::m2::leaves_1::rs_0",
-            "Board::m2::leaves_1::rs_1",
-        ],
-    );
-    let mut want = vec![
+    // Row order: the three explicit rows in declaration order, then the
+    // composed defaults in path order.
+    let got = placement_set(ir);
+    let want = vec![
+        ("Board::source", 0, 0),
         ("Board::m1::leaves_0::rs_0", 100, 100),
         ("Board::m1::leaves_0::rs_1", 102, 100),
         ("Board::m1::leaves_1::rs_0", 110, 100),
@@ -621,6 +597,63 @@ design Board {{
         )
     })
     .collect::<Vec<_>>();
-    want.sort_by(|a, b| a.0.cmp(&b.0));
-    assert_eq!(got, want, "nested loops, two instances, full set");
+    assert_eq!(
+        got, want,
+        "nested loops, two instances, complete mapping incl. the source row"
+    );
+}
+
+#[test]
+fn subdesign_circuit_for_with_nested_layout_block_places_every_element() {
+    // A circuit-body `for` whose body carries its own `layout {}` block: the
+    // block's placements are defaults of the enclosing subdesign node, and
+    // every iteration's rows must survive and compose through the node's
+    // anchor. The layout loop inside a `layout {}` block is a different form
+    // — this one nests the whole layout block inside the circuit loop.
+    let src = format!(
+        "{LIB}
+pub subdesign Grid {{
+    ports {{ required IN: Pin }}
+    inst rs: [RP; 4]
+    for w: i in 0..4 {{
+        net _: IN, rs[i].A, rs[i].B
+        layout {{
+            place rs[i] at (i * 5mm, 3mm)
+        }}
+    }}
+}}
+design Board {{
+    inst source: SRCP
+    subdesign g: Grid {{ IN: source.OUT, }}
+    layout {{ place source at (0mm, 0mm)  place g at (10mm, 10mm) }}
+}}"
+    );
+    let mut checked = check(&src);
+    let _ = cohdl::pipeline::build_artifacts(&mut checked, &LockState::default()).expect("build");
+    let ir = checked.ir.as_ref().unwrap();
+    // g anchored at (10,10): rs_i at (10+i*5, 13). Explicit source row first,
+    // composed defaults after in path order.
+    let got = placement_set(ir);
+    let defaults: Vec<(String, i128, i128, u16, cohdl::ast::PlacementSide)> =
+        [(0, 10, 13), (1, 15, 13), (2, 20, 13), (3, 25, 13)]
+            .into_iter()
+            .map(|(i, x, y)| {
+                (
+                    format!("Board::g::rs_{i}"),
+                    mm(x),
+                    mm(y),
+                    0,
+                    cohdl::ast::PlacementSide::Top,
+                )
+            })
+            .collect();
+    let mut want = vec![(
+        "Board::source".to_string(),
+        mm(0),
+        mm(0),
+        0,
+        cohdl::ast::PlacementSide::Top,
+    )];
+    want.extend(defaults);
+    assert_eq!(got, want, "circuit-for nested layout, complete mapping");
 }
