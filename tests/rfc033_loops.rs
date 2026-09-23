@@ -1,5 +1,6 @@
 use cohdl::lock::LockState;
 use cohdl::pipeline::{build_artifacts, check_files_in};
+use std::collections::BTreeSet;
 
 fn check(src: &str) -> (cohdl::pipeline::Checked, String) {
     let files = vec![("src/main.cohdl".to_string(), src.to_string())];
@@ -98,24 +99,51 @@ design B {{ inst host: HOST  for x: i in 0..0 {{ inst extra: LED }}  net _: host
 
 #[test]
 fn sibling_frames_do_not_merge_same_named_nets() {
+    // Named nets are not admitted directly in a circuit for body (E1406, see
+    // rfc033_named_nets). The old frame-isolation property survives through a
+    // helper fn: each sibling loop iteration gets its own private LINK.
     let src = format!(
         "{LIB}
+fn link(x: Pin, y: Pin) {{ net LINK: x, y }}
 design B {{
     inst host: HOST
     inst leds: [LED; 2]
     net P: host.V5, leds[0..=1].VDD
     net G [gnd]: host.GND, leds[0..=1].GND
     net D: host.DATA, leds[0].DIN
-    for a: i in 0..1 {{ net LINK: leds[0].DOUT, leds[1].DIN }}
-    for b: i in 0..1 {{ net LINK: leds[1].DOUT }}
+    for a: i in 0..1 {{ link(leds[0].DOUT, leds[1].DIN) }}
+    for b: i in 0..1 {{ link(leds[1].DOUT, leds[1].DOUT) }}
 }}"
     );
     let (chk, r) = check(&src);
     assert!(!chk.diags.has_errors(), "{r}");
-    let net = netlist(&src);
+    let ir = chk.ir.as_ref().unwrap();
+    let links: Vec<_> = ir.nets.iter().filter(|n| n.name.contains("LINK")).collect();
+    assert_eq!(links.len(), 2, "one private LINK per sibling frame:\n{r}");
+    let names: BTreeSet<_> = links.iter().map(|n| n.name.as_str()).collect();
     assert!(
-        net.contains("__for_a_0::LINK") && net.contains("__for_b_0::LINK"),
-        "{net}"
+        names.contains("__for_a_0::__fn0_link::LINK")
+            && names.contains("__for_b_0::__fn0_link::LINK"),
+        "{:?}",
+        names
+    );
+    let endpoints: BTreeSet<_> = links.iter().map(|n| n.members.clone()).collect();
+    let expected: BTreeSet<_> = [
+        [
+            ("B::leds_0".to_string(), "DOUT".to_string()),
+            ("B::leds_1".to_string(), "DIN".to_string()),
+        ]
+        .into_iter()
+        .collect(),
+        [("B::leds_1".to_string(), "DOUT".to_string())]
+            .into_iter()
+            .collect(),
+    ]
+    .into_iter()
+    .collect();
+    assert_eq!(
+        endpoints, expected,
+        "full endpoint sets, no cross-frame merge"
     );
 }
 

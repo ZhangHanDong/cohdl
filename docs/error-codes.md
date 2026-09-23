@@ -266,7 +266,7 @@ the RFC-016 classes (E202/E205), exactly as the RFC directs.
 | E1403 | division or remainder by zero, including a known zero divisor inside a loop body that never runs |
 | E1404 | reversed `for` range — the end is below the start (equal bounds are an empty loop, not an error) |
 | E1405 | deterministic expansion budget exceeded: 100,000 entered iterations, 1,000,000 work items, or 64 active loop frames; reported before the excess object is materialized, never a partial build |
-| E1406 | a declaration or operation not admitted in this context: `inst`/`subdesign` inside a `for` body (including an empty one), or anything but `const`/`place`/`for` inside a layout loop |
+| E1406 | a declaration or operation not admitted in this context: `inst`/`subdesign` inside a `for` body (including an empty one), a directly authored NAMED `net NAME: …` inside a `for` body (declare the named net outside the loop and join it inside via an anonymous `net _` through shared pins/ports; helper-fn private named nets called from loops are unaffected), or anything but `const`/`place`/`for` inside a layout loop |
 | E1407 | cyclic constant / array-length dependency — the complete cycle is named (`N` → `leds.len` → `N`) |
 
 ## D00x — residual DRC (RFC-004; exactly four, never more)

@@ -109,12 +109,12 @@ The half-open range `a..b` enters a through b−1 in order; equal endpoints are 
 
 | Context                             | Admitted operations                                                                                        |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Circuit loop in design/subdesign    | const, net, nc, fn calls, nested for, placement-subset layout                                              |
+| Circuit loop in design/subdesign    | const, anonymous `net _`, nc, fn calls, nested for, placement-subset layout                                 |
 | Circuit loop in fn                  | Same, subject to inherited fn placement restrictions                                                       |
 | Loop inside layout                  | const, place, nested for; no inst, subdesign, fn call, net or nc                                           |
 | Ordinary circuit body outside loops | Existing inst/subdesign/fn operations plus const/for/count expressions; existing owner restrictions remain |
 
-Direct scalar/array `inst` and `subdesign` declarations in a loop body are rejected — including in empty loops — with E1406 where no more specific owner error applies; `subdesign` use in a fn remains E1307. Calling a fn from a loop may create that fn's ordinary local components (fn stays effectful; all effects are metered). Local constants are validated before operations, but no hypothetical instances are allocated to validate a skipped loop. A loop declares neither an electrical interface nor a coordinate frame; no outside-loop `label[i].r` interface exists.
+Direct scalar/array `inst` and `subdesign` declarations in a loop body are rejected — including in empty loops — with E1406 where no more specific owner error applies; `subdesign` use in a fn remains E1307. A directly authored NAMED net (`net NAME: …`) inside a loop body is likewise rejected with a single E1406 at the net name — including in empty or nested loops and in uncalled fn/subdesign definitions (PR-43 review revision, still Proposed; not yet Accepted): a per-iteration named rail is ambiguous about whether the frames join, and implicit frame-private named nets are unsafe to leave as defaults for this syntax. Declare the named net OUTSIDE the loop and join it inside via an anonymous `net _` through the shared pins/ports; a named net local to a helper fn CALLED from a loop keeps its ordinary per-frame privacy (fn isolation already governs it). Calling a fn from a loop may create that fn's ordinary local components (fn stays effectful; all effects are metered). Local constants are validated before operations, but no hypothetical instances are allocated to validate a skipped loop. A loop declares neither an electrical interface nor a coordinate frame; no outside-loop `label[i].r` interface exists.
 
 ### 6. Placement preserves ownership and override semantics
 
@@ -139,7 +139,7 @@ Current arrays derive element names via `element_name(base, i)`; subdesign/fn ex
 | ------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Physical array element                | `Board::leds_3`                                                           | Existing physical instance/pin contexts                  |
 | Subdesign array child                 | `Board::channels_3::c`                                                    | Ports for electricity; dotted paths for placement        |
-| Loop-generated operation/helper local | `Board::__for_wiring_3::LINK`, `Board::__for_decouple_3::__fn0_helper::c` | Operation provenance; fn locals gain no placement access |
+| Loop-generated operation/helper local | `Board::__for_wiring_3::__net0`, `Board::__for_decouple_3::__fn0_helper::LINK` | Operation provenance; fn locals gain no placement access |
 
 `__for_LABEL_VALUE` is an internal lexical frame keyed by **label + actual integer value** (decimal; negative as `neg` + magnitude), never by source ordinal or line number — not a subdesign node; no ports, part, designator, BOM row, default layout or override priority. The `_*for*` name family is reserved via the existing reserved-name rule; injectivity is tested against nested array/subdesign/fn paths.
 
@@ -149,7 +149,7 @@ Consequences (the reason labels are mandatory):
 
 2. **Generated identity survives edits** — inserting a loop above another, reordering differently-labelled loops, or growing a range preserves every surviving label/value path, designator and lock row; only new iterations add rows. Renaming a label is the one edit that intentionally changes generated paths. An unlabeled ordinal scheme would shift every generated identity when a loop is inserted above.
 
-3. **Sibling loops stay distinct** — both may bind `n`; same-spelled anonymous nets or helper locals in different frames never merge. Each iteration owns its fn-call and anonymous-net counters; explicitly shared pins/ports merge through existing rules; no private net escapes by printed name.
+3. **Sibling loops stay distinct** — both may bind `n`; same-spelled anonymous nets or helper locals in different frames never merge. Each iteration owns its fn-call and anonymous-net counters; explicitly shared pins/ports merge through existing rules; no private net escapes by printed name. A NAMED net authored directly in the loop body is not one of these cases — it is rejected (E1406, see §5) rather than silently merged or privatized; helper-fn private named nets remain the named-per-iteration path.
 
 A loop that only wires or places a predeclared object **never reparents it**: extending the RC array preserves `channels_0`…`channels_9` paths. The existing ordinal identity limit for fn calls *within* one frame remains disclosed: reordering those calls can reassign purposes without a helpful lock diff — compare connectivity/parts/layout too. Duplicate labels fail E201.
 
@@ -250,11 +250,12 @@ design FilterBoard {
     inst outputs: [SignalSink; N]
     inst ground: Ground
     subdesign channels: [RcChannel<1kohm, 100nF>; N]
+    net GND [gnd]: ground.GND
 
     for wiring: i in 0..channels.len {
         net _: inputs[i].OUT, channels[i].IN
         net _: channels[i].OUT, outputs[i].IN
-        net GND [gnd]: ground.GND, channels[i].GND
+        net _: ground.GND, channels[i].GND
     }
 
     layout {
@@ -269,7 +270,7 @@ design FilterBoard {
 }
 ```
 
-4N+1 physical instances, 2N+1 net classes. At N = 10, channel 6's default capacitor origin is (61mm, 15mm); its override is (62mm, 17mm). At N = 12 the override and all earlier origins remain; surviving `channels_0::r`…`channels_9::c` keep paths, designators and terminal relationships; the shared ground class legitimately gains endpoints.
+4N+1 physical instances, 2N+1 net classes. At N = 10, channel 6's default capacitor origin is (61mm, 15mm); its override is (62mm, 17mm). At N = 12 the override and all earlier origins remain; surviving `channels_0::r`…`channels_9::c` keep paths, designators and terminal relationships; the shared ground class legitimately gains endpoints (the named `net GND` is declared OUTSIDE the loop and joined per channel via anonymous `net _`, per §5).
 
 **Nested reuse** — shared substitution through logical boundaries and helpers:
 
@@ -498,4 +499,4 @@ Purely additive syntax; no existing `.cohdl` source requires change. Acceptance 
 
 ## Decision
 
-**Proposed — ready for acceptance review.** Scope is Candidate A (selected 2026-09-12): typed Int/Length compile-time computation, local constants, `const N: Int` generics shared by fn and subdesign, checked expression counts/indexes/selectors for both array kinds, mandatory-labelled half-open `for` loops over net/nc/helper-call/placement operations, expression-valued placement, hygienic label+value iteration frames feeding the existing designator allocator, uniform static declaration validation, full expansion-graph metering (100,000 iterations / 1,000,000 work items / 64 frames), the E1401–E1407 diagnostic block, one-token minus lexing, and package API docs schema v2. Direct loop-body `inst`/`subdesign` declarations (Candidate B) remain deferred. Formal acceptance still requires the decision record, central RFC/error-code allocation, the pre-acceptance compatibility audit in §Compatibility, and synchronized amendment of note 10 and affected RFCs. No M2 behavior is claimed implemented or executed.
+**Proposed — ready for acceptance review.** Scope is Candidate A (selected 2026-09-12): typed Int/Length compile-time computation, local constants, `const N: Int` generics shared by fn and subdesign, checked expression counts/indexes/selectors for both array kinds, mandatory-labelled half-open `for` loops over net/nc/helper-call/placement operations, expression-valued placement, hygienic label+value iteration frames feeding the existing designator allocator, uniform static declaration validation, full expansion-graph metering (100,000 iterations / 1,000,000 work items / 64 frames), the E1401–E1407 diagnostic block, one-token minus lexing, and package API docs schema v2. Direct loop-body `inst`/`subdesign` declarations (Candidate B) remain deferred. A PR-43 review revision (still Proposed, not Accepted) rejects directly authored NAMED nets inside loop bodies with E1406 — the named net is declared outside the loop and joined inside via anonymous `net _` connections. Formal acceptance still requires the decision record, central RFC/error-code allocation, the pre-acceptance compatibility audit in §Compatibility, and synchronized amendment of note 10 and affected RFCs. No M2 behavior is claimed implemented or executed.

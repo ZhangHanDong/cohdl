@@ -352,6 +352,8 @@ variants, formerly on this list, landed via RFC-008.
 
 ## Parameterized circuit construction proposal (RFC-033 review branch)
 
+**Named loop nets (PR-43 review revision, provisional):** a directly authored named `net NAME: …` inside a circuit `for` body is rejected (E1406) — declare the named net outside the loop and join it inside with an anonymous `net _` through the shared pins/ports. Named nets inside helper fns called from loops keep ordinary per-frame privacy.
+
 The implementation under review in PR #43 follows the Candidate A proposal in
 `docs/design/rfc-033-parameterized-circuit.md`. That proposal still records its
 status as Proposed; its presence in this branch is not evidence of central RFC

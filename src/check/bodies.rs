@@ -418,6 +418,28 @@ fn check_stmts(ctx: &mut StaticCtx, stmts: &[Stmt], in_loop: bool, diags: &mut D
                 }
             }
             Stmt::Net(n) => {
+                // Syntactic admission (named loop nets, E1406): definition-time
+                // only — `ctx.check_names` is true in the definition pass
+                // (check_one) and false in the per-activation bound_context
+                // pass, so a called helper/subdesign reports exactly once at
+                // its definition site and is not re-reported per expansion.
+                if in_loop && ctx.check_names {
+                    if let Some(name) = &n.name {
+                        diags.push(
+                            Diagnostic::error(
+                                "E1406",
+                                name.span,
+                                format!(
+                                    "a named net `{name}` is not admitted inside a `for` body — declare the named net outside the loop and connect it here with an anonymous `net _` through the shared pins/ports (RFC-033 named loop nets)",
+                                    name = name.name
+                                ),
+                            )
+                            .with_help(
+                                "move `net NAME: …` outside the loop and use `net _: OUTER.PIN, …` inside the loop to join it",
+                            ),
+                        );
+                    }
+                }
                 for m in &n.members {
                     check_selector_static(ctx, m, diags);
                 }
