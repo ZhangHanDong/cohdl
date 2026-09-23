@@ -11,22 +11,68 @@ use crate::lex::{Token, TokenKind};
 use crate::span::Span;
 use crate::units::{UnitType, UnitValue};
 
+/// Maximum recursive syntax/AST path: enclosing `for` nodes plus expression
+/// nodes (leaves count as one). Independent of the expansion frame budget.
+/// Kept small for parser, downstream visitors, Clone and Drop on ordinary
+/// thread stacks; checked BEFORE descending or constructing a parent node.
+/// Debug probes on the default test-thread stack overflow with candidate 256
+/// on parentheses and candidate 128 on circuit loops; 96 passes both paths.
+/// Loop headers use the same budget as their body (a literal costs one).
+const MAX_SYNTAX_DEPTH: usize = 96;
+
 pub fn parse(tokens: Vec<Token>, diags: &mut Diagnostics) -> SourceFile {
-    Parser {
+    let mut local = Diagnostics::new();
+    let mut parser = Parser {
         tokens,
         pos: 0,
-        diags,
+        diags: &mut local,
+        nesting: 0,
+        depth_error: None,
+    };
+    let file = parser.file();
+    if let Some(span) = parser.depth_error {
+        // Resource-limit recovery abandons this file. Do not forward a partial
+        // body to consumers or emit cascaded missing-delimiter diagnostics from
+        // the bounded unwind. Lexer diagnostics already in `diags` survive.
+        diags.push(Diagnostic::error(
+            "E102",
+            span,
+            format!("syntax/AST depth limit of {MAX_SYNTAX_DEPTH} exceeded"),
+        ));
+        SourceFile { items: Vec::new() }
+    } else {
+        diags.extend(local);
+        file
     }
-    .file()
 }
 
 struct Parser<'a> {
     tokens: Vec<Token>,
     pos: usize,
     diags: &'a mut Diagnostics,
+    nesting: usize,
+    depth_error: Option<Span>,
 }
 
 impl<'a> Parser<'a> {
+    fn depth_exceeded<T>(&mut self, span: Span) -> Option<T> {
+        self.depth_error.get_or_insert(span);
+        // Constant-time, forward-only recovery; no recursion through the rest
+        // of an adversarial file, even if its delimiters are malformed.
+        self.pos = self.tokens.len() - 1;
+        None
+    }
+
+    fn nested<T>(&mut self, parse: impl FnOnce(&mut Self) -> Option<T>) -> Option<T> {
+        if self.nesting == MAX_SYNTAX_DEPTH {
+            return self.depth_exceeded(self.span());
+        }
+        self.nesting += 1;
+        let result = parse(self);
+        self.nesting -= 1;
+        result
+    }
+
     // -- token plumbing ------------------------------------------------------
 
     fn peek(&self) -> &TokenKind {
@@ -131,7 +177,7 @@ impl<'a> Parser<'a> {
 
     // -- file / items --------------------------------------------------------
 
-    fn file(mut self) -> SourceFile {
+    fn file(&mut self) -> SourceFile {
         let mut items = Vec::new();
         while !self.at(&TokenKind::Eof) {
             let before = self.pos;
@@ -3831,6 +3877,10 @@ impl<'a> Parser<'a> {
     /// anything else; static validation lands with Task 9, but the shape is
     /// rejected right here so the grammar stays closed).
     fn layout_for(&mut self) -> Option<LayoutFor> {
+        self.nested(Self::layout_for_inner)
+    }
+
+    fn layout_for_inner(&mut self) -> Option<LayoutFor> {
         let (label, binder, start_e, end_e, start) = self.for_header()?;
         self.expect(&TokenKind::LBrace, "to open the layout loop body");
         let mut consts = Vec::new();
@@ -4252,6 +4302,10 @@ impl<'a> Parser<'a> {
     }
 
     fn for_stmt(&mut self) -> Option<ForStmt> {
+        self.nested(Self::for_stmt_inner)
+    }
+
+    fn for_stmt_inner(&mut self) -> Option<ForStmt> {
         let (label, binder, start_e, end_e, start) = self.for_header()?;
         self.expect(&TokenKind::LBrace, "to open the loop body");
         let mut body = Vec::new();
@@ -4334,19 +4388,29 @@ impl<'a> Parser<'a> {
     }
 
     fn expr(&mut self) -> Option<Expr> {
-        self.expr_add()
+        self.expr_add(MAX_SYNTAX_DEPTH - self.nesting)
+            .map(|(expr, _)| expr)
     }
 
-    fn expr_add(&mut self) -> Option<Expr> {
-        let mut lhs = self.expr_mul()?;
+    // Private expression routines carry exact subtree depth beside the node.
+    // Each operator updates it in O(1); no rescanning or public AST metadata.
+    // Reserving a slot before parsing each child bounds both descent and the
+    // left-deep trees produced by these otherwise iterative precedence loops.
+    fn expr_add(&mut self, budget: usize) -> Option<(Expr, usize)> {
+        let (mut lhs, mut depth) = self.expr_mul(budget)?;
         loop {
             let op = match self.peek() {
                 TokenKind::Plus => BinOp::Add,
                 TokenKind::Minus => BinOp::Sub,
                 _ => break,
             };
+            let operator = self.span();
+            if depth == budget {
+                return self.depth_exceeded(operator);
+            }
             self.bump();
-            let rhs = self.expr_mul()?;
+            let (rhs, rhs_depth) = self.expr_mul(budget - 1)?;
+            depth = depth.max(rhs_depth) + 1;
             let span = lhs.span().to(rhs.span());
             lhs = Expr::Binary {
                 op,
@@ -4355,11 +4419,11 @@ impl<'a> Parser<'a> {
                 span,
             };
         }
-        Some(lhs)
+        Some((lhs, depth))
     }
 
-    fn expr_mul(&mut self) -> Option<Expr> {
-        let mut lhs = self.expr_unary()?;
+    fn expr_mul(&mut self, budget: usize) -> Option<(Expr, usize)> {
+        let (mut lhs, mut depth) = self.expr_unary(budget)?;
         loop {
             let op = match self.peek() {
                 TokenKind::Star => BinOp::Mul,
@@ -4367,8 +4431,13 @@ impl<'a> Parser<'a> {
                 TokenKind::Percent => BinOp::Rem,
                 _ => break,
             };
+            let operator = self.span();
+            if depth == budget {
+                return self.depth_exceeded(operator);
+            }
             self.bump();
-            let rhs = self.expr_unary()?;
+            let (rhs, rhs_depth) = self.expr_unary(budget - 1)?;
+            depth = depth.max(rhs_depth) + 1;
             let span = lhs.span().to(rhs.span());
             lhs = Expr::Binary {
                 op,
@@ -4377,10 +4446,13 @@ impl<'a> Parser<'a> {
                 span,
             };
         }
-        Some(lhs)
+        Some((lhs, depth))
     }
 
-    fn expr_unary(&mut self) -> Option<Expr> {
+    fn expr_unary(&mut self, budget: usize) -> Option<(Expr, usize)> {
+        if budget == 0 {
+            return self.depth_exceeded(self.span());
+        }
         let start = self.span();
         match self.peek() {
             TokenKind::Minus => {
@@ -4398,7 +4470,7 @@ impl<'a> Parser<'a> {
                             // `-9223372036854775808` fits: parse the magnitude
                             // as u64 and wrap — exactly i64::MIN.
                             Ok(m) if m <= (1u64 << 63) => {
-                                Some(Expr::Int((m as i128).wrapping_neg() as i64, span))
+                                Some((Expr::Int((m as i128).wrapping_neg() as i64, span), 1))
                             }
                             _ => {
                                 self.diags.push(Diagnostic::error(
@@ -4422,7 +4494,7 @@ impl<'a> Parser<'a> {
                         // The E105 wording is exactly `negate_for_literal`'s
                         // (one source of truth for the sign rule).
                         match v.negate_for_literal() {
-                            Ok(neg) => return Some(Expr::Length(neg, span)),
+                            Ok(neg) => return Some((Expr::Length(neg, span), 1)),
                             Err(msg) => {
                                 self.diags.push(Diagnostic::error("E105", span, msg));
                                 return None;
@@ -4431,29 +4503,35 @@ impl<'a> Parser<'a> {
                     }
                     _ => {}
                 }
-                let rhs = self.expr_unary()?;
+                let (rhs, depth) = self.expr_unary(budget - 1)?;
                 let span = start.to(rhs.span());
-                Some(Expr::Unary {
-                    op: UnaryOp::Neg,
-                    rhs: Box::new(rhs),
-                    span,
-                })
+                Some((
+                    Expr::Unary {
+                        op: UnaryOp::Neg,
+                        rhs: Box::new(rhs),
+                        span,
+                    },
+                    depth + 1,
+                ))
             }
             TokenKind::Plus => {
                 self.bump();
-                let rhs = self.expr_unary()?;
+                let (rhs, depth) = self.expr_unary(budget - 1)?;
                 let span = start.to(rhs.span());
-                Some(Expr::Unary {
-                    op: UnaryOp::Plus,
-                    rhs: Box::new(rhs),
-                    span,
-                })
+                Some((
+                    Expr::Unary {
+                        op: UnaryOp::Plus,
+                        rhs: Box::new(rhs),
+                        span,
+                    },
+                    depth + 1,
+                ))
             }
-            _ => self.expr_primary(),
+            _ => self.expr_primary(budget),
         }
     }
 
-    fn expr_primary(&mut self) -> Option<Expr> {
+    fn expr_primary(&mut self, budget: usize) -> Option<(Expr, usize)> {
         match self.peek() {
             TokenKind::Number(_) => {
                 let t = self.bump();
@@ -4461,7 +4539,7 @@ impl<'a> Parser<'a> {
                     unreachable!()
                 };
                 match text.parse::<i64>() {
-                    Ok(n) => Some(Expr::Int(n, t.span)),
+                    Ok(n) => Some((Expr::Int(n, t.span), 1)),
                     Err(_) => {
                         self.diags.push(Diagnostic::error(
                             "E1401",
@@ -4481,7 +4559,7 @@ impl<'a> Parser<'a> {
                     unreachable!()
                 };
                 if v.unit == UnitType::Length {
-                    Some(Expr::Length(v, t.span))
+                    Some((Expr::Length(v, t.span), 1))
                 } else {
                     // A non-Length unit in an expression position. `place`
                     // coordinates historically report E1007 AT CHECK (the
@@ -4489,15 +4567,18 @@ impl<'a> Parser<'a> {
                     // parses and the check-side unit validation stays the
                     // single owner of that diagnostic. Everywhere else the
                     // expression kinds are wrong (E1401 at evaluation, Task 5).
-                    Some(Expr::Length(v, t.span))
+                    Some((Expr::Length(v, t.span), 1))
                 }
             }
             TokenKind::LParen => {
                 let open = self.span();
                 self.bump();
-                let inner = self.expr()?;
+                let (inner, depth) = self.expr_add(budget - 1)?;
                 self.expect(&TokenKind::RParen, "to close the parenthesized expression");
-                Some(Expr::Paren(Box::new(inner), open.to(self.prev_span())))
+                Some((
+                    Expr::Paren(Box::new(inner), open.to(self.prev_span())),
+                    depth + 1,
+                ))
             }
             TokenKind::Ident(_) => {
                 let id = self.ident("in an expression")?;
@@ -4506,9 +4587,9 @@ impl<'a> Parser<'a> {
                 {
                     self.bump();
                     let t = self.bump();
-                    return Some(Expr::Len(id.clone(), id.span.to(t.span)));
+                    return Some((Expr::Len(id.clone(), id.span.to(t.span)), 1));
                 }
-                Some(Expr::Name(id))
+                Some((Expr::Name(id), 1))
             }
             other => {
                 let msg = format!(
