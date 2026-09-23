@@ -714,7 +714,10 @@ design Board {{
         checked.diags.iter().filter(|d| d.code == "E1007").collect();
     assert_eq!(e1007.len(), 1, "exactly one E1007, got all: {e1007:?}");
     let d = e1007[0];
-    assert_eq!(d.message, "`rs[i]` is placed more than once");
+    assert_eq!(
+        d.message,
+        "`rs[i]` is placed more than once; target `Board::s::rs_0` — in Board::s::__for_p_0, i = 0"
+    );
     assert!(matches!(d.severity, cohdl::diag::Severity::Error));
     // The primary span names the loop's placement path itself.
     assert_eq!(checked.sm.snippet(d.primary.span), "rs[i]");

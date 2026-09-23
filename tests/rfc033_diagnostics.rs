@@ -69,7 +69,12 @@ fn duplicate_placements_identify_each_target_and_iteration() {
     codes(&c, &["E1007", "E1007"]);
     for (i, d) in c.diags.iter().enumerate() {
         assert_eq!(d.primary.span, span(&src, "a[i]"));
-        assert_eq!(d.message, "`a[i]` is placed more than once");
+        assert_eq!(
+            d.message,
+            format!(
+                "`a[i]` is placed more than once; target `B::a_{i}` — in B::__for_pos_{i}, i = {i}"
+            )
+        );
         assert_eq!(
             d.primary.message,
             format!("target `B::a_{i}` — in B::__for_pos_{i}, i = {i}")
@@ -85,7 +90,7 @@ fn rotation_errors_identify_computed_angle_target_and_iteration() {
     codes(&c, &["E1007", "E1007"]);
     for (i, d) in (2..4).zip(c.diags.iter()) {
         assert_eq!(d.primary.span, span(&src, "200 * i"));
-        assert_eq!(d.message, format!("`rotate {}` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise)", 200 * i));
+        assert_eq!(d.message, format!("`rotate {}` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise); target `B::a_{i}`, computed angle {} — in B::__for_pos_{i}, i = {i}", 200 * i, 200 * i));
         assert_eq!(
             d.primary.message,
             format!(
@@ -95,6 +100,65 @@ fn rotation_errors_identify_computed_angle_target_and_iteration() {
         );
         assert!(d.help.is_empty());
         assert!(d.secondary.is_empty());
+    }
+}
+
+#[test]
+fn nested_layout_errors_carry_all_frames_in_main_message() {
+    for rotate in [false, true] {
+        let placements = if rotate {
+            "place a[i] at (0mm, 0mm) rotate 200 * i"
+        } else {
+            "place a[i] at (0mm, 0mm) place a[i] at (1mm, 0mm)"
+        };
+        let (c, src) = check(&format!("design B {{ inst a: [P; 4] net _: a[0..=3].A, a[0..=3].B layout {{ for rows: row in 7..8 {{ for pos: i in 2..4 {{ {placements} }} }} }} }}"));
+        codes(&c, &["E1007", "E1007"]);
+        for (i, d) in (2..4).zip(c.diags.iter()) {
+            let suffix = format!(" — in B::__for_rows_7::__for_pos_{i}, row = 7, i = {i}");
+            let (message, label, site) = if rotate {
+                (format!("`rotate {}` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise)", 200 * i), format!("target `B::a_{i}`, computed angle {}{suffix}", 200 * i), "200 * i")
+            } else {
+                (
+                    "`a[i]` is placed more than once".to_string(),
+                    format!("target `B::a_{i}`{suffix}"),
+                    "a[i]",
+                )
+            };
+            assert_eq!(d.primary.span, span(&src, site));
+            assert_eq!(d.message, format!("{message}; {label}"));
+            assert_eq!(d.primary.message, label);
+            assert!(d.help.is_empty());
+            assert!(d.secondary.is_empty());
+        }
+    }
+}
+
+#[test]
+fn nonloop_layout_errors_keep_legacy_messages() {
+    for subdesign in [false, true] {
+        for (placement, site, message) in [
+            ("place a at (0mm, 0mm) place a at (1mm, 0mm)", "a at", "`a` is placed more than once"),
+            ("place a at (0mm, 0mm) rotate 400", "400", "`rotate 400` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise)"),
+        ] {
+            let body = format!("inst a: P net _: a.A, a.B layout {{ {placement} }}");
+            let body = if subdesign {
+                format!("pub subdesign S {{ {body} }} design B {{ subdesign s: S }}")
+            } else {
+                format!("design B {{ {body} }}")
+            };
+            let (c, src) = check(&body);
+            codes(&c, &["E1007"]);
+            let d = c.diags.iter().next().unwrap();
+            let mut expected_span = span(&src, site);
+            if site == "a at" {
+                expected_span.end = expected_span.start + 1;
+            }
+            assert_eq!(d.primary.span, expected_span);
+            assert_eq!(d.message, message);
+            assert!(d.primary.message.is_empty());
+            assert!(d.help.is_empty());
+            assert!(d.secondary.is_empty());
+        }
     }
 }
 

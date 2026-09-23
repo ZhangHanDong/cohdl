@@ -1258,10 +1258,13 @@ impl<'w, 'd> Expander<'w, 'd> {
                         ),
                     );
                     if !scope.frame.is_empty() {
-                        diagnostic = diagnostic.with_primary_label(format!(
+                        let context = format!(
                             "target `{resolved_target}`, computed angle {n}{}",
                             self.frame_suffix(scope)
-                        ));
+                        );
+                        // Message-only consumers must retain activation provenance.
+                        diagnostic.message.push_str(&format!("; {context}"));
+                        diagnostic = diagnostic.with_primary_label(context);
                     }
                     self.diags.push(diagnostic);
                     return;
@@ -1282,10 +1285,9 @@ impl<'w, 'd> Expander<'w, 'd> {
                 format!("`{}` is placed more than once", placement.path_text()),
             );
             if !scope.frame.is_empty() {
-                diagnostic = diagnostic.with_primary_label(format!(
-                    "target `{resolved_target}`{}",
-                    ex.frame_suffix(scope)
-                ));
+                let context = format!("target `{resolved_target}`{}", ex.frame_suffix(scope));
+                diagnostic.message.push_str(&format!("; {context}"));
+                diagnostic = diagnostic.with_primary_label(context);
             }
             ex.diags.push(diagnostic);
         };

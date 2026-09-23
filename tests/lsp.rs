@@ -1163,6 +1163,94 @@ fn related_information_requires_client_capability() {
     lsp.shutdown();
 }
 
+// RFC-033 constraint 12: message-only clients must distinguish activations.
+// Exercise real CLI and LSP subprocesses without relatedInformation support.
+#[test]
+fn loop_placement_main_messages_survive_without_related_information() {
+    for nested in [false, true] {
+        for rotate in [false, true] {
+            let placements = if rotate {
+                "place a[i] at (0mm, 0mm) rotate 200 * i"
+            } else {
+                "place a[i] at (0mm, 0mm) place a[i] at (1mm, 0mm)"
+            };
+            let loop_body = format!("for pos: i in 2..4 {{\n{placements}\n}}");
+            let loop_body = if nested {
+                format!("for rows: row in 7..8 {{\n{loop_body}\n}}")
+            } else {
+                loop_body
+            };
+            let src = format!("pub device Probe {{ pins {{ A: 1 [passive], B: 2 [passive] }} }}\ndesign B {{\ninst a: [Probe; 4]\nnet _: a[0..=3].A, a[0..=3].B\nlayout {{\n{loop_body}\n}}\n}}\n");
+            let (path, uri, text) = fixture(&format!("loop-message-{nested}-{rotate}.cohdl"), &src);
+            let out = Command::new(env!("CARGO_BIN_EXE_cohdl"))
+                .args(["check", path.to_str().unwrap(), "--json"])
+                .env("COHDL_STD", repo_std())
+                .output()
+                .unwrap();
+            assert_eq!(out.status.code(), Some(1));
+            let doc: Value = serde_json::from_slice(&out.stdout).unwrap();
+            // COHDL_STD contributes an unrelated project warning without a
+            // source file. Assert the COMPLETE source diagnostic set below.
+            let cli: Vec<_> = doc["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|d| d["primary"]["file"].as_str() == Some(path.to_str().unwrap()))
+                .collect();
+            let mut lsp = Lsp::spawn();
+            let _ = lsp.request("initialize", json!({ "capabilities": {} }));
+            lsp.notify("initialized", json!({}));
+            did_open(&mut lsp, &uri, &text);
+            let diagnostics = lsp.await_diagnostics(&uri);
+            lsp.shutdown();
+            assert_eq!(cli.len(), 2, "{doc}");
+            assert_eq!(diagnostics.len(), 2, "{diagnostics:?}");
+            // Literal source coordinates, independent of checked IR/diagnostics:
+            // placement line 7 (8 when nested), duplicate target at column 32,
+            // or rotation expression at column 33 (all 1-based, ASCII).
+            let line0 = if nested { 7 } else { 6 };
+            let (start, end) = if rotate { (32, 39) } else { (31, 35) };
+            let range = json!({
+                "start": { "line": line0, "character": start },
+                "end": { "line": line0, "character": end },
+            });
+            for (i, (j, l)) in (2..4).zip(cli.iter().zip(&diagnostics)) {
+                let frame = if nested {
+                    format!("B::__for_rows_7::__for_pos_{i}, row = 7, i = {i}")
+                } else {
+                    format!("B::__for_pos_{i}, i = {i}")
+                };
+                let (base, label) = if rotate {
+                    (format!("`rotate {}` is not a rotation — give a whole number of degrees in 0..=359 (counter-clockwise)", 200 * i), format!("target `B::a_{i}`, computed angle {} — in {frame}", 200 * i))
+                } else {
+                    (
+                        "`a[i]` is placed more than once".to_string(),
+                        format!("target `B::a_{i}` — in {frame}"),
+                    )
+                };
+                let message = format!("{base}; {label}");
+                assert_eq!(l["message"], message);
+                assert_eq!(j["code"], "E1007");
+                assert_eq!(j["severity"], "error");
+                assert_eq!(j["message"], message);
+                assert_eq!(j["primary"]["message"], label);
+                assert_eq!(j["primary"]["start_line"], line0 + 1);
+                assert_eq!(j["primary"]["end_line"], line0 + 1);
+                assert_eq!(j["primary"]["start_col"], start + 1);
+                assert_eq!(j["primary"]["end_col"], end + 1);
+                assert_eq!(j["secondary"], json!([]));
+                assert_eq!(j["help"], json!([]));
+                assert_eq!(l["code"], "E1007");
+                assert_eq!(l["severity"], 1);
+                assert_eq!(l["message"], j["message"]);
+                assert_eq!(l["range"], range);
+                assert!(l.get("relatedInformation").is_none());
+            }
+            assert_ne!(diagnostics[0]["message"], diagnostics[1]["message"]);
+        }
+    }
+}
+
 // R8: header field names are case-insensitive (HTTP semantics).
 #[test]
 fn lowercase_content_length_header_accepted() {
