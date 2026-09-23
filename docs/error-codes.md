@@ -56,7 +56,7 @@ CLI-only has at least one real call site in `src/`.
 | Code | Meaning |
 |---|---|
 | E101 | non-ASCII unit spelling (`Ω`, `°C`) directly after a number |
-| E102 | negative bare number (only `Temperature` and `Length` literals may be negative) — RFC-033 moved the check to the parser's `legacy_number` (pin/pad/mount-hole numbers) |
+| E102 | negative bare number in legacy pin/pad/mount-hole number positions; also syntax/AST nesting deeper than 96, reported before recursive descent or constructing an over-limit tree (distinct from the 64-frame expansion budget, E1405) |
 | E103 | unknown unit suffix |
 | E104 | SI prefix not allowed for this unit (incl. any prefix on `Temperature`/`Tolerance`) |
 | E105 | leading `-` on a unit literal whose type is not signed (only `Temperature` and `Length` may carry a sign) |

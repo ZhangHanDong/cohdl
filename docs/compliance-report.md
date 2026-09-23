@@ -4161,49 +4161,87 @@ internals exception. E1301-E1307 registered. Notes and honest narrowings:
 
 ## RFC-033 — parameterized circuit construction, 2026-09-17
 
-Implemented per Candidate A: typed `Int`/`Length` compile-time
-expressions with an exact two-domain evaluator (Int i64 checked, Length
-femto i128, division never rounds), local `const`, `const N: Int`
-generics on `fn`/`subdesign` with expression arguments, expression-valued
-array lengths / indexes / placements / rotation, mandatory-labelled
-half-open `for` loops over connection operations, hygienic
-`__for_{LABEL}_{VALUE}` frames feeding the existing designator allocator,
-uniform static declaration validation, and deterministic expansion
-metering (100,000 iterations / 1,000,000 work items / 64 frames) that
-activates only when the reachable graph contains M2 syntax. E1401–E1407
-registered. Notes and honest narrowings:
+Candidate A adds checked i64 `Int` and exact femto-i128 `Length`
+expressions, local `const`, `const N: Int` generics on functions and
+subdesigns, expression-valued arrays and placements, and labelled
+half-open `for` loops. This section records implementation evidence;
+**the source RFC is still Proposed**. Its provisional number, E140x
+allocation and acceptance require confirmation in the design source.
+The generated Accepted-only language specification is not an acceptance
+record for this implementation.
 
-- **The one compatibility correction (RFC §8, enumerated):** duplicate
-  local declarations now fail at declaration time in uncalled `fn`s and
-  design bodies too (E201, formerly caught only when a design activated
-  the code); the same pass rejects known-kind const/bound mismatches and
-  known-zero divisors inside loops that never run. Corpus audit (Task 14,
-  against an origin/main baseline worktree): **66 package directories** —
-  63 under `lib/` (incl. `@scope/*`) and 3 under `examples/` — totalling
-  **174 `.cohdl` files**, compared verdict+diagnostic-codes with the
-  baseline compiler: **0 DIFF** (no package changed verdict or code set;
-  the E201 correction fired on nothing in the corpus). All three example
-  builds (`joint-motor-controller`, `sf32-miniboard`, `rpi-pico2`)
-  produced **byte-identical** `out/` artifacts (netlist, BOM, layout.json,
-  footprints, CSVs) against the baseline.
-- **`rotate` keeps the RFC-020 deviation:** any whole degree 0..=359 (not
-  the closed {0,90,180,270} set) — now expression-valued, evaluated
-  before the range check.
-- **`fmt` deviations, per RFC §8 tooling:** loops print in source order
-  among siblings (no reordering), and `__for_` frames reset the
-  anonymous-net and fn-call counters per iteration so sibling frames with
-  identical bodies produce distinct, injective paths
-  (`__for_links_0::LINK` vs `__for_b_0::LINK`); the frame segment carries
-  identity, never order-of-visitation.
-- **Parser deviation (a):** an `Expr::Length` node may carry a non-Length
-  `UnitValue` so legacy positions keep their own precise codes (`place …
-  at (0mm, 3V)` stays E1007); the evaluator judges by actual unit and
-  reports E1401 in expression positions.
-- **Parser deviation (b):** generic-argument expressions start only at a
-  Length literal, `(`/`-`/`+`, a name followed by `.len`, or a
-  number/name/unit followed by an arithmetic operator — a bare
-  `Number`/`Unit`/`Name` keeps its legacy
-  `GenericArg` shape so E113/E112 diagnostics stay byte-identical.
-- **Package API docs use schema v2 for parameterized items** (bound
-  `{"const":"Int"}`, `body_source`); legacy documents remain v1. The
-  registry accepts both schema versions.
+- **Expansion identity and layout ownership are separate.** The
+  `__for_{LABEL}_{VALUE}` path segment identifies an iteration; a
+  subdesign's layout defaults belong to its actual subdesign node.
+  Tests compare complete placement maps through nested loops, parent
+  rotation/side transforms and explicit overrides. LED, RC and FilterBank
+  oracles also check complete endpoint partitions, named rails, nc,
+  parts, BOM and surviving designators against hand-authored expectations.
+- **Named nets in circuit loops remain a release decision.** The current
+  implementation gives them private frame names. Repeating `net VCC`
+  inside a loop does not itself join an outer `VCC`. The review's proposed
+  restriction has not been accepted or implemented. Current RC examples
+  declare the shared rail outside the loop and use anonymous connections
+  through an explicit shared pin. Existing function/subdesign private-net
+  rules have not been changed to merge names globally.
+- **Length identity uses the typed value, while forwarding preserves
+  authored text.** Literal, parenthesized-literal and pure parameter/const
+  forwarding retain spellings such as `1.50mm`; arithmetic results use
+  canonical value text. Equal femto values do not create false E802
+  conflicts. Bare Length arguments use an expression AST node; other
+  legacy bare generic arguments retain their existing representation.
+  Diagnostic compatibility is checked at actual use sites, not inferred
+  from the AST variant.
+- **Declaration checks are intentionally stricter.** Duplicate locals in
+  unused definitions and known-kind/known-zero expression errors in empty
+  loops are diagnosed before expansion. Wrong-unit generic arguments are
+  still checked in unused functions/subdesigns, including expressions
+  whose type is known but value is not. Historical duplicate E112 reports
+  at one called-function site become one; unused-definition E112 reports
+  gain a primary label. These are explicit diagnostic changes, not a
+  claim that all historical diagnostics are byte-identical.
+- **Syntax/AST depth is bounded at 96.** The parser checks before descent
+  or AST construction, including left-associated operator chains. An
+  over-limit file reports E102 and discards its partial AST. Boundary,
+  very-deep CLI/fmt/docs, debug/release and consecutive LSP-edit tests
+  exercise normal process stacks. This is independent of the expansion
+  budget: 100,000 iterations, 1,000,000 work items and 64 active frames
+  (E1405). Metering activates on reachable M2 syntax; ordinary legacy
+  literal placements do not activate it, while empty `for` loops do.
+- **Formatting preserves comments and source order.** Circuit bodies use
+  the shared statement formatter. Layout blocks containing M2 merge
+  const/place/for/constraint/outline entries by source span, recursively;
+  existing non-M2 layout formatting retains its prior conventions.
+  Golden fixtures, idempotence and full electrical/layout comparisons
+  cover this behavior. VS Code and Zed recognize the new constructs;
+  the Zed generated parser is kept in sync with its grammar.
+- **API docs and Registry support both schemas locally.** Legacy docs
+  remain v1; M2 items use v2 `body_source` and omit inapplicable legacy
+  summaries. Classification visits every expression-bearing position;
+  parenthesized array lengths cannot enter JSON as raw DSL. The compiler
+  suite parses complete documents with a standard JSON parser. Registry
+  tests cover buffered and streaming v1/v2, optional summaries and Int
+  signatures. A real compiler-generated document, padded through an
+  intent attribute to 16,661,062 uploaded bytes, was stored and retrieved
+  identically by a local Worker. This does not verify production
+  deployment or browser rendering; those remain release gates, with the
+  consumer deployed before a compiler release that emits v2.
+- **Compatibility evidence is scoped to fixed inputs and revisions.**
+  The pre-RFC baseline is `b78b7432b1dc9e01bd9e751c0878b11602c8c456`,
+  not `99e9385` (which already contains RFC-033). At intermediate
+  integration `5eee26a`, all **63 package directories** from the baseline
+  tree (**60 lib + 3 examples**) have identical complete diagnostic JSON,
+  exit status and stderr. The three examples also have byte-identical
+  outputs from all four emitters, including output manifests and
+  `design.lock`. Seven additional old-language Length cases cover the
+  noncanonical spellings absent from those examples. OpenMicroKBD was
+  checked both unchanged and with 15 switch placements replaced by nested
+  loops: the latter changes layout-record order only, with the complete
+  placement map, other emitted bytes and designators preserved. These
+  intermediate runs must be repeated on the final candidate; they are not
+  proof for every possible old program or a substitute for final CI.
+- **Explorer verification has an explicit boundary.** Its parameterized
+  fixture checks all six instance identities, the complete BUS net, four
+  resolved placements, exact source file/line/column and read-only,
+  deterministic extraction. Browser selection/source navigation remains
+  a separate interactive check.
