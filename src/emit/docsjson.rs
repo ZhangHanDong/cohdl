@@ -176,48 +176,79 @@ pub fn item_uses_m2(item_fq: &str, world: &World) -> bool {
 fn stmt_uses_m2(stmt: &Stmt) -> bool {
     match stmt {
         Stmt::Const(_) | Stmt::For(_) => true,
-        Stmt::Layout(b) => !b.consts.is_empty() || !b.loops.is_empty(),
-        Stmt::Inst(i) => i.array_len.as_ref().is_some_and(|(e, _)| expr_uses_m2(e)),
-        Stmt::SubdesignUse(u) => u.array_len.as_ref().is_some_and(|(e, _)| expr_uses_m2(e)),
-        _ => false,
+        Stmt::Layout(b) => {
+            !b.consts.is_empty()
+                || !b.loops.is_empty()
+                || b.placements.iter().any(|p| {
+                    expr_uses_m2(&p.at.0)
+                        || expr_uses_m2(&p.at.1)
+                        || p.rotate.as_ref().is_some_and(expr_uses_m2)
+                        || p.path
+                            .iter()
+                            .any(|seg| seg.index.as_ref().is_some_and(|(e, _)| expr_uses_m2(e)))
+                })
+        }
+        Stmt::Inst(i) => {
+            i.array_len.as_ref().is_some_and(|(e, _)| expr_uses_m2(e))
+                || i.ty.generic_args.iter().any(generic_arg_uses_m2)
+                || i.phys.iter().any(|attr| match attr {
+                    ast::PhysAttr::Bypass { index, .. } => {
+                        index.as_ref().is_some_and(|(e, _)| expr_uses_m2(e))
+                    }
+                    _ => false,
+                })
+        }
+        Stmt::SubdesignUse(u) => {
+            u.array_len.as_ref().is_some_and(|(e, _)| expr_uses_m2(e))
+                || u.ty.generic_args.iter().any(generic_arg_uses_m2)
+                || u.conns.iter().any(|c| pin_ref_uses_m2(&c.value))
+        }
+        Stmt::Net(n) => n.members.iter().any(pin_ref_uses_m2),
+        Stmt::Nc(n) => n.members.iter().any(pin_ref_uses_m2),
+        Stmt::Call(c) => {
+            c.generic_args.iter().any(generic_arg_uses_m2) || c.args.iter().any(pin_ref_uses_m2)
+        }
     }
 }
 
+fn generic_arg_uses_m2(arg: &ast::GenericArg) -> bool {
+    matches!(arg, ast::GenericArg::Expr(e) if expr_uses_m2(e))
+}
+
+fn pin_ref_uses_m2(pin: &ast::PinRef) -> bool {
+    pin.index.as_ref().is_some_and(|sel| match sel {
+        ast::IndexSel::Single(e, _) => expr_uses_m2(e),
+        ast::IndexSel::Range {
+            start, end, step, ..
+        } => expr_uses_m2(start) || expr_uses_m2(end) || step.as_ref().is_some_and(expr_uses_m2),
+        ast::IndexSel::List(es, _) => es.iter().any(expr_uses_m2),
+    })
+}
+
 fn expr_uses_m2(e: &ast::Expr) -> bool {
-    match e {
-        ast::Expr::Int(_, _) => false,
-        ast::Expr::Paren(inner, _) => expr_uses_m2(inner),
-        _ => true,
-    }
+    // Signed literals are already assembled by the parser. Length literals
+    // also occur in legacy placements and generic arguments. Parentheses,
+    // unlike literals, are new syntax even when their value is a literal.
+    !matches!(e, ast::Expr::Int(..) | ast::Expr::Length(..))
 }
 
 /// RFC-033: the fmt-canonical body text of an M2 item — format the item's
 /// whole source file with `crate::fmt::format_source`, re-parse the
 /// formatted text, locate the same item by fq name, and slice from the
-/// body's first `{` to its matching `}` (byte offsets into the FORMATTED
+/// body's first statement to its last (byte offsets into the FORMATTED
 /// text, so the slice is exact and uses the one formatter).
 fn body_source(world: &World, sm: &SourceMap, fq: &str) -> Option<String> {
-    // The item's body + its span's file text.
-    let (body_span, file_text): (crate::span::Span, String) = if let Some(f) = world.fns.get(fq) {
-        (
-            f.body.first()?.span(),
-            sm.text(f.name.span.file).to_string(),
-        )
+    let file = if let Some(f) = world.fns.get(fq) {
+        f.name.span.file
     } else if let Some(sd) = world.subdesigns.get(fq) {
-        (
-            sd.body.first()?.span(),
-            sm.text(sd.name.span.file).to_string(),
-        )
+        sd.name.span.file
     } else if let Some(d) = world.designs.get(fq) {
-        (
-            d.body.first()?.span(),
-            sm.text(d.name.span.file).to_string(),
-        )
+        d.name.span.file
     } else {
         return None;
     };
-    let _ = body_span;
-    let formatted = crate::fmt::format_source("docs.cohdl", &file_text).ok()?;
+    let file_text = sm.text(file);
+    let formatted = crate::fmt::format_source("docs.cohdl", file_text).ok()?;
     // Re-parse and locate the same item by bare name (fq's last segment for
     // fns/subdesigns; designs are bare-named).
     let mut fsm = SourceMap::new();
@@ -235,22 +266,17 @@ fn body_source(world: &World, sm: &SourceMap, fq: &str) -> Option<String> {
             _ => false,
         };
         if hit {
-            let (start, end) = match &item.kind {
-                ast::ItemKind::Fn(f) => (
-                    f.body.first().map(|s| s.span()).unwrap_or(item.span),
-                    f.body.last().map(|s| s.span()).unwrap_or(item.span),
-                ),
-                ast::ItemKind::Subdesign(sd) => (
-                    sd.body.first().map(|s| s.span()).unwrap_or(item.span),
-                    sd.body.last().map(|s| s.span()).unwrap_or(item.span),
-                ),
-                ast::ItemKind::Design(d) => (
-                    d.body.first().map(|s| s.span()).unwrap_or(item.span),
-                    d.body.last().map(|s| s.span()).unwrap_or(item.span),
-                ),
-                _ => (item.span, item.span),
+            let body = match &item.kind {
+                ast::ItemKind::Fn(f) => &f.body,
+                ast::ItemKind::Subdesign(sd) => &sd.body,
+                ast::ItemKind::Design(d) => &d.body,
+                _ => unreachable!(),
             };
-            body_range = Some((start.start as usize, end.end as usize));
+            let Some(first) = body.first() else {
+                return Some(String::new());
+            };
+            let last = body.last().expect("nonempty body");
+            body_range = Some((first.span().start as usize, last.span().end as usize));
             break;
         }
     }
@@ -296,7 +322,7 @@ fn generic_arg_text(arg: &ast::GenericArg) -> String {
         ast::GenericArg::Unit(v, _) => v.text.clone(),
         ast::GenericArg::Name(id) => id.name.clone(),
         ast::GenericArg::Number(n, _) => n.clone(),
-        // RFC-033: canonical spelling (the VALUE once Task 7 evaluates).
+        // RFC-033: preserve the expression, including unbound generics.
         ast::GenericArg::Expr(e) => ast::expr_text(e),
     }
 }
@@ -311,8 +337,8 @@ fn body_summary(body: &[Stmt]) -> Vec<(&'static str, Val)> {
             Stmt::Inst(i) => {
                 let mut fields: Vec<(&'static str, Val)> =
                     vec![("name", s(&i.name.name)), ("type", s(&i.ty.name.name))];
-                if let Some((len, _)) = &i.array_len {
-                    fields.push(("array", raw(ast::expr_text(len))));
+                if let Some((ast::Expr::Int(len, _), _)) = &i.array_len {
+                    fields.push(("array", raw(len.to_string())));
                 }
                 if !i.ty.generic_args.is_empty() {
                     fields.push(("args", strs(i.ty.generic_args.iter().map(generic_arg_text))));
@@ -333,8 +359,8 @@ fn body_summary(body: &[Stmt]) -> Vec<(&'static str, Val)> {
                     ("type", s(&u.ty.name.name)),
                     ("kind", s("subdesign")),
                 ];
-                if let Some((len, _)) = &u.array_len {
-                    fields.push(("array", raw(ast::expr_text(len))));
+                if let Some((ast::Expr::Int(len, _), _)) = &u.array_len {
+                    fields.push(("array", raw(len.to_string())));
                 }
                 if !u.ty.generic_args.is_empty() {
                     fields.push(("args", strs(u.ty.generic_args.iter().map(generic_arg_text))));
