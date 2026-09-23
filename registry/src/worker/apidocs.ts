@@ -352,8 +352,15 @@ function canonicalPrefixEnvelope(
   ) {
     return { ok: false, error: "large api docs must use the canonical CoHDL JSON envelope" };
   }
-  if (Reflect.get(document, "schema_version") !== 1) {
-    return { ok: false, error: "api docs must declare `schema_version` 1" };
+  const schemaVer: unknown = Reflect.get(document, "schema_version");
+  // Schema 2 (RFC-033) adds body_source-carrying items; the canonical envelope
+  // itself is unchanged. The buffered path already accepts 1 or 2 — keep the
+  // two paths in lockstep. This is the DOCUMENT schema, deliberately distinct
+  // from the `X-CoHDL-Api-Docs-Schema: 1` transport handshake below, which
+  // pins the streaming upload contract (canonical prefix + SHA-256) and does
+  // not change with the document schema.
+  if (schemaVer !== 1 && schemaVer !== 2) {
+    return { ok: false, error: "api docs must declare `schema_version` 1 or 2" };
   }
   const pkgField: unknown = Reflect.get(document, "package");
   const pkg =

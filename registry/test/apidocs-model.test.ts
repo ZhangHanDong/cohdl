@@ -796,3 +796,105 @@ describe("signal viewBox margins", () => {
     expect(m.bottom).toBeCloseTo(1 * 0.5 * 0.62 + 0.25 + 0.5, 9);
   });
 });
+
+// --- schema 2 (RFC-033) -------------------------------------------------------
+//
+// Fixtures follow the REAL emitter field hierarchy (src/emit/docsjson.rs):
+// body_source sits at the ITEM level (a sibling of the kind-named payload),
+// an M2 item omits insts/calls/nets inside its payload, and a const Int
+// generic is {"name": N, "bound": {"const": "Int"}, "default": <number>}.
+
+import { fnSignature, genericSignature, kindCounts } from "../src/ui/apidocs-model";
+
+function m2FnItem(fq: string, bodySource: string): Extract<ApiDocsItem, { kind: "fn" }> {
+  const idx = fq.lastIndexOf("::");
+  return {
+    fq,
+    name: idx === -1 ? fq : fq.slice(idx + 2),
+    kind: "fn",
+    pub: true,
+    module: idx === -1 ? "pkg" : fq.slice(0, idx),
+    file: "src/main.cohdl",
+    line: 3,
+    // RFC-033: the M2 payload keeps generics/params but drops the
+    // insts/calls/nets summary — body_source replaces it.
+    fn: {
+      generics: [{ name: "N", bound: { const: "Int" }, default: 2 }],
+      params: [{ name: "p", type: { kind: "pin" } }],
+      nets: 0,
+    },
+    body_source: bodySource,
+  };
+}
+
+describe("schema 2 rendering model", () => {
+  it("signatures const Int generics in their own spelling, with numeric defaults", () => {
+    expect(genericSignature({ name: "N", bound: { const: "Int" }, default: 4 })).toBe(
+      "const N: Int = 4",
+    );
+    expect(genericSignature({ name: "N", bound: { const: "Int" } })).toBe("const N: Int");
+    expect(fnSignature("fn", "bank", m2FnItem("pkg::bank", "").fn)).toBe(
+      "fn bank<const N: Int = 2>(p: Pin)",
+    );  });
+
+  it("keeps the legacy unit/trait generic spelling on v1 documents", () => {
+    expect(genericSignature({ name: "L", bound: { unit: "Length" }, default: "1.5mm" })).toBe(
+      "L: Length = 1.5mm",
+    );
+    expect(genericSignature({ name: "T", bound: { traits: ["std::Capacitor"] } })).toBe(
+      "T: std::Capacitor",
+    );
+    expect(
+      fnSignature("fn", "legacy", {
+        generics: [{ name: "L", bound: { unit: "Length" } }],
+        params: [],
+        nets: 2,
+      }),
+    ).toBe("fn legacy<L: Length>()");
+  });
+
+  it("summarizes a body_source item as full body source, never 'undefined nets'", () => {
+    const item = m2FnItem("pkg::banks::BANK", "for x: i in 0..N {\n  net _: p\n}");
+    const summary = itemSummary(item);
+    expect(summary).toBe("full body source");
+    expect(summary).not.toContain("undefined");
+
+    const designItem = {
+      ...m2FnItem("MainBoard", ""),
+      kind: "design" as const,
+      design: { nets: 0 },
+      body_source: "layout for x: i in 0..4 { place R(x) }",
+    };
+    expect(itemSummary(designItem as unknown as ApiDocsItem)).toBe("full body source");
+
+    const subItem = {
+      ...m2FnItem("pkg::rail::LogicRail", ""),
+      kind: "subdesign" as const,
+      subdesign: { ports: [{ name: "VIN", obligation: "required" as const }] },
+      body_source: "net gnd: GND",
+    };
+    expect(itemSummary(subItem as unknown as ApiDocsItem)).toBe("full body source");
+  });
+
+  it("keeps the v1 insts/calls/nets summary for items without body_source", () => {
+    const legacy: ApiDocsItem = {
+      fq: "pkg::plain",
+      name: "plain",
+      kind: "fn",
+      pub: true,
+      module: "pkg",
+      file: "src/main.cohdl",
+      line: 1,
+      fn: { params: [{ name: "p", type: { kind: "pin" } }], nets: 3 },
+    };
+    expect(itemSummary(legacy)).toBe("1 parameter · 3 nets");
+  });
+
+  it("counts the subdesign kind alongside the legacy kinds", () => {
+    const counts = kindCounts([
+      m2FnItem("pkg::a::F", ""),
+      { ...m2FnItem("pkg::a::S", ""), kind: "subdesign" as const },
+    ] as unknown as ApiDocsItem[]);
+    expect(counts.map((c) => c.kind)).toEqual(["subdesign", "fn"]);
+  });
+});
