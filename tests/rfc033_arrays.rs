@@ -121,9 +121,9 @@ design Board {{ inst c: C100N  inst h: HOST  net A: h.P, c.A  net B: h.Q, c.B  l
     assert!(check(&src).1.contains("E1401"), "Int where Length expected");
 }
 
-// 黑板 #12 转交的外环探针:四个 const 依次 E1401/E1401/E1403/E1402。
+// Constants reject mixed dimensions, a wrong unit, division by zero, and overflow.
 #[test]
-fn const_probes_from_outer_loop() {
+fn invalid_constant_expressions_report_their_specific_errors() {
     let src = format!(
         "{LIB}
 design Board {{
