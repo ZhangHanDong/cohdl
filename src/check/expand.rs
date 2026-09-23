@@ -52,6 +52,7 @@ pub fn expand_design(world: &World, design: &DesignDef, diags: &mut Diagnostics)
         path: design.name.name.clone(),
         is_design_body: true,
         place_ctx: PlaceCtx::Design,
+        layout_owner: None,
         subst: Substitution::new(),
         bindings: BTreeMap::new(),
         local_insts: BTreeMap::new(),
@@ -110,6 +111,14 @@ struct Scope {
     path: String,
     is_design_body: bool,
     place_ctx: PlaceCtx,
+    /// The coordinate frame a `place` statement's DEFAULT is recorded against:
+    /// the enclosing subdesign node's retained path, or None at design level
+    /// (where placements are absolute). This is deliberately NOT `path` — a
+    /// loop frame appends `__for_{label}_{value}` to `path` for iteration
+    /// identity, but a loop NEVER creates a new coordinate node: every
+    /// iteration's placements stay relative to the same subdesign origin.
+    /// Set when entering a subdesign body; inherited unchanged by `enter_frame`.
+    layout_owner: Option<String>,
     subst: Substitution,
     bindings: BTreeMap<String, Binding>,
     /// local instance name → full path.
@@ -594,6 +603,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             ),
             is_design_body: false,
             place_ctx: scope.place_ctx,
+            layout_owner: scope.layout_owner.clone(),
             subst: scope.subst.clone(),
             bindings: scope.bindings.clone(),
             local_insts: scope.local_insts.clone(),
@@ -1374,7 +1384,16 @@ impl<'w, 'd> Expander<'w, 'd> {
                 let target_path = match &target {
                     PlaceTarget::Inst(p) | PlaceTarget::Node(p) => p.clone(),
                 };
-                let owner = scope.path.clone();
+                // The frame a default is recorded against is the enclosing
+                // subdesign NODE, never the loop-qualified `scope.path`: a
+                // layout `for` iterates within the same coordinate owner
+                // (RFC-033 §6 — `Scope::path` keeps iteration identity,
+                // `Scope::layout_owner` keeps the coordinate frame).
+                let Some(owner) = scope.layout_owner.clone() else {
+                    // Unreachable: every PlaceCtx::Sub scope is constructed by
+                    // `handle_subdesign_use` with its node path as owner.
+                    return;
+                };
                 let same = |t: &PlaceTarget| match t {
                     PlaceTarget::Inst(p) | PlaceTarget::Node(p) => *p == target_path,
                 };
@@ -2755,6 +2774,7 @@ impl<'w, 'd> Expander<'w, 'd> {
             path: format!("{}::{}", scope.path, seg),
             is_design_body: false,
             place_ctx: PlaceCtx::Fn,
+            layout_owner: None, // `place` is rejected in Fn contexts outright
             subst,
             bindings,
             local_insts: BTreeMap::new(),
@@ -2957,6 +2977,7 @@ impl<'w, 'd> Expander<'w, 'd> {
                 path: node_path.clone(),
                 is_design_body: false,
                 place_ctx: PlaceCtx::Sub,
+                layout_owner: Some(node_path.clone()),
                 subst: subst.clone(),
                 bindings,
                 local_insts: BTreeMap::new(),
@@ -3955,6 +3976,7 @@ mod budget_tests {
             path: design.name.name.clone(),
             is_design_body: true,
             place_ctx: PlaceCtx::Design,
+            layout_owner: None,
             subst: Substitution::new(),
             bindings: BTreeMap::new(),
             local_insts: BTreeMap::new(),
