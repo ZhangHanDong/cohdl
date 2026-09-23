@@ -4229,7 +4229,7 @@ record for this implementation.
 - **Compatibility evidence is scoped to fixed inputs and revisions.**
   The pre-RFC baseline is `b78b7432b1dc9e01bd9e751c0878b11602c8c456`,
   not `99e9385` (which already contains RFC-033). At verified code
-  revision `26adacf`, all **63 package directories** from the baseline
+  revision `10f59a9`, all **63 package directories** from the baseline
   tree (**60 lib + 3 examples**) have identical complete diagnostic JSON,
   exit status and stderr. The three examples also have byte-identical
   outputs from all four emitters, including output manifests and
@@ -4246,11 +4246,22 @@ record for this implementation.
   resolved placements, exact source file/line/column and read-only,
   deterministic extraction. Browser selection/source navigation remains
   a separate interactive check.
-- **Combined local checks at `26adacf`:** 820 Rust tests, the IPC-2581
+- **Combined local checks at `10f59a9`:** 823 Rust tests, the IPC-2581
   schema gate with `xmllint`, all-targets clippy, Rust/source formatting and
-  build passed. Registry's 207 tests, typecheck, lint and build passed;
-  Explorer's seven extractor tests and eleven web tests passed. The old
+  build passed. Explorer's eight extractor tests passed, including the
+  message-only diagnostic consumer. Registry's 207 tests/typecheck/lint/build
+  and Explorer's eleven web tests/build remain valid from `26adacf`: those
+  targets' source trees are unchanged. The old
   corpus, seven Length cases, product oracles and OpenMicroKBD comparisons
   above were repeated with this same compiler binary. Interactive checks,
   the named-net language decision, upstream allocation/acceptance and
   CI on the eventual PR head remain open.
+- **Activation context survives message-only consumers.** Loop E1007
+  duplicate-placement and rotation failures include the resolved target,
+  loop path and binder values in the main diagnostic message. Putting this
+  information only in a primary label was insufficient: LSP and Explorer
+  project the main message. Real CLI/LSP subprocess tests without the
+  related-information capability and an Explorer regression now enforce
+  that contract, including nested loops and distinct messages for multiple
+  iterations at the same source span. Non-loop E1007 messages retain their
+  previous shape.
