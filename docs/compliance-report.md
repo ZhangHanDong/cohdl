@@ -4224,8 +4224,10 @@ record for this implementation.
   signatures. A real compiler-generated document, padded through an
   intent attribute to 16,661,062 uploaded bytes, was stored and retrieved
   identically by a local Worker. This does not verify production
-  deployment or browser rendering; those remain release gates, with the
-  consumer deployed before a compiler release that emits v2.
+  deployment or browser rendering. Manual browser checks are optional
+  follow-up, not a prerequisite for this language PR. Deployment is a
+  separate release task: deploy the consumer before a compiler release
+  that emits v2.
 - **Compatibility evidence is scoped to fixed inputs and revisions.**
   The pre-RFC baseline is `b78b7432b1dc9e01bd9e751c0878b11602c8c456`,
   not `99e9385` (which already contains RFC-033). At verified code
@@ -4245,7 +4247,7 @@ record for this implementation.
   fixture checks all six instance identities, the complete BUS net, four
   resolved placements, exact source file/line/column and read-only,
   deterministic extraction. Browser selection/source navigation remains
-  a separate interactive check.
+  an optional follow-up check, not a language-PR acceptance gate.
 - **Combined local checks at `10f59a9`:** 823 Rust tests, the IPC-2581
   schema gate with `xmllint`, all-targets clippy, Rust/source formatting and
   build passed. Explorer's eight extractor tests passed, including the
@@ -4253,9 +4255,10 @@ record for this implementation.
   and Explorer's eleven web tests/build remain valid from `26adacf`: those
   targets' source trees are unchanged. The old
   corpus, seven Length cases, product oracles and OpenMicroKBD comparisons
-  above were repeated with this same compiler binary. Interactive checks,
-  the named-net language decision, upstream allocation/acceptance and
-  CI on the eventual PR head remain open.
+  above were repeated with this same compiler binary. The named-net
+  language decision, upstream allocation/acceptance and CI on the
+  eventual PR head remain open. Manual UI checks remain unverified
+  optional follow-up.
 - **Activation context survives message-only consumers.** Loop E1007
   duplicate-placement and rotation failures include the resolved target,
   loop path and binder values in the main diagnostic message. Putting this
