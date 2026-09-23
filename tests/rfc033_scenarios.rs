@@ -3,6 +3,8 @@
 //! the proposal tree, not shipped parts; these synthetic twins carry the
 //! same pins/kinds so every count and override assertion is the RFC's own).
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use cohdl::lock::LockState;
 use cohdl::pipeline::{build_artifacts, check_files_in};
 
@@ -82,7 +84,27 @@ fn led_chain_neighbor_nets_0_1_9() {
     }
 }
 
-fn rc_board(n: i64) -> String {
+fn rc_board(n: i64, loops: bool) -> String {
+    let wiring = if loops {
+        "for wiring: i in 0..channels.len {
+            net _: inputs[i].OUT, channels[i].IN
+            net _: channels[i].OUT, outputs[i].IN
+            net _: ground.GND, channels[i].GND
+        }"
+        .to_string()
+    } else {
+        (0..n).map(|i| format!(
+            "net _: inputs[{i}].OUT, channels[{i}].IN\nnet _: channels[{i}].OUT, outputs[{i}].IN\nnet _: ground.GND, channels[{i}].GND\n"
+        )).collect()
+    };
+    let placements = if loops {
+        "for placement: i in 0..channels.len { place channels[i] at (10mm + i * 8mm, 15mm) }"
+            .to_string()
+    } else {
+        (0..n)
+            .map(|i| format!("place channels[{i}] at ({}mm, 15mm)\n", 10 + i * 8))
+            .collect()
+    };
     format!(
         "{LIB}
 pub subdesign RcChannel {{
@@ -109,16 +131,11 @@ design FilterBoard {{
     inst ground: GNDP
     subdesign channels: [RcChannel; N]
 
-    for wiring: i in 0..channels.len {{
-        net _: inputs[i].OUT, channels[i].IN
-        net _: channels[i].OUT, outputs[i].IN
-        net GND [gnd]: ground.GND, channels[i].GND
-    }}
+    net GND [gnd]: ground.GND
+    {wiring}
 
     layout {{
-        for placement: i in 0..channels.len {{
-            place channels[i] at (10mm + i * 8mm, 15mm)
-        }}
+        {placements}
         place ground at (0mm, 15mm)
         place channels[6].c at (62mm, 17mm)
     }}
@@ -126,37 +143,143 @@ design FilterBoard {{
     )
 }
 
-#[test]
-fn rc_channels_counts_override_and_growth() {
-    // N = 10: 4N+1 physical instances (10 src + 10 snk + 1 gnd + 20 rc),
-    // 2N+1 net classes (2 per channel + the shared ground).
-    let art = build(&rc_board(10), &LockState::default());
-    assert_eq!(art.netlist.matches("(comp (ref \"").count(), 41);
-    // net classes: per-channel IN/OUT nets (20) + GND = 21 distinct named
-    // classes; count distinct (net (name …)) entries.
-    let nets = art.netlist.matches("(net (code").count();
-    assert_eq!(nets, 21, "2N+1 net classes at N=10");
-    // channel 6's capacitor override lands at [62, 17].
-    let layout = art.layout.as_deref().expect("layout.json");
-    assert!(
-        layout.contains("channels_6::c"),
-        "override target:\n{layout}"
-    );
-    assert!(
-        layout.contains("[62, 17]"),
-        "override at (62mm,17mm):\n{layout}"
-    );
+type Endpoints = BTreeSet<(String, String)>;
 
-    // N = 12 with the N=10 lock carried: everything earlier survives.
-    let lock10 = art.lock.clone();
-    let art12 = build(&rc_board(12), &lock10);
-    let layout12 = art12.layout.as_deref().expect("layout");
-    assert!(layout12.contains("channels_6::c") && layout12.contains("[62, 17]"));
-    assert_eq!(art12.netlist.matches("(comp (ref \"").count(), 49);
-    assert_eq!(art12.netlist.matches("(net (code").count(), 25);
+fn endpoint(path: impl Into<String>, pin: &str) -> (String, String) {
+    (path.into(), pin.into())
 }
 
-fn bank_board() -> String {
+fn assert_net_partition(ir: &cohdl::ir::DesignIr, expected: &BTreeSet<Endpoints>) {
+    let actual: BTreeSet<_> = ir.nets.iter().map(|n| n.members.clone()).collect();
+    assert_eq!(actual.len(), ir.nets.len(), "no duplicate net partitions");
+    assert_eq!(&actual, expected);
+    assert!(ir.nc_pins.is_empty());
+}
+
+#[test]
+fn rc_channels_have_exact_connectivity_placements_parts_and_stable_growth() {
+    let mut prior = LockState::default();
+    for n in [10, 12] {
+        let mut checked = check(&rc_board(n, true));
+        let art = build_artifacts(&mut checked, &prior).expect("build RC board");
+        let ir = checked.ir.as_ref().unwrap();
+        let mut manual = check(&rc_board(n, false));
+        let unrolled = build_artifacts(&mut manual, &prior).expect("build manual RC board");
+        let manual_ir = manual.ir.as_ref().unwrap();
+
+        let mut ground = Endpoints::from([endpoint("FilterBoard::ground", "GND")]);
+        let mut partitions = BTreeSet::new();
+        let mut placements = vec![(
+            "FilterBoard::ground".to_string(),
+            mm(0),
+            mm(15),
+            0,
+            cohdl::ast::PlacementSide::Top,
+        )];
+        let mut parts = BTreeMap::from([(
+            "FilterBoard::ground".to_string(),
+            ("board::Ground", "board::GNDP"),
+        )]);
+        for i in 0..n {
+            let r = format!("FilterBoard::channels_{i}::r");
+            let c = format!("FilterBoard::channels_{i}::c");
+            let input = format!("FilterBoard::inputs_{i}");
+            let output = format!("FilterBoard::outputs_{i}");
+            ground.insert(endpoint(&c, "B"));
+            partitions.insert(Endpoints::from([
+                endpoint(&input, "OUT"),
+                endpoint(&r, "A"),
+            ]));
+            partitions.insert(Endpoints::from([
+                endpoint(&output, "IN"),
+                endpoint(&r, "B"),
+                endpoint(&c, "A"),
+            ]));
+            placements.push((
+                r.clone(),
+                mm(10 + i as i128 * 8),
+                mm(15),
+                0,
+                cohdl::ast::PlacementSide::Top,
+            ));
+            let (x, y) = if i == 6 {
+                (62, 17)
+            } else {
+                (13 + i as i128 * 8, 15)
+            };
+            placements.push((c.clone(), mm(x), mm(y), 0, cohdl::ast::PlacementSide::Top));
+            parts.insert(r, ("board::SeriesR", "board::RP"));
+            parts.insert(c, ("board::ShuntC", "board::CP"));
+            parts.insert(input, ("board::SignalSource", "board::SRCP"));
+            parts.insert(output, ("board::SignalSink", "board::SNKP"));
+        }
+        partitions.insert(ground.clone());
+        placements.sort_by(|a, b| a.0.cmp(&b.0));
+        for board in [ir, manual_ir] {
+            assert_net_partition(board, &partitions);
+            let gnd = board
+                .nets
+                .iter()
+                .find(|net| net.name == "GND")
+                .expect("exact manufacturing ground name");
+            assert_eq!(gnd.members, ground);
+            for net in &board.nets {
+                assert_eq!(net.is_gnd, net.name == "GND");
+                assert!(net.voltage.is_none());
+            }
+            let mut actual = placement_set(board);
+            actual.sort_by(|a, b| a.0.cmp(&b.0));
+            assert_eq!(actual, placements);
+            let actual_parts: BTreeMap<_, _> = board
+                .instances
+                .iter()
+                .map(|(path, inst)| {
+                    assert!(inst.variant.is_none());
+                    (
+                        path.clone(),
+                        (inst.device.as_str(), inst.part.as_deref().unwrap()),
+                    )
+                })
+                .collect();
+            assert_eq!(actual_parts, parts);
+        }
+        // This checks every populated row, rather than a component count or
+        // an override coordinate found somewhere in the document.
+        assert_eq!(art.bom, unrolled.bom);
+        assert_eq!(art.layout, unrolled.layout);
+        assert_eq!(art.lock, unrolled.lock);
+        for (path, designator) in &prior.designators {
+            assert_eq!(art.lock.designators.get(path), Some(designator));
+        }
+        assert_eq!(art.lock.designators.len(), parts.len());
+        let repeated = build(&rc_board(n, true), &art.lock);
+        assert_eq!(repeated.lock, art.lock);
+        assert_eq!(repeated.netlist, art.netlist);
+        assert_eq!(repeated.bom, art.bom);
+        assert_eq!(repeated.layout, art.layout);
+        prior = art.lock;
+    }
+}
+
+fn bank_board(loops: bool) -> String {
+    let wiring = if loops {
+        "for wiring: i in 0..N { join(IN, channels[i].IN) join(channels[i].OUT, receivers[i].IN) net _: GND, channels[i].GND }".to_string()
+    } else {
+        (0..3).map(|i| format!("join(IN, channels[{i}].IN)\njoin(channels[{i}].OUT, receivers[{i}].IN)\nnet _: GND, channels[{i}].GND\n")).collect()
+    };
+    let placements = if loops {
+        "for placement: i in 0..N { place channels[i] at (i * 8mm, 0mm) place receivers[i] at (i * 8mm, 10mm) }".to_string()
+    } else {
+        (0..3)
+            .map(|i| {
+                format!(
+                    "place channels[{i}] at ({}mm, 0mm)\nplace receivers[{i}] at ({}mm, 10mm)\n",
+                    i * 8,
+                    i * 8
+                )
+            })
+            .collect()
+    };
     format!(
         "{LIB}
 pub subdesign RcChannel {{
@@ -187,22 +310,17 @@ pub subdesign FilterBank<const N: Int> {{
     }}
     inst receivers: [SNKP; N]
     subdesign channels: [RcChannel; N]
-    for wiring: i in 0..N {{
-        join(IN, channels[i].IN)
-        join(channels[i].OUT, receivers[i].IN)
-        net _: GND, channels[i].GND
-    }}
+    {wiring}
     layout {{
-        for placement: i in 0..N {{
-            place channels[i] at (i * 8mm, 0mm)
-            place receivers[i] at (i * 8mm, 10mm)
-        }}
+        {placements}
     }}
 }}
 
 design Board {{
     inst source: SRCP
     inst ground: GNDP
+    net INPUT: source.OUT
+    net GND [gnd]: ground.GND
     subdesign bank: FilterBank<3> {{
         IN: source.OUT,
         GND: ground.GND,
@@ -216,30 +334,99 @@ design Board {{
 }
 
 #[test]
-fn nested_filter_bank_counts_and_override() {
-    // N=3 inside the bank: 3 receivers + 3×(r,c) = 9 bank-internal physical
-    // instances, plus source + ground = 11 on the board.
-    let art = build(&bank_board(), &LockState::default());
-    assert_eq!(
-        art.netlist.matches("(comp (ref \"").count(),
-        11,
-        "11 instances at N=3"
-    );
-    // Net classes: per channel IN + OUT (2 each) + the bank's shared GND =
-    // 5 at N=3 (the ground merges into one class; joins collapse IN/OUT
-    // pairs across the boundary).
-    let nets = art.netlist.matches("(net (code").count();
-    assert_eq!(nets, 5, "5 net classes at N=3");
-    // The board-level override reaches through the bank boundary.
-    let layout = art.layout.as_deref().expect("layout");
-    assert!(
-        layout.contains("bank::channels_1::c"),
-        "nested override target:\n{layout}"
-    );
-    assert!(
-        layout.contains("[22, 17]"),
-        "override at (22mm,17mm):\n{layout}"
-    );
+fn nested_filter_bank_has_exact_nets_parts_and_every_composed_placement() {
+    let mut checked = check(&bank_board(true));
+    let art = build_artifacts(&mut checked, &LockState::default()).expect("build bank");
+    let mut manual = check(&bank_board(false));
+    let unrolled = build_artifacts(&mut manual, &LockState::default()).expect("build manual bank");
+    let mut input = Endpoints::from([endpoint("Board::source", "OUT")]);
+    let mut ground = Endpoints::from([endpoint("Board::ground", "GND")]);
+    let mut partitions = BTreeSet::new();
+    let mut placements = Vec::new();
+    let mut parts = BTreeMap::from([
+        (
+            "Board::source".to_string(),
+            ("board::SignalSource", "board::SRCP"),
+        ),
+        (
+            "Board::ground".to_string(),
+            ("board::Ground", "board::GNDP"),
+        ),
+    ]);
+    for i in 0..3 {
+        let r = format!("Board::bank::channels_{i}::r");
+        let c = format!("Board::bank::channels_{i}::c");
+        let receiver = format!("Board::bank::receivers_{i}");
+        input.insert(endpoint(&r, "A"));
+        ground.insert(endpoint(&c, "B"));
+        partitions.insert(Endpoints::from([
+            endpoint(&r, "B"),
+            endpoint(&c, "A"),
+            endpoint(&receiver, "IN"),
+        ]));
+        placements.push((
+            r.clone(),
+            mm(10 + i * 8),
+            mm(15),
+            0,
+            cohdl::ast::PlacementSide::Top,
+        ));
+        let (x, y) = if i == 1 { (22, 17) } else { (13 + i * 8, 15) };
+        placements.push((c.clone(), mm(x), mm(y), 0, cohdl::ast::PlacementSide::Top));
+        placements.push((
+            receiver.clone(),
+            mm(10 + i * 8),
+            mm(25),
+            0,
+            cohdl::ast::PlacementSide::Top,
+        ));
+        parts.insert(r, ("board::SeriesR", "board::RP"));
+        parts.insert(c, ("board::ShuntC", "board::CP"));
+        parts.insert(receiver, ("board::SignalSink", "board::SNKP"));
+    }
+    partitions.insert(input.clone());
+    partitions.insert(ground.clone());
+    placements.sort_by(|a, b| a.0.cmp(&b.0));
+    for ir in [checked.ir.as_ref().unwrap(), manual.ir.as_ref().unwrap()] {
+        assert_net_partition(ir, &partitions);
+        for (name, ends) in [("INPUT", &input), ("GND", &ground)] {
+            assert_eq!(
+                &ir.nets
+                    .iter()
+                    .find(|net| net.name == name)
+                    .expect("named rail")
+                    .members,
+                ends
+            );
+        }
+        for net in &ir.nets {
+            assert_eq!(net.is_gnd, net.name == "GND");
+            assert!(net.voltage.is_none());
+        }
+        let mut actual = placement_set(ir);
+        actual.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(actual, placements);
+        let actual_parts: BTreeMap<_, _> = ir
+            .instances
+            .iter()
+            .map(|(path, inst)| {
+                assert!(inst.variant.is_none());
+                (
+                    path.clone(),
+                    (inst.device.as_str(), inst.part.as_deref().unwrap()),
+                )
+            })
+            .collect();
+        assert_eq!(actual_parts, parts);
+    }
+    assert_eq!(art.bom, unrolled.bom);
+    assert_eq!(art.layout, unrolled.layout);
+    assert_eq!(art.lock, unrolled.lock);
+    let repeated = build(&bank_board(true), &art.lock);
+    assert_eq!(repeated.netlist, art.netlist);
+    assert_eq!(repeated.bom, art.bom);
+    assert_eq!(repeated.layout, art.layout);
+    assert_eq!(repeated.lock, art.lock);
 }
 
 // ---------------------------------------------------------------------------
