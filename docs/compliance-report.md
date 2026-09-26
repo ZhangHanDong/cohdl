@@ -4273,3 +4273,31 @@ record for this implementation.
   that contract, including nested loops and distinct messages for multiple
   iterations at the same source span. Non-loop E1007 messages retain their
   previous shape.
+- **Re-review corrections, 2026-09-27:** a bare signed Temperature generic
+  argument such as `Td<-40C>` uses the legacy unit-literal path, preserving
+  its exact value, spelling and span. The exception is limited to a bare
+  Temperature argument; signed Length arithmetic still uses the expression
+  evaluator. Targeted comparisons with `b78b743` cover inst/part/fn/subdesign
+  arguments, defaults, signed zero, wrong-unit diagnostics and complete
+  manufacturing output, including `-40.00C` spelling.
+- **Repeated diagnostics are bounded by the underlying error.** Duplicate
+  placement conflicts report once per resolved target and coordinate owner,
+  retaining the first conflict's source span and activation context. A
+  99,999-iteration same-target loop reports one E1007; different targets or
+  owners remain distinct, as do per-iteration rotation errors. Undefined
+  expression names (E202) join the existing failed-expression tracking:
+  empty loops and unused definitions are checked, separate source sites
+  remain separate, and dynamic index failures survive across iterations
+  and helper calls. Legal default/override composition is unchanged.
+- **Re-review verification at `c2f0abd`:** 856 Rust tests passed, with zero
+  failures and one existing ignored fixture; fmt, all-targets clippy,
+  doctests, build and lib/examples source formatting passed. Fourteen
+  targeted CLI acceptance groups include exact Temperature compatibility,
+  signed Length arithmetic and diagnostic-volume boundaries. Two actual
+  message-only LSP cases verify single-diagnostic responses and exact
+  source ranges for repeated placement and undefined-name errors. The
+  previous seven Length cases, fourteen diagnostic probes, two LSP
+  provenance cases, seven product oracles and eight Explorer extractor
+  tests also passed with this compiler. The earlier 63-package and
+  three-example corpus results above remain evidence for their recorded
+  revision; this pass adds targeted coverage for the shapes they missed.
