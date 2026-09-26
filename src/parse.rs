@@ -2756,13 +2756,30 @@ impl<'a> Parser<'a> {
         self.bump(); // <
         let mut args = Vec::new();
         while !self.at(&TokenKind::Gt) && !self.at(&TokenKind::Eof) {
-            // RFC-033: an argument starting with a Length literal, `(`, `-`
+            // RFC-033: an argument starting with a Length literal, `(`
             // or `+`, or a number/name/unit FOLLOWED by an arithmetic
             // operator, is a full expression (`bank::<1 + 1, 2mm * 2>`).
             // A bare number stays `GenericArg::Number` (E113's precise
             // report at type check); a NON-Length unit literal stays
             // `GenericArg::Unit` (`MLCC<100nF, 16V, 10%>`); a bare ident
             // stays a Name; a name followed by `.len` is an expression.
+            // Re-review: a leading `-` byte-adjacent to a TEMPERATURE unit
+            // literal immediately followed by `,` or `>` is the legacy
+            // signed bare literal (`Td<-40C>`) via `signed_unit_literal`.
+            // Length keeps the expression path so `-1mm + 2mm` arithmetic
+            // is not truncated; other negative units keep their original
+            // path (expression grammar / E105).
+            let signed_temperature_bare = self.at(&TokenKind::Minus)
+                && matches!(self.peek_ahead(1), TokenKind::Unit(v) if v.unit == UnitType::Temperature)
+                && {
+                    let idx = self.pos;
+                    idx + 1 < self.tokens.len()
+                        && self.tokens[idx].span.end == self.tokens[idx + 1].span.start
+                }
+                && matches!(
+                    self.tokens.get(self.pos + 2).map(|t| &t.kind),
+                    Some(TokenKind::Comma) | Some(TokenKind::Gt)
+                );
             let op_ahead = matches!(
                 self.peek_ahead(1),
                 TokenKind::Plus
@@ -2772,7 +2789,8 @@ impl<'a> Parser<'a> {
                     | TokenKind::Percent
             );
             let starts_expr = match self.peek() {
-                TokenKind::LParen | TokenKind::Minus | TokenKind::Plus => true,
+                TokenKind::LParen | TokenKind::Plus => true,
+                TokenKind::Minus => !signed_temperature_bare,
                 TokenKind::Number(_) => op_ahead,
                 TokenKind::Unit(_) => {
                     op_ahead
@@ -2781,7 +2799,13 @@ impl<'a> Parser<'a> {
                 TokenKind::Ident(_) => op_ahead || matches!(self.peek_ahead(1), TokenKind::Dot),
                 _ => false,
             };
-            if starts_expr {
+            if signed_temperature_bare {
+                match self.signed_unit_literal() {
+                    Some((v, span)) => args.push(GenericArg::Unit(v, span)),
+                    // E105 already reported (unsigned type made negative)
+                    None => break,
+                }
+            } else if starts_expr {
                 match self.expr() {
                     Some(e) => args.push(GenericArg::Expr(e)),
                     None => break,
