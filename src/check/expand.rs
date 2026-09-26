@@ -35,6 +35,7 @@ pub fn expand_design(world: &World, design: &DesignDef, diags: &mut Diagnostics)
         sub_nodes: BTreeMap::new(),
         active_subs: Vec::new(),
         abs_node_places: BTreeMap::new(),
+        reported_place_conflicts: BTreeSet::new(),
         rel_places: Vec::new(),
         synth_net_conns: Vec::new(),
         phys_grounds: Vec::new(),
@@ -265,6 +266,11 @@ struct Expander<'w, 'd> {
     active_subs: Vec<String>,
     /// Design-level whole-unit placements of subdesign nodes (absolute).
     abs_node_places: BTreeMap<String, PlaceData>,
+    /// Re-review (B): duplicate-placement conflicts already reported, keyed
+    /// by the coordinate OWNER plus the resolved target — a 5000-iteration
+    /// loop placing one target reports the first conflict once, while two
+    /// independent targets or different owners still report each.
+    reported_place_conflicts: BTreeSet<(String, String)>,
     /// Placements declared inside subdesign bodies (defaults, owner-relative).
     rel_places: Vec<RelPlace>,
     /// RFC-032 port connections written as bare net names, validated against
@@ -1278,7 +1284,22 @@ impl<'w, 'd> Expander<'w, 'd> {
             side: placement.side,
             span: placement.span,
         };
+        // The duplicate-placement conflict key: the actual coordinate owner
+        // (subdesign node for defaults, the design for absolute placements)
+        // plus the RESOLVED target — never the source spelling or the error
+        // code/message, so distinct targets/owners can never be swallowed.
+        let conflict_owner = match scope.place_ctx {
+            PlaceCtx::Sub => scope
+                .layout_owner
+                .clone()
+                .expect("PlaceCtx::Sub always carries the subdesign node as layout_owner"),
+            _ => String::new(),
+        };
         let dup = |ex: &mut Self, span: Span| {
+            let key = (conflict_owner.clone(), resolved_target.clone());
+            if !ex.reported_place_conflicts.insert(key) {
+                return; // same owner + same resolved target: already reported
+            }
             let mut diagnostic = Diagnostic::error(
                 "E1007",
                 span,
@@ -3891,6 +3912,7 @@ mod budget_tests {
             sub_nodes: BTreeMap::new(),
             active_subs: Vec::new(),
             abs_node_places: BTreeMap::new(),
+            reported_place_conflicts: BTreeSet::new(),
             rel_places: Vec::new(),
             synth_net_conns: Vec::new(),
             phys_grounds: Vec::new(),
