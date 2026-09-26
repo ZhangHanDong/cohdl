@@ -238,7 +238,15 @@ pub(crate) fn expression_failed(span: Span, failed: &[Span]) -> bool {
 pub(crate) fn expression_failures(diags: &Diagnostics) -> Vec<Span> {
     diags
         .iter()
-        .filter(|d| matches!(d.code, "E1401" | "E1402" | "E1403" | "E1407" | "E211"))
+        // Undefined expression names are invariant failures too. Dynamic
+        // index bounds are checked during expansion, outside this validation
+        // batch, and must still report independently for each activation.
+        .filter(|d| {
+            matches!(
+                d.code,
+                "E1401" | "E1402" | "E1403" | "E1407" | "E211" | "E202"
+            )
+        })
         .map(|d| d.primary.span)
         .collect()
 }
